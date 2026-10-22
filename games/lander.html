@@ -423,14 +423,14 @@
     // The inner route, flown after coming back to Earth: Venus, then Mercury
     { id: "venus", name: "Venus", appear: 12000, orbit: 20000, grav: 0.0034, pads: [8, 12, 16], starHide: 1,
       sky: ["#6b3c12", "#c27a2a", "#efbf73"], ground: { fill: "#99582c", rock: [22, 42, 34], top: [30, 52, 44], band: 9 }, maxR: 0.2, orbitR: 0.16 },
-    // Mercury pulls about as hard as Mars (both about 0.38 g in reality); harsh, airless light: a sunlit rim on the ground
+    // Mercury pulls about as hard as Mars (both about 0.38 g in reality); its ground is one flat color
     { id: "mercury", name: "Mercury", appear: 30000, orbit: 42000, grav: 0.003, pads: [12, 16, 20], starHide: 0,
-      sky: null, ground: { fill: "#7d7974", rock: [30, 6, 44], top: [36, 10, 70], band: 9, harsh: true }, maxR: 0.14, orbitR: 0.12 },
+      sky: null, ground: { fill: "#7d7974", rock: [30, 6, 44] }, maxR: 0.14, orbitR: 0.12 },
     // The end of the inner route and of the game: a heat-shielded platform on the Sun. The real pull (about 28 g)
     // is far beyond any engine here (full thrust is about 3.4x Earth's pull), so it is set to 1.5x Earth's: the
     // strongest in the game, still hoverable with the stock engine
     { id: "sun", name: "Sun", appear: 64000, orbit: 80000, grav: 0.0052, pads: [30, 40, 50], starHide: 1,
-      sky: ["#2a0602", "#8f2207", "#f0701a"], ground: { fill: "#ffa21f", rock: [30, 90, 50], top: [46, 100, 66], band: 10 }, maxR: 0.3, orbitR: 0.22 }
+      sky: ["#2a0602", "#8f2207", "#f0701a"], ground: { fill: "#ffa21f", rock: [30, 90, 50] }, maxR: 0.3, orbitR: 0.22 }
   ];
   // Courses through the bodies: outward from Earth, or inward toward the Sun
   var ROUTES = { outer: ["earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"], inner: ["earth", "venus", "mercury", "sun"] };
@@ -885,21 +885,6 @@
       for (var b = q.start; b <= q.start + q.pts; b++) { raw[b] = y; fixed[b] = true; }
       leftIdx = q.start + q.pts; leftY = y;
     });
-    // Mercury: two or three crater bowls with raised rims in the profile itself
-    if (spec.id === "mercury") {
-      for (var tries = 0, made = 0; tries < 30 && made < 3; tries++) {
-        var cr = Math.random() < 0.6 ? 1 : 2, cc = cr + 1 + Math.floor(Math.random() * (n - 2 * cr - 2)), free = true;
-        for (var ci = cc - cr; ci <= cc + cr; ci++) if (ci < 1 || ci > n - 1 || fixed[ci]) free = false;
-        if (!free) continue;
-        var depth = rnd(18, 30);
-        for (ci = -cr; ci <= cr; ci++) {
-          var u = Math.abs(ci) / cr;
-          raw[cc + ci] = Math.min(H - 25, raw[cc + ci] + (u < 1 ? depth * Math.sqrt(1 - u * u) : -depth * 0.45));
-          fixed[cc + ci] = true;
-        }
-        made++;
-      }
-    }
     // Limit slopes so there are no needle peaks or sheer pits
     for (var pass = 0; pass < 4; pass++) {
       for (idx2 = 1; idx2 <= n; idx2++) if (!fixed[idx2]) raw[idx2] = Math.max(raw[idx2 - 1] - rise, Math.min(raw[idx2 - 1] + rise, raw[idx2]));
@@ -919,8 +904,6 @@
       band = { th: Math.max(4, Math.min(spec.ground.band || 14, H * 0.016)), base: hsl(gt[0], gt[1], gt[2] - 3), shades: [] };
       for (var f = 0; f < n; f++) {
         var sl = (pts[f + 1].y - pts[f].y) / step, lift = -sl * 8;
-        // Airless, harsh light (Mercury): the low Sun on the right lights slopes facing it, the rest sit in hard shadow
-        if (spec.ground.harsh) lift = sl > 0.04 ? 8 + sl * 10 : sl < -0.04 ? -30 : -12;
         band.shades.push([hsl(gt[0] + rnd(-3, 3), gt[1], gt[2] + lift + rnd(-2, 2)),
                           hsl(gt[0] + rnd(-3, 3), gt[1], gt[2] + lift - 5 + rnd(-2, 2))]);
       }
@@ -946,15 +929,6 @@
     if (BASE_BODIES[spec.id] && towerBuilt(spec.id)) placeTower();
     buildRocks(spec.ground.rock);
     if (spec.id === "sun") ground.rocks = [];
-    // Mercury: shallow craters pressed into the ground just under the surface
-    ground.craters = [];
-    if (spec.id === "mercury") {
-      for (var ct = 0; ct < 60 && ground.craters.length < Math.max(4, Math.round(W / 170)); ct++) {
-        var crx = rnd(30, W - 30), crr = rnd(14, 34);
-        if (ground.craters.some(function (c) { return Math.abs(c.x - crx) < c.rx + crr + 16; })) continue;
-        ground.craters.push({ x: crx, y: surfaceY(crx) + rnd(10, 46) + crr * 0.3, rx: crr, ry: crr * rnd(0.22, 0.32), sh: rnd(-2, 2) });
-      }
-    }
     ground.rover = null;
     if (spec.id === "mars") {
       for (var rt = 0; rt < 100; rt++) {
@@ -1873,19 +1847,13 @@
     ctx.save(); ctx.fillStyle = ground.color; ctx.fill(ground.fillPath);
     // Ground is one flat color; texture comes only from objects on it
     ctx.restore();
-    // Surface band (Venus, Mercury, the Sun): a strip hanging under the surface line, shaded per segment
+    // Surface band (Venus): a strip hanging under the surface line, shaded per segment
     if (ground.band) {
       var B = ground.band, P = ground.pts;
       for (var bi = 0; bi < P.length - 1 && bi < B.shades.length; bi++)
         fpolySeal(ctx, [[P[bi].x, P[bi].y], [P[bi + 1].x, P[bi + 1].y], [P[bi + 1].x, P[bi + 1].y + B.th], [P[bi].x, P[bi].y + B.th]], B.shades[bi][0]);
     }
     if (sceneIdx === 0 && flora.length) drawFlora();
-    if (ground.craters) ground.craters.forEach(function (c) {
-      // rim lit from the upper left, floor in shadow, a lighter far wall
-      polyFill(ctx, ellipsePts(c.x, c.y, c.rx * 1.12, c.ry * 1.35, 10, 0, Math.PI * 2), hsl(30, 5, 58));
-      polyFill(ctx, ellipsePts(c.x + c.sh, c.y + c.ry * 0.12, c.rx, c.ry, 10, 0, Math.PI * 2), hsl(30, 6, 36));
-      polyFill(ctx, ellipsePts(c.x + c.sh, c.y + c.ry * 0.12, c.rx, c.ry, 5, Math.PI * 0.05, Math.PI * 0.95), hsl(30, 6, 47));
-    });
     if (ground.rover) drawRover(ground.rover);
     if (ground.moonBase) {
       // Painted straight from its layout (deterministic) into the terrain layer
@@ -2052,10 +2020,10 @@
     },
     mercury: function (mx, my, light) { return [30, 8, 50 + light * 16 + rnd(-1, 1)]; },
     venus: function (mx, my, light) { return [44, 55, 72 + light * 10 + rnd(-1, 1)]; },
-    // self-lit: brighter toward the middle, a few darker sunspot cells
+    // self-lit: brighter toward the middle
     sun: function (mx, my, light) {
-      var r = Math.hypot(mx, my), spot = Math.random() < 0.06 ? 10 : 0;
-      return [mix(48, 30, r) + rnd(-2, 2), 100, 70 - r * 12 - spot + rnd(-2, 2)];
+      var r = Math.hypot(mx, my);
+      return [mix(48, 30, r) + rnd(-2, 2), 100, 70 - r * 12 + rnd(-2, 2)];
     },
     earth: function (mx, my, light) {
       // Orthographic view of real (coarse) continents, Africa and Europe
@@ -2610,6 +2578,118 @@
     return { draw: function (dt) { bits.forEach(function (b) { b.draw(dt); }); } };
   }
 
+  // Heat or cold at full: the lander melts (sags, glows and drips) or is
+  // sealed in a block of ice, then the flight ends
+  function startDoom(kind) {
+    var L = lander;
+    L.engine = L.left = L.right = false;
+    L.vel = { x: 0, y: 0 }; L.spinVel = 0;
+    L.hitKind = kind;
+    L.doom = { kind: kind, at: elapsed, drips: [] };
+    if (kind === "heat") for (var i = 0; i < 9; i++) L.doom.drips.push({ u: rnd(-0.9, 0.9), t0: rnd(0.05, 0.75), r: rnd(2.4, 4.2), sp: rnd(0.8, 1.3) });
+  }
+  // The ship outline in screen space: the box and its pointed nose
+  function shipOutline(x, y, angle) {
+    var c = Math.cos(angle), s = Math.sin(angle);
+    return [[-LW / 2, LH / 2], [-LW / 2, -LH / 2], [0, -LH], [LW / 2, -LH / 2], [LW / 2, LH / 2]].map(function (q) {
+      return [x + q[0] * c - q[1] * s, y + q[0] * s + q[1] * c];
+    });
+  }
+  function shipPath(pts) {
+    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+    for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.closePath();
+  }
+  function drawDoomShip(L) {
+    var D = L.doom, p = clamp01(0, DOOM_MS, elapsed - D.at), x = L.shown.x, y = L.shown.y;
+    var pts = shipOutline(x, y, L.angle);
+    if (D.kind === "heat") {
+      // Sagging: everything slumps toward the lowest point and spreads out
+      var low = Math.max.apply(null, pts.map(function (q) { return q[1]; })), tall = LH * 1.5, sag = Math.pow(p, 1.4);
+      var soft = [];
+      pts.forEach(function (q, i) {
+        var nq = pts[(i + 1) % pts.length];
+        soft.push(q, [(q[0] + nq[0]) / 2, (q[1] + nq[1]) / 2]);
+      });
+      soft = soft.map(function (q, i) {
+        var up = clamp01(0, tall, low - q[1]);
+        return [x + (q[0] - x) * (1 + sag * 0.8 * (1 - up)) + Math.sin(elapsed / 90 + i) * sag * 1.5,
+                q[1] + (low - q[1]) * sag * 0.58];
+      });
+      ctx.save();
+      shipPath(soft); ctx.fillStyle = bodyGradient; ctx.fill();
+      ctx.globalAlpha = Math.min(1, p * 1.6) * 0.85; ctx.fillStyle = hsl(22, 100, 52); ctx.fill();
+      ctx.globalAlpha = Math.min(1, p * 1.6) * 0.6;
+      var core = soft.map(function (q) { return [x + (q[0] - x) * 0.55, low - (low - q[1]) * 0.55]; });
+      shipPath(core); ctx.fillStyle = hsl(44, 100, 64); ctx.fill();
+      ctx.globalAlpha = 1;
+      // Drips: a bead grows at the lower edge, stretches and falls
+      D.drips.forEach(function (d) {
+        var q = (p - d.t0 * 0.7) / 0.3;
+        if (q <= 0) return;
+        var dx = x + d.u * LW * (0.5 + sag * 0.7), stretch = Math.min(1, q * 2) * 9 * d.sp, fall = Math.max(0, q - 0.5) * 2;
+        var dy = low + fall * fall * 140 * d.sp;
+        ctx.fillStyle = q > 0.5 ? hsl(46, 100, 62) : hsl(30, 100, 56);
+        ctx.beginPath(); ctx.moveTo(dx - d.r * 0.5, dy - stretch); ctx.lineTo(dx + d.r * 0.5, dy - stretch);
+        ctx.lineTo(dx + d.r, dy); ctx.lineTo(dx, dy + d.r * 1.4); ctx.lineTo(dx - d.r, dy); ctx.closePath(); ctx.fill();
+      });
+      ctx.restore();
+    } else {
+      // Freezing: the hull frosts over while a block of ice grows up around it
+      drawShipAt(x, y, L.angle, 1, false);
+      ctx.save();
+      shipPath(pts); ctx.globalAlpha = 0.75 * sine(Math.min(1, p * 1.4)); ctx.fillStyle = hsl(200, 70, 86); ctx.fill();
+      ctx.globalAlpha = 1;
+      var g = sine(Math.min(1, p / 0.75)), bw = LW * 1.6 + 10, top = y - LH * 0.95 - 8, bot = y + LH * 0.6 + 6, bh = (bot - top) * g;
+      if (bh > 0) {
+        ctx.beginPath(); ctx.rect(x - bw, bot - bh, bw * 2, bh); ctx.clip();
+        var bx0 = x - bw / 2 - 4, bx1 = x + bw / 2 + 4, mx = x + 3, my = (top + bot) / 2;
+        var block = [[bx0 + 3, top + 2], [x - 2, top - 3], [bx1 - 2, top + 3], [bx1, my - 6], [bx1 - 3, bot], [x + 2, bot + 2], [bx0, bot - 2], [bx0 - 2, my + 4]];
+        ctx.globalAlpha = 0.72;
+        for (var i = 0; i < block.length; i++) {
+          var j = (i + 1) % block.length, lt = Math.cos(i / block.length * Math.PI * 2 + 2.2);
+          fpolySeal(ctx, [block[i], block[j], [mx, my]], hsl(198 + lt * 6, 80, 74 + lt * 10));
+        }
+        ctx.globalAlpha = 0.9;
+        fpolySeal(ctx, [[bx0 + 5, top + 6], [bx0 + 9, top + 5], [bx0 + 4, my + 6], [bx0 + 1, my + 4]], hsl(195, 80, 95));
+        if (p > 0.85 && Math.floor(elapsed / 60) % 2) {
+          ctx.globalAlpha = 0.9; ctx.strokeStyle = hsl(200, 60, 97); ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(x - 2, top); ctx.lineTo(x + 3, my - 8); ctx.lineTo(x - 4, my + 4); ctx.lineTo(x + 2, bot);
+          ctx.moveTo(x + 3, my - 8); ctx.lineTo(bx1, my - 2); ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+  }
+  // After melting: the molten hull falls apart in glowing drops that
+  // settle on the ground and cool
+  function meltWreck(at, angle) {
+    var x = at.x, y = Math.max.apply(null, shipOutline(at.x, at.y, angle).map(function (q) { return q[1]; })) - 4;
+    var hot = burst({ x: x, y: y }, { x: 0, y: -0.6 }, hsl(30, 100, 56), 11, 16, true), glow = burst({ x: x, y: y }, { x: 0, y: -1 }, hsl(46, 100, 62), 6, 18, true), born = elapsed;
+    return { draw: function (dt) {
+      var a = 1 - clamp01(4000, 6000, elapsed - born);
+      if (a <= 0) return;
+      ctx.save(); ctx.globalAlpha = a; hot.draw(dt); glow.draw(dt); ctx.restore();
+    } };
+  }
+  // After freezing: the ice block shatters and the lander breaks up with it
+  function iceWreck(at, vel, angle, collide) {
+    var hull = landerBreakup(at, vel, angle, collide), born = elapsed;
+    var shards = burst(at, { x: 0, y: -1.5 }, hsl(198, 80, 82), 14, 26, collide), fine = burst(at, { x: 0, y: -2.5 }, hsl(195, 80, 94), 5, 30, collide);
+    return { draw: function (dt) {
+      var age = elapsed - born;
+      if (age < 220) {
+        // a cold white flash where the block burst
+        ctx.save(); ctx.globalAlpha = 1 - age / 220; ctx.fillStyle = hsl(195, 80, 94);
+        polyFill(ctx, ellipsePts(at.x, at.y, LW * 2.4, LH * 1.2, 12, 0, Math.PI * 2), hsl(195, 80, 94));
+        ctx.restore();
+      }
+      hull.draw(dt);
+      var a = 1 - clamp01(4500, 6500, age);
+      if (a <= 0) return;
+      ctx.save(); ctx.globalAlpha = a; shards.draw(dt); fine.draw(dt); ctx.restore();
+    } };
+  }
   function landerBreakup(at, vel, angle, collide) {
     var fill = bodyGradient;
     function piece(offsetY, shape) {
@@ -2951,7 +3031,7 @@
     L.topVel = { x: L.vel.x, y: L.vel.y }; L.speedMark = { x: 0, y: 0 };
     L.maxFeet = 0;
     L.burns = 0; L.firstSlack = null; L.engineOffAt = null; L.heldToGround = false;
-    L.shieldUntil = 0; L.parked = false; L.hitKind = null;
+    L.shieldUntil = 0; L.parked = false; L.hitKind = null; L.doom = null;
     L.shield = TEST_MODE && adminShield; L.shieldRow = false;
   }
 
@@ -3017,7 +3097,9 @@
       L.angle = Math.PI * 2; L.vel = { x: 0, y: 0 }; L.spinVel = 0;
     } else {
       r.score = frac(Math.min(MAX_SAFE_SPEED * SPEED_TO_MPH, MAX_SAFE_ANGLE), 900, combo) * 100;
-      L.wreck = landerBreakup(inSpace() ? L.shown : L.pos, L.vel, L.angle, !inSpace());
+      var wAt = inSpace() ? L.shown : L.pos;
+      L.wreck = byRock && L.hitKind === "heat" ? meltWreck(wAt, L.angle) : byRock && L.hitKind === "freeze" ? iceWreck(wAt, L.vel, L.angle, !inSpace())
+        : landerBreakup(wAt, L.vel, L.angle, !inSpace());
       L.vel = { x: 0, y: 0 };
     }
     L.result = r;
@@ -3165,16 +3247,23 @@
   function shieldHudShown() {
     return scene !== "orbit" && !!(shields || TEST_INFINITE_SHIELDS || lander.shield || shieldActive());
   }
-  var heat = 0, HEAT_MS = 30000;
+  // Heat (the Sun) and cold (Uranus, Neptune, Pluto): a meter that fills
+  // while flying the surface; full means the lander melts or freezes solid
+  var heat = 0, cold = 0, HEAT_MS = 8000, DOOM_MS = 2000;
+  var COLD_MS = { uranus: 8500, neptune: 7500, pluto: 6500 };
   function drawHeatHud() {
-    if (BODIES[sceneIdx].id !== "sun" || heat <= 0) return;
-    var w = Math.min(180, W * 0.3), h = 6, x = (W - w) / 2, y = hudMargin() + 16;
+    var id = BODIES[sceneIdx].id, isHeat = id === "sun", isCold = !!COLD_MS[id];
+    if (scene !== "surface" || (!isHeat && !isCold)) return;
+    var v = Math.min(1, isHeat ? heat : cold);
+    var w = Math.round(Math.min(240, W * 0.36)), h = 10, x = Math.round((W - w) / 2), y = Math.round(hudMargin() + 20);
     ctx.save();
-    ctx.font = "400 12px " + FONT; ctx.letterSpacing = "3px"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = heat > 0.8 && Math.floor(elapsed / 250) % 2 ? "#ff5a46" : "#fff";
-    ctx.fillText("HEAT " + Math.min(100, Math.floor(heat * 100)) + "%", W / 2, y - 4);
-    ctx.fillStyle = "rgba(4, 10, 24, 0.6)"; ctx.fillRect(x - 1, y + 2, w + 2, h + 2);
-    ctx.fillStyle = hsl(mix(50, 0, heat), 100, 52); ctx.fillRect(x, y + 3, Math.max(1, Math.round(w * Math.min(1, heat))), h);
+    ctx.font = "700 12px " + FONT; ctx.letterSpacing = "3px"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    var warn = v > 0.75 && Math.floor(elapsed / 250) % 2;
+    ctx.fillStyle = warn ? (isHeat ? "#ff5a46" : "#8fdcff") : "#fff";
+    ctx.fillText((isHeat ? "HEAT " : "COLD ") + Math.floor(v * 100) + "%", W / 2, y - 6);
+    ctx.fillStyle = "rgba(4, 10, 24, 0.6)"; ctx.fillRect(x - 2, y, w + 4, h + 4);
+    ctx.fillStyle = isHeat ? hsl(mix(50, 0, v), 100, 52) : hsl(mix(190, 210, v), 90, mix(72, 58, v));
+    if (v > 0) ctx.fillRect(x, y + 2, Math.max(1, Math.round(w * v)), h);
     ctx.restore();
   }
   function drawShieldHud() {
@@ -3492,7 +3581,12 @@
   function drawLander(t, dt) {
     var L = lander;
     L.t = t;
-    if (!L.result) {
+    if (L.doom && !L.result) {
+      // Melting or freezing: the controls are dead and the ship hangs where
+      // it was until the animation ends in a crash
+      L.engine = L.left = L.right = false;
+      if (elapsed - L.doom.at >= DOOM_MS) finish(false, true);
+    } else if (!L.result) {
       stepLander(dt);
       if (L.pos.y > SPACE_Y) drawPath();
     }
@@ -3500,8 +3594,10 @@
     if (L.party) L.party.draw(dt);
     if (L.wreck) L.wreck.draw(dt);
     placeShown();
-    if (!L.result || L.result.landed) drawShipAt(L.shown.x, L.shown.y, L.angle, 1, true);
-    if (L.pos.y > SPACE_Y) { drawSideHud(); drawCourseNote(); }
+    if (L.doom && !L.result) drawDoomShip(L);
+    else if (!L.result || L.result.landed) drawShipAt(L.shown.x, L.shown.y, L.angle, 1, true);
+    if (L.doom && !L.result) { /* no readouts while melting or freezing */ }
+    else if (L.pos.y > SPACE_Y) { drawSideHud(); drawCourseNote(); }
     else if (!L.result) {
       var p = clamp01(LH, -LH, L.pos.y);
       ctx.save();
@@ -3517,7 +3613,7 @@
 
   function engineOn() {
     var L = lander;
-    if (L.engine || L.result) return;
+    if (L.engine || L.result || L.doom) return;
     L.engine = true;
     if (++L.burns === 1) L.firstSlack = burnSlack();
   }
@@ -4009,7 +4105,7 @@
     // Earth, Venus and Mercury are always in the sky's little orrery
     if (!shieldEarned[idx] && idx > 0) { shieldEarned[idx] = true; if (body.id !== "venus" && body.id !== "mercury") discovered[body.id] = elapsed; }
     scene = "surface";
-    sceneIdx = idx; heat = 0;
+    sceneIdx = idx; heat = cold = 0;
     sceneBase = body.orbit || 0;
     grav = body.grav;
     orbit = null;
@@ -4250,6 +4346,12 @@
     "Out here the ice always wins",
     "You hit a frozen leftover from the dawn of time"
   ];
+  var COLD_LINES = [
+    "Frozen solid",
+    "Keep the engine burning out here",
+    "The lander is now a very expensive ice cube",
+    "Too long in the cold"
+  ];
   var HEAT_LINES = [
     "The heat shield gave out",
     "Too long in the Sun\u2019s glare",
@@ -4278,7 +4380,7 @@
     bonus.hidden = true;
     var total = r.score + bonus.total;
     var line = r.landed ? (r.slam ? "Hoverslam!" : landedLine(total))
-      : r.byRock ? pickLine(r.hitKind === "sat" ? SAT_LINES : r.hitKind === "ice" ? ICE_LINES : r.hitKind === "heat" ? HEAT_LINES : ROCK_LINES) : crashedLine(total);
+      : r.byRock ? pickLine(r.hitKind === "sat" ? SAT_LINES : r.hitKind === "ice" ? ICE_LINES : r.hitKind === "heat" ? HEAT_LINES : r.hitKind === "freeze" ? COLD_LINES : ROCK_LINES) : crashedLine(total);
     var shown = fmt(total, 1);
     var where = BODIES[sceneIdx].name;
     // Coins: the points scored, only for a successful landing, plus
@@ -6390,7 +6492,7 @@
     progress.flights = (progress.flights || 0) + 1;
     // From Earth the course is the one chosen (inner once unlocked); from a base, outward
     route = progress.innerUnlocked && progress.route === "inner" ? "inner" : "outer";
-    earthArmed = false; turnMs = 0; homeward = false; backMs = onwardMs = 0; hudNote = null; heat = 0;
+    earthArmed = false; turnMs = 0; homeward = false; backMs = onwardMs = 0; hudNote = null; heat = cold = 0;
     scene = "surface"; sceneIdx = 0; sceneBase = 0; grav = BODIES[0].grav; orbit = null; fadeIn = null;
     extraConfetti = [];
     buildGround(BODIES[0]);
@@ -6468,13 +6570,18 @@
     if (here.id === "venus") drawVenusBanks(L.pos.y);
     if (here.id === "mercury") drawSun(dropFor(L.pos.y), L.pos.y);
     if (here.id === "sun" && air > 0) drawSunSky(dropFor(L.pos.y), air);
-    // The Sun's heat: the hull heats up while low over the surface; full heat
-    // costs a shield (back to 60%) or the ship
-    if (here.id === "sun" && !L.result && !L.parked && L.pos.y > -H * 2 && scene === "surface") {
-      heat += dt / HEAT_MS;
-      if (heat >= 1) {
-        if (absorbCrash()) heat = 0.6;
-        else { heat = 1; L.engine = L.left = L.right = false; L.hitKind = "heat"; finish(false, true); }
+    // The Sun's heat: the hull heats up fast near the surface and cools off
+    // high above it. Uranus, Neptune and Pluto: the hull freezes unless the
+    // main engine burns. Either one full melts or freezes the lander (shields
+    // do not help) and the flight is lost.
+    if (scene === "surface" && !L.result && !L.parked && !L.doom) {
+      if (here.id === "sun") {
+        var near = L.pos.y > -H * 2 ? clamp01(-H * 2, groundLevel, L.pos.y) : 0;
+        heat = Math.max(0, heat + dt / HEAT_MS * (near * near * 1.4 - 0.25));
+        if (heat >= 1) { heat = 1; startDoom("heat"); }
+      } else if (COLD_MS[here.id]) {
+        cold = Math.max(0, cold + dt / COLD_MS[here.id] * (L.engine ? -1.5 : 1));
+        if (cold >= 1) { cold = 1; startDoom("freeze"); }
       }
     }
     var outer = route === "outer";
@@ -6594,6 +6701,7 @@
     state: function () { var L = lander; return { x: L.pos.x, y: L.pos.y, vx: L.vel.x, vy: L.vel.y, angle: L.angle, spin: L.spinVel, result: L.result, heat: heat, grav: grav, thrust: thrust, W: W, H: H, scene: scene,
       pads: ground.pads.map(function (p) { return { x: p.x, w: p.width, y: p.y }; }) }; },
     surfaceY: function (x) { return surfaceY(x); },
+    cold: function () { return cold; },
     orbit: function (id) { if (mode === "game") enterOrbit(idxOf(id)); },
     stockEngine: function () { thrust = THRUST; },
     place: function (ft) { lander.pos.y = groundLevel - ft * 3.5; lander.vel = { x: 0, y: -0.2 }; lander.angle = Math.PI * 2; lander.spinVel = 0; }
