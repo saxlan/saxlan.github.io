@@ -1,4 +1,4 @@
-// Agletic backend (Google Apps Script web app).
+// Saxlan backend (Google Apps Script web app).
 // The site itself is static (GitHub Pages); the page talks to this script with fetch: POST, Content-Type text/plain,
 // body {fn, args}. doPost runs only the functions listed in RPC_ below and answers JSON {ok:true, result} or
 // {ok:false, error}. No triggers, no background work.
@@ -119,7 +119,7 @@ function setup() {
     let id = PROPS.getProperty('sheetId');
     if (id) { try { SpreadsheetApp.openById(id); } catch (e) { id = ''; } }
     if (!id) {
-      const ss = SpreadsheetApp.create('Agletic storage');
+      const ss = SpreadsheetApp.create('Saxlan storage');
       KINDS.forEach(k => ss.insertSheet(k));
       ss.getSheets().forEach(s => { if (KINDS.indexOf(s.getName()) < 0) ss.deleteSheet(s); });
       PROPS.setProperty('sheetId', ss.getId());
@@ -277,7 +277,7 @@ function rpcLogout(token) {
 function doGet() {
   let setup = false;
   try { setup = !!PROPS.getProperty('sheetId'); } catch (e) {}
-  return ContentService.createTextOutput(JSON.stringify({ ok: true, app: 'Agletic', setup: setup })).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, app: 'Saxlan', setup: setup })).setMimeType(ContentService.MimeType.JSON);
 }
 // POST {fn, args}: one allowlisted rpc. Every answer is JSON {ok:true, result} or {ok:false, error}.
 const POST_MAX_ = 3000000;

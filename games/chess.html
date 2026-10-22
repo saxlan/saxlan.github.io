@@ -934,7 +934,7 @@ function startChime() {
 
 
 /* ---------- two computers ---------- */
-var ERR = { noroom: 'No game with that code', full: 'That game is full', taken: 'That name is in use', wronggame: 'That code is for another game', bad: 'Check the name and code', rate: 'Too fast, try again', conn: 'Connection problem', badtoken: 'Session ended', signin: 'Sign in to Agletic to play online' };
+var ERR = { noroom: 'No game with that code', full: 'That game is full', taken: 'That name is in use', wronggame: 'That code is for another game', bad: 'Check the name and code', rate: 'Too fast, try again', conn: 'Connection problem', badtoken: 'Session ended', signin: 'Sign in to Saxlan to play online' };
 function setErr(e) { $('err').textContent = ERR[e && e.message] || ERR.conn; }
 function getName() { var n = $('iName').value.trim().slice(0, 16); if (!n) { $('err').textContent = 'Enter a name'; $('iName').focus(); return ''; } store.set('name', n); return n; }
 function netColor() { if (!S || !S.seats || !net) return net && net.myColor || 'w'; if (S.seats.w.id === net.me) return 'w'; if (S.seats.b.id === net.me) return 'b'; return net.myColor || 'w'; }

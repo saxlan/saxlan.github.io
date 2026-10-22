@@ -274,7 +274,7 @@
   .route .cap { cursor: pointer; padding: 0 9px; }
   /* admin only: permanent shield toggle, directly above the Sound button */
   #shieldBtn { bottom: calc(max(18px, 3.5vh) + 54px); }
-  /* Agletic has no leaderboards: the button and the end screen link stay hidden */
+  /* Saxlan has no leaderboards: the button and the end screen link stay hidden */
   #lbBtn, #finLb { display: none !important; }
   /* leaderboard button: directly above the Shop button */
   .lbBtn { position: absolute; left: 20px; bottom: calc(max(18px, 3.5vh) + 72px); pointer-events: auto; min-height: 44px; font-size: 12px; --cut: 10px; padding-right: calc(16px + var(--cut)); }
@@ -4404,7 +4404,7 @@
     cb(m.res && typeof m.res === "object" ? m.res : { error: "conn" });
   });
   function lbQueue() {
-    return; // Agletic has no leaderboards
+    return; // Saxlan has no leaderboards
     clearTimeout(lbT);
     lbT = setTimeout(function () {
       var sc = lbScores(), key = JSON.stringify(sc);

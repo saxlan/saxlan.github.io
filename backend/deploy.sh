@@ -6,7 +6,7 @@ if [ -n "$CLASP" ]; then :; elif command -v clasp >/dev/null 2>&1; then CLASP=cl
 export CLASP
 DEPLOYMENT=$(cat deployment-id)
 sh push.sh
-$CLASP update-deployment "$DEPLOYMENT" --description "Aglet backend"
+$CLASP update-deployment "$DEPLOYMENT" --description "Saxlan backend"
 URL="https://script.google.com/macros/s/$DEPLOYMENT/exec"
 out=$(curl -s -L -H 'Content-Type: text/plain;charset=utf-8' --data '{"fn":"rpcPing","args":[]}' "$URL")
 case "$out" in

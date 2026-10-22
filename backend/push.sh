@@ -1,5 +1,5 @@
 #!/bin/sh
-# Push the Aglet backend (src/) to its Apps Script project.
+# Push the Saxlan backend (src/) to its Apps Script project.
 # Never let Google's permission screen appear for visitors: the web app runs as the owner for anyone, and the scopes stay
 # exactly the two the owner grants once by running setup(). A new scope, a run-as-visitor setting or a Google service that
 # needs another scope stops the push here.
