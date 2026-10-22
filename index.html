@@ -783,10 +783,12 @@ input.lib-q{width:calc(100% + 2 * var(--reach));margin:0 calc(-1 * var(--reach))
 /* Schoology screenshots for the iCal link steps (Your Classes and the Guide share them) */
 .shot{display:block;width:100%;background:var(--panel2) center/100% 100% no-repeat;border:1px solid var(--line);margin:10px 0 12px}
 [data-theme=dark] .shot{filter:brightness(.88)}
-.shot-export{max-width:390px;aspect-ratio:390/80}
-.shot-share{max-width:380px;aspect-ratio:380/182}
-.shot-disabled{max-width:380px;aspect-ratio:380/182}
-.shot-enable{max-width:565px;aspect-ratio:565/107}
+/* every picture is the same width (that of the column, up to 600px) and keeps its own shape */
+.shot{max-width:600px}
+.shot-export{aspect-ratio:390/80}
+.shot-share{aspect-ratio:380/182}
+.shot-disabled{aspect-ratio:380/182}
+.shot-enable{aspect-ratio:565/107}
 .ical-steps{margin:0;padding-left:1.4em}.ical-steps li+li{margin-top:12px}
 .su-intro{background:var(--panel);padding:12px 18px;font-size:13.5px;line-height:1.5;margin-bottom:18px;box-shadow:inset 3px 0 0 var(--accent)}
 .su-step{background:var(--panel);padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0;margin-bottom:18px}
@@ -807,7 +809,7 @@ input.lib-q{width:calc(100% + 2 * var(--reach));margin:0 calc(-1 * var(--reach))
 .su-how ol{margin:0;padding-left:1.3em}.su-how li+li{margin-top:8px}
 .su-how p{margin:12px 0 0;color:var(--fg2);font-size:12.5px}
 /* the wide guide column: screenshots grow up to one and a half times their size */
-.su-how .shot-export{max-width:585px}.su-how .shot-share,.su-how .shot-disabled{max-width:570px}.su-how .shot-enable{max-width:848px}
+.su-how .shot{max-width:none}
 @media (max-width:1000px){.su-wrap{grid-template-columns:minmax(0,1fr)}.su-how{position:static;max-height:none}}
 .su-list{display:flex;flex-direction:column;gap:8px}
 .su-row{display:flex;gap:8px}
