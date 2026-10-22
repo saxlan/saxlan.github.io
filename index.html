@@ -1182,7 +1182,7 @@ html.home-on body::before{opacity:1}
 #games .gm-tile{appearance:none;cursor:pointer;display:flex;flex-direction:column;padding:0;border-radius:0;background:#232322;color:#f2f0ea;
   border:1px solid rgba(242,240,234,.32);overflow:hidden;transition:border-color .15s,background .15s}
 #games .gm-tile{aspect-ratio:1}
-/* Metrica title screen: the three worlds in the games' own look (Inter, paper and ink, blue accent, square corners) */
+/* Metrica title screen: the four worlds in the games' own look (Inter, paper and ink, blue accent, square corners) */
 #games .mx{--bg:#f2f0ea;--sf:#fbfaf6;--box:#e6e3da;--box2:#dbd7cc;--fg:#171717;--fg2:#6e6c64;--line:rgba(110,104,88,.28);--grid:rgba(110,104,88,.11);
   --hatch:rgba(23,23,23,.07);--gnd:#e2ddd1;--acc:#2b3fd3;--acc2:#2234b8;--accfg:#fff;
   flex:1;min-height:0;display:flex;flex-direction:column;background:var(--bg);color:var(--fg);font-family:var(--font-ui);-webkit-font-smoothing:antialiased}
@@ -1200,6 +1200,11 @@ html.home-on body::before{opacity:1}
 #games .mx-h1{margin:0 0 36px;font:800 clamp(44px,7vw,88px)/.95 var(--font-ui);letter-spacing:-0.035em;text-transform:uppercase}
 #games .mx-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
 @media (max-width:1000px){#games .mx-modes{grid-template-columns:1fr}}
+#games .mx-modes.n4{grid-template-columns:repeat(2,minmax(0,1fr))}
+#games .mx-xc{fill:var(--acc)}
+#games .mx-xi{fill:var(--accfg)}
+#games .mx-xp{fill:none;stroke:var(--acc);stroke-width:3}
+@media (max-width:700px){#games .mx-modes.n4{grid-template-columns:1fr}}
 #games .mx-mode{appearance:none;display:flex;flex-direction:column;padding:0;margin:0;border:1px solid var(--line);border-radius:0;background:var(--sf);color:var(--fg);
   text-align:left;cursor:pointer;font-family:var(--font-ui);min-width:0}
 #games .mx-mode:hover{border-color:var(--fg)}
@@ -1710,7 +1715,7 @@ html.tut-cadd .mcell.today .cadd{opacity:1}
 <li><b>Lander</b>: fly a rocket from planet to planet and land softly. Coins buy upgrades, towers and bases.</li>
 <li><b>GeoBowl</b>: you get 8 countries one at a time and 8 world stats (life expectancy, chocolate eaten, Olympic medals and more). Put each country in the stat where you think it ranks highest; the lower your total rank, the better. Classic, Daily and Weekly rounds.</li>
 <li><b>Chess</b>: play a friend or the computer, with a choice of boards and piece sets.</li>
-<li><b>Metrica</b>: one game, three worlds. <b>Classic</b>: the cube runs on its own; jump at the right moment to clear spikes, pads and portals, and fly the ship in Liftoff. Includes practice mode and a level editor. <b>Platformer</b>: a precise platformer. Reach the goal, collect gems, and build your own levels in its editor. <b>Wave</b>: hold to fly the dart up and let go to dive, threading it between the spikes. Clearing every level in a world opens its portal in the Classic editor, so your levels can switch between cube, ship, wave and platformer. All three worlds share one set of skins.</li>
+<li><b>Metrica</b>: one game, four worlds. <b>Classic</b>: the cube runs on its own; jump at the right moment to clear spikes, pads and portals, and fly the ship in Liftoff. Includes practice mode and a cube level editor. <b>Platformer</b>: a precise platformer. Reach the goal, collect gems, and build your own levels in its editor. <b>Wave</b>: hold to fly the dart up and let go to dive, threading it between the spikes. <b>Mixed</b>: the editor for levels that switch between cube, ship, platformer and wave through portals. Clearing every level in a world unlocks its mode there. All the worlds share one set of skins.</li>
 </ul></div>
 
 <h3>Keyboard shortcuts</h3>
@@ -2133,6 +2138,7 @@ async function apiRaw(path,opts){
     const method=(opts&&opts.method)||'GET';
     const body=opts&&opts.body?JSON.parse(opts.body):null;
     if(path==='/api/data')return gsRun('rpcGetData');
+    if(path==='/api/resources')return gsRun('rpcGetResources');
     if(path==='/api/myres'&&method==='GET')return gsRun('rpcListMyRes');
     if(path==='/api/myres'&&method==='POST')return gsRun('rpcSaveRes',body);
     if(path==='/api/myres/resync')return gsRun('rpcResyncRes',body);
@@ -2641,7 +2647,7 @@ function renderAssignments(){
 let RES=null,resLoading=false;
 async function loadResources(force){
   if(resLoading||(RES&&MYRES&&!force))return;resLoading=true;
-  if(!RES)RES={courses:{}};
+  try{if(!RES||force)RES=(await api('/api/resources'))||{courses:{}};}catch(e){console.warn('resources failed',e);RES=RES||{courses:{}};}
   try{const m=await api('/api/myres');MYRES=(m&&m.resources)||[];}catch(e){console.warn('own resources failed',e);MYRES=MYRES||[];}
   resLoading=false;if(state.view==='resources')render();
 }
@@ -5032,11 +5038,13 @@ const GAMES=[
   {id:'lander',name:'Lander',labels:['Singleplayer']},
   {id:'geohunter',name:'GeoBowl',labels:['Singleplayer']},
   {id:'chess',name:'Chess',labels:['Multiplayer']},
-  /* Metrica: one tile for three worlds, Classic (geodash), Platformer (appel) and Wave (metrica-wave); each keeps its own saves */
-  {id:'metrica',name:'Metrica',labels:['Multiplayer'],modes:[['geodash','Classic','The cube runs on its own. Jump spikes, fly the ship and build levels that switch modes.'],['appel','Platformer','Reach the goal, collect gems and build your own levels.'],['metrica-wave','Wave','Hold to fly the dart up, let go to dive. Thread it between the spikes.']]},
+  /* Metrica: one tile for four worlds, Classic (geodash), Platformer (appel), Wave (metrica-wave) and Mixed
+     (metrica-mixed: the same file as Classic, opened as the Mixed editor, see GAME_FILE); each keeps its own saves */
+  {id:'metrica',name:'Metrica',labels:['Multiplayer'],modes:[['geodash','Classic','The cube runs on its own. Jump spikes, fly the ship and build your own levels.'],['appel','Platformer','Reach the goal, collect gems and build your own levels.'],['metrica-wave','Wave','Hold to fly the dart up, let go to dive. Thread it between the spikes.'],['metrica-mixed','Mixed','Build levels that switch between cube, ship, platformer and wave.']]},
   {id:'geodash',name:'Metrica: Classic',labels:['Multiplayer'],hide:true},
   {id:'appel',name:'Metrica: Platformer',labels:['Multiplayer'],hide:true},
-  {id:'metrica-wave',name:'Metrica: Wave',labels:['Multiplayer'],hide:true}];
+  {id:'metrica-wave',name:'Metrica: Wave',labels:['Multiplayer'],hide:true},
+  {id:'metrica-mixed',name:'Metrica: Mixed',labels:['Multiplayer'],hide:true}];
 /* picker sections, in order */
 /* Saxlan has four games: one section, no filter */
 const GAME_SECTIONS=[['Games','Games']];
@@ -5050,8 +5058,11 @@ chess:'UklGRlwZAABXRUJQVlA4IFAZAABwggCdASrAAcABPm02l0kkIqKhIVUJEIANiWlu4XYBG_Np6
 };
 const thumbSrc=id=>GAME_THUMB[id]?'data:image/webp;base64,'+GAME_THUMB[id].replace(/-/g,'+').replace(/_/g,'/'):'';
 const gameSrc={};
+/* a game id that opens another game's file: Mixed is the Classic file, told which world it is by window.MX_ENTRY */
+const GAME_FILE={'metrica-mixed':'geodash'};
 async function loadGame(id){
   if(gameSrc[id])return gameSrc[id];
+  if(GAME_FILE[id])return gameSrc[id]=await loadGame(GAME_FILE[id]);
   const r=await fetch('games/'+encodeURIComponent(id)+'.html');
   if(!r.ok)throw new Error('HTTP '+r.status);
   gameSrc[id]=await r.text();
@@ -5200,12 +5211,19 @@ MX_PV['metrica-wave']=`<span class="mx-pv w" aria-hidden="true"><svg viewBox="0 
     <g class="mx-wsc">${[0,1,2,3,4,5].map(i=>{const x=i*120;return `<path class="mx-wspk" d="M${x+40} 170l20 -24 20 24zM${x+100} 30l20 24 20 -24z"/>`;}).join('')}</g>
     <g clip-path="url(#mxwc)"><g class="mx-wsc"><polyline class="mx-wtr" points="${Array.from({length:13},(_,k)=>(k*60-60)+' '+(k%2?140:60)).join(' ')}"/></g></g>
     <g transform="translate(300 60)"><g class="mx-wy"><g class="mx-wr"><path class="mx-wdart" d="M14 0L-10 -10L-4 0L-10 10Z"/></g></g></g></svg></span>`;
+MX_PV['metrica-mixed']=`<span class="mx-pv x" aria-hidden="true"><svg viewBox="0 0 480 200" preserveAspectRatio="xMidYMid slice">
+    <rect class="mx-wband" x="-10" y="160" width="500" height="50"/>
+    <rect class="mx-xc" x="60" y="126" width="34" height="34"/><rect class="mx-xi" x="70" y="136" width="14" height="14"/>
+    <rect class="mx-xp" x="176" y="58" width="22" height="102"/><rect class="mx-xp" x="330" y="58" width="22" height="102"/>
+    <path class="mx-wspk" d="M120 160l14 -22 14 22z"/>
+    <polyline class="mx-wtr" points="198 136 238 96 278 136 318 96 330 108"/>
+    <rect class="mx-xc" x="392" y="126" width="34" height="34"/><path class="mx-xi" d="M403 136h3v10h-3zM412 136h3v10h-3z"/></svg></span>`;
 function metricaPick(gm){
   const g=document.getElementById('games');
   roomLeaveAll();
   g.innerHTML=`<div class="mx" role="region" aria-label="${esc(gm.name)}"><header class="mx-top"><button class="mx-back" data-mx-back aria-label="Back" title="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
     <div class="mx-brand" data-mx-back>${esc(gm.name)}</div></header>
-    <div class="mx-main"><div class="mx-wrap"><h1 class="mx-h1">${esc(gm.name)}</h1><div class="mx-modes">${gm.modes.map(([id,n,d],i)=>`<button class="mx-mode" data-game="${id}" aria-label="${esc(n)}">${MX_PV[id]||''}
+    <div class="mx-main"><div class="mx-wrap"><h1 class="mx-h1">${esc(gm.name)}</h1><div class="mx-modes n${gm.modes.length}">${gm.modes.map(([id,n,d],i)=>`<button class="mx-mode" data-game="${id}" aria-label="${esc(n)}">${MX_PV[id]||''}
       <span class="mx-info"><span class="mx-lbl">World 0${i+1}</span><span class="mx-name">${esc(n)}</span><span class="mx-d">${esc(d)}</span>
       <span class="mx-go"><svg viewBox="0 0 10 10"><path d="M1 0l9 5-9 5z"/></svg>Play</span></span></button>`).join('')}</div></div></div></div>`;
   g.hidden=false;
@@ -5275,6 +5293,7 @@ function playGame(id){
     /* scrolling inside a game never carries on into the planner or the frame around it */
     const OVS='<style>html,body{overscroll-behavior:none}</style>';
     src=/<head[^>]*>/i.test(src)?src.replace(/<head[^>]*>/i,m=>m+OVS):OVS+src;
+    if(GAME_FILE[id])src=src.replace(/<head[^>]*>/i,m=>m+'<script>window.MX_ENTRY='+JSON.stringify(id)+';</'+'script>');
     const test=isGameAdmin()&&gameTest();
     if(test){const T='<script>window.SX_TEST=true;</'+'script>';src=src.replace('var TEST_MODE = false;','var TEST_MODE = true;');src=/<head[^>]*>/i.test(src)?src.replace(/<head[^>]*>/i,m=>m+T):T+src;}
     f.srcdoc=src;}).catch(e=>{console.warn('game failed',e);const l=g.querySelector('.gm-lname');if(l)l.textContent='Couldn\u2019t load the game';});

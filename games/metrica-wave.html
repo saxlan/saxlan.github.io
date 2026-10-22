@@ -443,7 +443,7 @@ var framed = false; try { framed = !!(window.parent && window.parent !== window)
 /* testing mode: the planner sets window.SX_TEST for admins. Everything is open and nothing is saved. */
 var TEST = !!window.SX_TEST;
 function blankLv() { return { best: 0, time: 0, att: 0, clr: 0 }; }
-var S = { v: 1, open: 1, lv: [blankLv(), blankLv(), blankLv(), blankLv(), blankLv()], end: { best: 0, time: 0, runs: 0 }, dist: 0, att: 0, muted: false, theme: 'auto', cube: { c1: 0, c2: 2, p: 0 }, cubeT: 0 };
+var S = { v: 1, open: 1, lv: [blankLv(), blankLv(), blankLv(), blankLv(), blankLv()], end: { best: 0, time: 0, runs: 0 }, dist: 0, att: 0, muted: false, theme: 'auto', cube: { c1: 0, c2: 2, p: 0 }, cubeT: 0, mxShown: false };
 /* the character (shared with the other worlds, MX): the Classic save opens colours and patterns, and the newest pick wins */
 var GD = null;
 function look() { return MX.look(S.cube, GD, TEST); }
@@ -477,6 +477,7 @@ var Store = {
       }
       if (d.end && typeof d.end === 'object') S.end = { best: num(d.end.best, 0), time: num(d.end.time, 0), runs: Math.floor(num(d.end.runs, 0)) };
       S.dist = num(d.dist, 0); S.att = Math.floor(num(d.att, 0));
+      if (d.mxShown === true) S.mxShown = true;
       if (typeof d.muted === 'boolean') S.muted = d.muted;
       if (d.theme === 'light' || d.theme === 'dark' || d.theme === 'auto') S.theme = d.theme;
       var cc = MX.cleanCube(d.cube); if (cc) S.cube = cc;
@@ -484,6 +485,7 @@ var Store = {
     }
     Store.loaded = true;
     loadOthers();
+    setTimeout(function () { if (UI.screen === 'menu') UI.unlockPopup(); }, 0);
     Theme.apply(); UI.refreshBar();
     if (UI.screen === 'menu') { UI.sel = UI.defaultSel(); UI.menu(); }
   },
@@ -885,7 +887,7 @@ var Game = {
     var unlocked = null;
     if (S.open < Game.idx + 2) { S.open = Game.idx + 2; unlocked = Game.idx + 1 < 5 ? 'Level ' + pad2(Game.idx + 2) + ' unlocked' : 'Endless unlocked'; }
     S.dist += Game.target() * MPU;
-    if (!wasDone && waveDone() && !TEST) unlocked = (unlocked ? unlocked + ', ' : '') + 'Wave portal unlocked';
+    if (!wasDone && waveDone() && !TEST && !S.mxShown) Game.popup = true;
     Game.info = { time: Game.t, att: Game.sessAtt, unlocked: unlocked, first: first, fastest: fastest };
     Store.save(true); Snd.done(); UI.hud();
   }
@@ -1211,7 +1213,15 @@ var UI = {
     ]);
   },
   resume: function () { UI.closeModal(); Game.paused = false; Loop.last = 0; },
+  /* once per account: finishing every Wave level opens the wave portal in the Mixed editor */
+  unlockPopup: function (then) {
+    if (TEST || S.mxShown || !waveDone() || UI.modal) { if (then) then(); return false; }
+    S.mxShown = true; Store.save(true);
+    UI.card('Wave unlocked', 'Wave cleared', null, ICON.open + '<span>The wave portal is open in the Mixed editor</span>', [['Continue', '', function () { UI.closeModal(); if (then) then(); }]]);
+    return true;
+  },
   complete: function () {
+    if (Game.popup) { Game.popup = false; if (UI.unlockPopup(UI.complete)) return; }
     var i = Game.idx, inf = Game.info || { time: Game.t, att: Game.sessAtt };
     var stats = [['Time', fmtTime1(inf.time)], ['Attempts', inf.att], ['Distance', LEVELS[i].m + ' m']];
     var acts = [];

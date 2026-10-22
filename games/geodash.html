@@ -207,12 +207,24 @@
   .props .pn { font: 800 15px/1 var(--font); font-variant-numeric: tabular-nums; min-width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--accent); border-radius: 50%; color: var(--accent); }
   .props .lbl { margin: 0 6px 0 2px; white-space: nowrap; }
   .props .inp { width: 140px; height: 38px; font-size: 14px; }
-  .wrow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--edge); border-bottom: 1px solid var(--edge); margin-top: -8px; }
-  .wrow > div { padding: 12px 0 12px 16px; border-left: 1px solid var(--edge); min-width: 0; color: var(--fg3); }
+  /* Mixed: the four modes, unlocked or locked */
+  .wrow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--edge); border-bottom: 1px solid var(--edge); margin-top: -8px; }
+  .wrow > div, .mstrip > div { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .wrow > div { padding: 12px 0 12px 14px; border-left: 1px solid var(--edge); }
   .wrow > div:first-child { border-left: 0; padding-left: 0; }
-  .wrow > div.on { color: var(--fg); }
-  .wrow b { display: flex; align-items: center; gap: 6px; font: 700 15px/1.2 var(--font); margin-top: 5px; }
-  .wrow b svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; flex: none; }
+  .wrow canvas, .mstrip canvas { width: 30px; height: 30px; flex: none; }
+  .wrow b, .mstrip b { display: block; font: 700 14px/1.2 var(--font); white-space: nowrap; }
+  .wrow .lbl, .mstrip .lbl { display: flex; align-items: center; gap: 4px; font-size: 10.5px; white-space: nowrap; margin-top: 3px; }
+  .wrow .lbl { white-space: normal; }
+  .wrow .lbl svg, .mstrip .lbl svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; flex: none; }
+  .wrow .on .lbl, .mstrip .on .lbl { color: var(--good); }
+  .wrow .off, .mstrip .off { color: var(--fg3); }
+  .wrow .off canvas, .mstrip .off canvas { opacity: 0.3; }
+  .mstrip { display: flex; gap: 4px; flex-wrap: wrap; }
+  .mstrip > div { padding: 5px 14px 5px 8px; background: var(--panel2); }
+  .mstrip > div.on { background: var(--panel3); box-shadow: inset 0 0 0 1px var(--edge); }
+  .card .note { color: var(--accent); margin: -6px 0 20px; display: flex; align-items: center; gap: 8px; font: 600 12.5px/1.35 var(--font); letter-spacing: 0.04em; text-transform: uppercase; }
+  .card .note svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; flex: none; }
   #mpad { position: absolute; right: 20px; bottom: 20px; z-index: 5; display: flex; gap: 6px; }
   #mpad .tb { width: 64px; height: 64px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--edge); }
   #mpad .tb.dn { background: var(--hover); }
@@ -489,6 +501,7 @@ var MX = (function () {
 /* MX:END */
 
 ICON.sel = '<svg viewBox="0 0 24 24"><path d="M4 4h4M4 4v4M20 4h-4M20 4v4M4 20h4M4 20v-4M20 20h-4M20 20v-4"/></svg>';
+ICON.open = '<svg viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 6.8-1.2"/></svg>';
 ICON.grid = '<svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM9.33 4v16M14.67 4v16M4 9.33h16M4 14.67h16"/></svg>';
 var fontReady = false;
 (function loadFont() {
@@ -506,13 +519,18 @@ var FONT = "'Inter', ui-sans-serif, 'Helvetica Neue', Arial, sans-serif";
 /* ---------------- 3. store ---------------- */
 /* Save layout (v2):
    { v: 2, prog: { levelId: { best, prac, att, jumps, done, time } }, user: [ { id, name, data, n, ct, ut } ],
-     scenes: [ { name, o: [[t, dx, dy, r]] } ], cube: { c1, c2, p }, cubeT, muted, theme: 'auto'|'light'|'dark', att, jumps, nid }
+     scenes: [ { name, o: [[t, dx, dy, r]] } ], cube: { c1, c2, p }, cubeT, mxShown, muted, theme: 'auto'|'light'|'dark', att, jumps, nid }
+   user[i].w is 'mixed' for Mixed levels. mxShown: the Classic world's unlock popup was shown. 
    user[i].data is a serialized level (section 5). The parent caps a save at 150000 characters. */
 var GAME = 'geodash', LSKEY = 'geodash.save', SAVE_CAP = 150000;
+/* this file is two worlds: Classic (cube only) and Mixed (the editor whose levels switch modes through portals).
+   The planner opens Mixed as its own tile and sets window.MX_ENTRY; on its own, #mixed in the address does the same.
+   Both keep their levels in this one save; a level made in Mixed (or holding a mode portal) belongs to Mixed. */
+var MIXED = (function () { var e = window.MX_ENTRY; try { if (!e && /mixed/.test(location.hash + location.search)) e = 'metrica-mixed'; } catch (x) {} return e === 'metrica-mixed'; })();
 var framed = false; try { framed = !!(window.parent && window.parent !== window); } catch (e) { framed = true; }
 /* testing mode: the planner sets window.SX_TEST for admins. Everything is open, progress shows as 100%, nothing is saved. */
 var TEST = !!window.SX_TEST;
-var S = { v: 2, prog: {}, user: [], scenes: [], muted: false, theme: 'auto', att: 0, jumps: 0, nid: 1, cube: { c1: 0, c2: 2, p: 0 }, cubeT: 0 };
+var S = { v: 2, prog: {}, user: [], scenes: [], mxShown: false, muted: false, theme: 'auto', att: 0, jumps: 0, nid: 1, cube: { c1: 0, c2: 2, p: 0 }, cubeT: 0 };
 /* the other two worlds, read once at load: which worlds are cleared (portals) and the newest character pick */
 var Worlds = { ap: null, wv: null, got: 0, open: { classic: false, plat: false, wave: false },
   refresh: function () { Worlds.open = MX.worlds(S, Worlds.ap, Worlds.wv, TEST); },
@@ -554,11 +572,13 @@ var Store = {
       if (typeof d.muted === 'boolean') S.muted = d.muted;
       var cc = MX.cleanCube(d.cube); if (cc) S.cube = cc;
       if (typeof d.cubeT === 'number' && isFinite(d.cubeT)) S.cubeT = d.cubeT;
+      if (d.mxShown === true) S.mxShown = true;
       if (d.theme === 'light' || d.theme === 'dark' || d.theme === 'auto') S.theme = d.theme;
       ['att', 'jumps', 'nid'].forEach(function (k) { if (typeof d[k] === 'number' && isFinite(d[k])) S[k] = d[k]; });
     }
     Store.loaded = true; Worlds.refresh();
     Theme.apply(); UI.refreshBar(); if (UI.screen === 'menu') UI.menu();
+    UI.unlockPopup();
     Worlds.load();
   },
   load: function () {
@@ -687,14 +707,24 @@ var TRIG = {
   fin:   { name: 'Fade in', d: [0.25, 0.5, 1, 2], a: null, dd: 0.5 },
   move:  { name: 'Move', d: [0.2, 0.4, 0.8, 1.5], a: null, dd: 0.4 }
 };
-/* editor palette, in groups; the portal for each mode opens when its world is cleared */
-var DOCK = [
+/* editor palette, in groups. Classic gets what the cube can use; Mixed gets everything, and its mode portal for each
+   mode opens when that mode's world is cleared */
+var DOCK = MIXED ? [
   ['Blocks', ['block', 'slab', 'slope', 'ledge', 'ice', 'crumble', 'bounce', 'conv', 'door']],
   ['Hazards', ['spike', 'twin', 'mini', 'lava']],
   ['Items', ['pad', 'pad2', 'padg', 'orb', 'orb2', 'orbg', 'key', 'check']],
-  ['Portals', ['flip', 'norm', 'mcube', 'mship', 'mwave', 'mplat']],
+  ['Portals', ['flip', 'norm', 'mcube', 'mship', 'mplat', 'mwave']],
+  ['Camera', ['shake', 'zin', 'zout', 'fout', 'fin']]
+] : [
+  ['Blocks', ['block', 'slab', 'slope', 'ledge', 'crumble', 'bounce', 'conv', 'door']],
+  ['Hazards', ['spike', 'twin', 'mini', 'lava']],
+  ['Items', ['pad', 'pad2', 'padg', 'orb', 'orb2', 'orbg', 'key', 'check']],
+  ['Portals', ['flip', 'norm']],
   ['Camera', ['shake', 'zin', 'zout', 'fout', 'fin']]
 ];
+/* the four modes as the Mixed editor shows them, each with the world that opens it */
+var MODES_ROW = [['mcube', 'Cube', 'classic'], ['mship', 'Ship', 'classic'], ['mplat', 'Platformer', 'plat'], ['mwave', 'Wave', 'wave']];
+function isMixedRec(u) { return u.w === 'mixed' || /"m(cube|ship|wave|plat)"/.test(u.data || ''); }
 var TYPE_NAMES = { block: 'Block', slab: 'Slab', slope: 'Slope', ledge: 'One way', ice: 'Ice', crumble: 'Crumble', bounce: 'Bounce', conv: 'Conveyor', door: 'Door',
   spike: 'Spike', twin: 'Small spikes', mini: 'Mini spike', lava: 'Lava', pad: 'Pad', pad2: 'Low pad', padg: 'Gravity pad', orb: 'Orb', orb2: 'Low orb', orbg: 'Gravity orb',
   key: 'Key', check: 'Checkpoint', flip: 'Gravity up', norm: 'Gravity down', mcube: 'Cube portal', mship: 'Ship portal', mwave: 'Wave portal', mplat: 'Platformer portal',
@@ -1609,8 +1639,8 @@ var Game = {
     var before = Unlock.count(), wasOpen = Worlds.open.classic;
     if (Game.practice) p.prac = 100; else { p.best = 100; p.done = (p.done | 0) + 1; }
     Worlds.refresh();
-    if (!wasOpen && Worlds.open.classic && !TEST) setTimeout(function () { UI.toast('Cube and ship portals unlocked'); }, 700);
-    else if (Unlock.count() > before) setTimeout(function () { UI.toast('New colours'); }, 700);
+    if (!wasOpen && Worlds.open.classic && !TEST && !MIXED && !S.mxShown) Game.popup = true;
+    if (Unlock.count() > before) setTimeout(function () { UI.toast('New colours'); }, 700);
     Game.lastRun = { trail: Game.trail.slice(), x: Game.s.x, y: Game.s.y };
     Store.save(); UI.hud();
     setTimeout(function () { if (Game.on && Game.phase === 'done') UI.complete(); }, 650);
@@ -2010,7 +2040,7 @@ var Editor = {
     var before = rec ? rec.data.length : 0;
     if (Store.size() - before + data.length + 120 > SAVE_CAP) { UI.toast('Save is full'); return false; }
     if (!rec) { rec = { id: Editor.rec.id, ct: Date.now() }; S.user.push(rec); }
-    rec.name = def.name; rec.data = data; rec.n = def.objects.length; rec.ut = Date.now();
+    rec.name = def.name; rec.data = data; rec.n = def.objects.length; rec.ut = Date.now(); if (MIXED) rec.w = 'mixed';
     delete Editor.rec.isNew;
     Editor.rec = rec; Editor.dirty = false; Store.save(true); UI.toast('Saved'); UI.refreshBar();
     return true;
@@ -2064,8 +2094,9 @@ var Icons = {
 
 
 var UI = {
-  screen: 'menu', tab: 'main', sel: 0, selUser: null, modal: null,
+  screen: 'menu', tab: MIXED ? 'user' : 'main', sel: 0, selUser: null, modal: null,
   init: function () {
+    if (MIXED) { $('brand').textContent = 'Metrica: Mixed'; DOC.title = 'Metrica: Mixed'; }
     $('brand').addEventListener('click', function () {
       if (framed) { try { parent.postMessage({ type: 'games-menu' }, '*'); } catch (e) {} }
       else UI.toMenu();
@@ -2126,7 +2157,7 @@ var UI = {
       });
     } else rows = UI.cubeOptions();
     var tb = function (k, label) { return '<button data-tab="' + k + '" class="' + (tab === k ? 'on' : '') + '">' + label + '</button>'; };
-    m.innerHTML = '<div class="mwrap"><div class="mcol"><div class="seg">' + tb('main', 'Levels') + tb('user', 'Created') + tb('cube', 'Skin') + '</div>' +
+    m.innerHTML = '<div class="mwrap"><div class="mcol"><div class="seg">' + (MIXED ? tb('user', 'Levels') : tb('main', 'Levels') + tb('user', 'Created')) + tb('cube', 'Skin') + '</div>' +
       (tab === 'cube' ? rows : '<div class="list">' + rows + '</div>') + (tab === 'user' ? '<button class="btn ghost lnew" data-a="new">New level</button>' : '') + '</div>' +
       '<div class="detail" id="det"></div></div>';
     m.querySelectorAll('[data-tab]').forEach(function (b) { b.addEventListener('click', function () { UI.tab = b.getAttribute('data-tab'); UI.menu(); }); });
@@ -2167,7 +2198,7 @@ var UI = {
       '<div><span class="lbl">Pattern</span><b>' + PATTERNS[c.p][1] + '</b></div><div><span class="lbl">Unlocked</span><b>' + Unlock.count() + ' / ' + (CUBE_COLORS.length + PATTERNS.length) + '</b></div></div></div>';
     Preview.cube();
   },
-  userList: function () { return S.user.slice().sort(function (a, b) { return (b.ut || 0) - (a.ut || 0); }); },
+  userList: function () { return S.user.filter(function (u) { return isMixedRec(u) === MIXED; }).sort(function (a, b) { return (b.ut || 0) - (a.ut || 0); }); },
   userRec: function (id) { for (var i = 0; i < S.user.length; i++) if (S.user[i].id === id) return S.user[i]; return null; },
   current: function () {
     if (UI.tab === 'main') { var L = LEVELS[UI.sel] || LEVELS[0]; return { def: L, id: L.id, src: 'main', index: UI.sel }; }
@@ -2177,18 +2208,26 @@ var UI = {
     d.name = u.name || d.name;
     return { def: d, id: u.id, src: 'user', rec: u };
   },
-  /* which portals the editor has open, one mark per world */
-  worldsRow: function () {
-    var h = '<div class="wrow">';
-    [['classic', 'Cube and ship'], ['plat', 'Platformer'], ['wave', 'Wave']].forEach(function (w) {
-      var open = TEST || Worlds.open[w[0]];
-      h += '<div class="' + (open ? 'on' : '') + '"><span class="lbl">' + WORLD_NAMES[w[0]] + '</span><b>' + (open ? '' : ICON.lock) + esc(w[1]) + '</b></div>';
+  /* the four modes in the Mixed editor: open, or locked until their world is finished */
+  modesRow: function (cls) {
+    var h = '<div class="' + (cls || 'wrow') + '">';
+    MODES_ROW.forEach(function (m) {
+      var open = Unlock.portal(m[0]);
+      h += '<div class="' + (open ? 'on' : 'off') + '" title="' + esc(TYPE_NAMES[m[0]]) + '"><canvas data-ico="' + m[0] + '"></canvas><span><b>' + m[1] + '</b><span class="lbl">' +
+        (open ? 'Unlocked' : ICON.lock + 'Finish ' + WORLD_NAMES[m[2]]) + '</span></span></div>';
     });
     return h + '</div>';
   },
+  /* once per account: finishing every Classic level opens the cube and ship portals in the Mixed editor */
+  unlockPopup: function (then) {
+    if (MIXED || TEST || S.mxShown || !Worlds.open.classic || UI.modal) { if (then) then(); return false; }
+    S.mxShown = true; Store.save(true);
+    UI.card('Ship unlocked', 'Classic cleared', null, [['Continue', '', function () { UI.closeModal(); if (then) then(); }]], 'Cube and ship portals are open in the Mixed editor');
+    return true;
+  },
   detail: function () {
     var det = $('det'), cur = UI.current();
-    if (!cur) { det.innerHTML = '<div class="pvwrap"><canvas id="pv"></canvas></div><div class="dbody"><div class="dname">Create</div><div class="dhead"><span class="lbl">Portals</span></div>' + UI.worldsRow() + '<div class="dacts"><button class="btn" data-a="new">New level</button></div></div>'; det.querySelector('[data-a=new]').addEventListener('click', UI.newLevel); Preview.set(null, null); return; }
+    if (!cur) { det.innerHTML = '<div class="pvwrap"><canvas id="pv"></canvas></div><div class="dbody"><div class="dname">Create</div>' + (MIXED ? '<div class="dhead"><span class="lbl">Modes</span></div>' + UI.modesRow() : '') + '<div class="dacts"><button class="btn" data-a="new">New level</button></div></div>'; det.querySelector('[data-a=new]').addEventListener('click', UI.newLevel); Preview.set(null, null); return; }
     var p = shown(cur.id), d = cur.def, main = cur.src === 'main', open = !main || Unlock.level(cur.index);
     var pips = '';
     if (main) { pips = '<span class="pips">'; for (var i = 1; i <= 5; i++) pips += '<i class="' + (i <= d.difficulty ? 'f' : '') + '"></i>'; pips += '</span>'; }
@@ -2199,7 +2238,7 @@ var UI = {
       '<div class="stats"><div><span class="lbl">Length</span><b>' + len + '</b></div><div><span class="lbl">Attempts</span><b>' + (p.att | 0) + '</b></div><div><span class="lbl">Jumps</span><b>' + (p.jumps | 0) + '</b></div><div><span class="lbl">Objects</span><b>' + d.objects.length + '</b></div></div>' +
       '<div class="bars"><div><div class="lbl"><span>Normal</span><b>' + (p.best | 0) + '%</b></div><div class="meter"><i style="width:' + (p.best | 0) + '%"></i></div></div>' +
       '<div><div class="lbl"><span>Practice</span><b>' + (p.prac | 0) + '%</b></div><div class="meter p"><i style="width:' + (p.prac | 0) + '%"></i></div></div></div>' +
-      (main ? '' : '<div class="dhead"><span class="lbl">Portals</span></div>' + UI.worldsRow()) +
+      (MIXED ? '<div class="dhead"><span class="lbl">Modes</span></div>' + UI.modesRow() : '') +
       '<div class="dacts"><button class="btn" data-a="play"' + (open ? '' : ' disabled') + '>' + ICON.play + 'Play</button><button class="btn ghost" data-a="prac"' + (open ? '' : ' disabled') + '>Practice</button>' +
       (main ? '' : '<div class="sp"></div><button class="btn ghost" data-a="edit">Edit</button><button class="btn danger" data-a="del">Delete</button>') + '</div></div>';
     det.querySelector('[data-a=play]').addEventListener('click', function () { UI.play(cur, {}); });
@@ -2252,6 +2291,7 @@ var UI = {
   resume: function () { UI.closeModal(); Game.paused = false; Loop.last = 0; if (Game.on && Game.phase === 'play') Audio.start(Game.entry.def.song, Game.practice); },
   leavePlay: function () { if (Game.entry && Game.entry.src === 'test') Editor.backFromTest(); else UI.toMenu(); },
   complete: function () {
+    if (Game.popup) { Game.popup = false; if (UI.unlockPopup(UI.complete)) return; }
     var e = Game.entry, test = e.src === 'test', p = Game.prog();
     var stats = [['Attempts', Game.practice ? Game.sessAtt : p.att | 0], ['Jumps', Game.s.jumps], ['Time', fmtTime(Game.s.tick * PH.DT)]];
     var acts = [];
@@ -2261,8 +2301,8 @@ var UI = {
     acts.push([test ? 'Editor' : 'Levels', 'ghost', function () { UI.closeModal(); UI.leavePlay(); }]);
     UI.card(Game.practice ? 'Practice complete' : 'Complete', e.def.name, stats, acts);
   },
-  card: function (title, sub, stats, acts) {
-    var o = $('ovl'), h = '<div class="card"><div class="lbl">' + esc(sub || '') + '</div><div class="big">' + esc(title) + '</div>';
+  card: function (title, sub, stats, acts, note) {
+    var o = $('ovl'), h = '<div class="card"><div class="lbl">' + esc(sub || '') + '</div><div class="big">' + esc(title) + '</div>' + (note ? '<div class="note">' + ICON.open + '<span>' + esc(note) + '</span></div>' : '');
     if (stats) { h += '<div class="stats">'; stats.forEach(function (s) { h += '<div><span class="lbl">' + esc(s[0]) + '</span><b>' + esc(s[1]) + '</b></div>'; }); h += '</div>'; }
     h += '<div class="col">';
     acts.forEach(function (a, i) { h += '<button class="btn wide ' + a[1] + '" data-k="' + i + '">' + esc(a[0]) + '</button>'; });
@@ -2304,7 +2344,7 @@ var UI = {
   dock: function () {
     if (UI.screen !== 'edit') return;
     var d = $('dock'); d.hidden = false;
-    var h = '<div class="drow">';
+    var h = (MIXED ? UI.modesRow('mstrip') : '') + '<div class="drow">';
     DOCK.forEach(function (grp) {
       h += '<div class="tg" title="' + grp[0] + '">';
       grp[1].forEach(function (t) {

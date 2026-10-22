@@ -783,7 +783,45 @@ const resAll_ = () => { const a = all_('res'), out = []; Object.keys(a).forEach(
 // your resources: the ones you wrote, the ones you contribute to, and your downloaded copies (shared.js decides)
 const myRes_ = me => resAll_().filter(r => SX.mine(r, me));
 const ownedCount_ = (all, me) => all.filter(r => r.owner === me).length;
-function libSource_(id) { const v = get_('res', id); return v ? JSON.parse(v) : null; }
+// ---------- built-in resources: the shared Latin and Spanish sets (backend/builtin.json, pushed as builtin.html) ----------
+// each set goes to every class whose canonical key matches its pattern (Latin 1 to AP Latin, Spanish 1 to AP Spanish)
+let BUILTIN_ = null;
+function builtIn_() {
+  if (!BUILTIN_) { try { BUILTIN_ = JSON.parse(fileText_('builtin')); } catch (e) { BUILTIN_ = { sets: [] }; } }
+  return BUILTIN_;
+}
+function builtInItems_(name) {
+  const key = SX.courseKey(name || '');
+  return key ? builtIn_().sets.filter(s => new RegExp(s.match).test(key)).reduce((a, s) => a.concat(s.items), []) : [];
+}
+function rpcGetResources(k) {
+  const me = auth_(k), out = { courses: {} };
+  (loadUser_(me).settings.courses || []).forEach(c => {
+    const items = c && c.id ? builtInItems_(c.name) : [];
+    if (items.length) out.courses[c.id] = { items: items };
+  });
+  return out;
+}
+// the sets as library entries, once under each registered class they match (shared.js builds the entries)
+function builtInLib_() {
+  const cls = all_('cls'), seen = {}, courses = [], res = { courses: {} };
+  Object.keys(cls).forEach(n => { try { JSON.parse(cls[n]).forEach(name => {
+    const key = SX.courseKey(name);
+    if (!key || seen[key]) return;
+    seen[key] = 1;
+    const items = builtInItems_(name);
+    if (!items.length) return;
+    const id = key.replace(/[^a-z0-9]+/g, '-');
+    courses.push({ id: id, name: name });
+    res.courses[id] = { items: items.map(it => Object.assign({}, it, { public: true })) };
+  }); } catch (e) {} });
+  return SX.builtInLibrary(res, courses, PROPS.getProperty('owner') || 'Saxlan');
+}
+function libSource_(id) {
+  const v = get_('res', id);
+  if (v) return JSON.parse(v);
+  return /^b-/.test(id) ? SX.builtInById(builtInLib_(), id) : null;
+}
 function rpcListMyRes(k) { const me = auth_(k); return { resources: myRes_(me) }; }
 function savePdf_(me, p) {
   const b64 = typeof p.b64 === 'string' ? p.b64.replace(/\s+/g, '') : '';
@@ -861,7 +899,7 @@ function rpcGetLibrary(k) {
   const me = auth_(k), res = resAll_();
   /* open to everyone; until two of your own are published, downloads have a cooldown (shared.js) */
   const cls = all_('cls'), lists = Object.keys(cls).map(n => { try { return JSON.parse(cls[n]); } catch (e) { return []; } });
-  return Object.assign(SX.library(lists, res), { wait: isOwner_(me) ? 0 : SX.libWait(res, me, Date.now()) });
+  return Object.assign(SX.library(lists, res.concat(builtInLib_())), { wait: isOwner_(me) ? 0 : SX.libWait(res, me, Date.now()) });
 }
 function rpcImportRes(k, o) {
   const me = auth_(k), id = String(o && o.id || ''), course = String(o && o.course || '');
@@ -998,7 +1036,7 @@ const RPC_ = {
   rpcSaveNote: rpcSaveNote, rpcDeleteNote: rpcDeleteNote, rpcSaveEvent: rpcSaveEvent, rpcDeleteEvent: rpcDeleteEvent,
   rpcImportIcal: rpcImportIcal,
   rpcListMyRes: rpcListMyRes, rpcSaveRes: rpcSaveRes, rpcDeleteRes: rpcDeleteRes, rpcResyncRes: rpcResyncRes, rpcGetPdf: rpcGetPdf,
-  rpcGetLibrary: rpcGetLibrary, rpcImportRes: rpcImportRes,
+  rpcGetLibrary: rpcGetLibrary, rpcImportRes: rpcImportRes, rpcGetResources: rpcGetResources,
   rpcRoles: rpcRoles, rpcModerate: rpcModerate, rpcSocial: rpcSocial, rpcSuggest: rpcSuggest,
   rpcLoadGame: rpcLoadGame, rpcSaveGame: rpcSaveGame, rpcLoadGuestGame: rpcLoadGuestGame, rpcSaveGuestGame: rpcSaveGuestGame,
   rpcRedeemGuest: rpcRedeemGuest, rpcRoom: rpcRoom

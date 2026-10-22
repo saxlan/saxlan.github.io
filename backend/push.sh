@@ -22,9 +22,11 @@ const code=files.map(f=>fs.readFileSync("src/"+f,"utf8")).join("\n");
 const banned=/\b(GmailApp|MailApp|DriveApp|DocumentApp|SlidesApp|FormApp|CalendarApp|ContactsApp|GroupsApp|ScriptApp|Session\.get(Active|Effective)User|Session\.getTemporaryActiveUserKey|AdminDirectory|YouTube|BigQuery|Drive\.|Gmail\.)\b/g;
 const hits=[...new Set(code.match(banned)||[])];
 if(hits.length)bad.push("uses "+hits.join(", "));
-const extra=fs.readdirSync("src").filter(f=>!/^(Code\.gs|shared\.js|appsscript\.json|dict_[a-z]\.html)$/.test(f));
+const extra=fs.readdirSync("src").filter(f=>!/^(Code\.gs|shared\.js|appsscript\.json|dict_[a-z]\.html|builtin\.html)$/.test(f));
 if(extra.length)bad.push("unexpected files in src: "+extra.join(", "));
 if(bad.length){console.error("REFUSING TO PUSH (would trigger the Google permission screen or ship something unexpected): "+bad.join("; "));process.exit(1);}'
+# the shared Latin and Spanish resources (written by the planner's build_resources.py), base64 like the dictionary
+base64 -i builtin.json | tr -d '\n' > src/builtin.html
 # the typo-check dictionary, one file per first letter, base64 so HtmlService can't alter it (Code.gs hasWord_ reads them)
 for l in a b c d e f g h i j k l m n o p q r s t u v w x y z; do
   grep "^$l" dict.txt | base64 | tr -d '\n' > "src/dict_$l.html"
