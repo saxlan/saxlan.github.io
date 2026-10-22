@@ -1182,7 +1182,7 @@ html.home-on body::before{opacity:1}
 #games .gm-tile{appearance:none;cursor:pointer;display:flex;flex-direction:column;padding:0;border-radius:0;background:#232322;color:#f2f0ea;
   border:1px solid rgba(242,240,234,.32);overflow:hidden;transition:border-color .15s,background .15s}
 #games .gm-tile{aspect-ratio:1}
-/* Metrica title screen: the two modes in the games' own look (Inter, paper and ink, blue accent, square corners) */
+/* Metrica title screen: the three worlds in the games' own look (Inter, paper and ink, blue accent, square corners) */
 #games .mx{--bg:#f2f0ea;--sf:#fbfaf6;--box:#e6e3da;--box2:#dbd7cc;--fg:#171717;--fg2:#6e6c64;--line:rgba(110,104,88,.28);--grid:rgba(110,104,88,.11);
   --hatch:rgba(23,23,23,.07);--gnd:#e2ddd1;--acc:#2b3fd3;--acc2:#2234b8;--accfg:#fff;
   flex:1;min-height:0;display:flex;flex-direction:column;background:var(--bg);color:var(--fg);font-family:var(--font-ui);-webkit-font-smoothing:antialiased}
@@ -1710,7 +1710,7 @@ html.tut-cadd .mcell.today .cadd{opacity:1}
 <li><b>Lander</b>: fly a rocket from planet to planet and land softly. Coins buy upgrades, towers and bases.</li>
 <li><b>GeoBowl</b>: you get 8 countries one at a time and 8 world stats (life expectancy, chocolate eaten, Olympic medals and more). Put each country in the stat where you think it ranks highest; the lower your total rank, the better. Classic, Daily and Weekly rounds.</li>
 <li><b>Chess</b>: play a friend or the computer, with a choice of boards and piece sets.</li>
-<li><b>Metrica</b>: one game, three modes. <b>Classic</b>: the cube runs on its own; jump at the right moment to clear spikes, pads and portals. Includes practice mode and a level editor. <b>Platformer</b>: a precise platformer. Reach the goal, collect gems, and build your own levels in the editor. <b>Wave</b>: hold to fly the dart up and let go to dive, threading it between the spikes.</li>
+<li><b>Metrica</b>: one game, three worlds. <b>Classic</b>: the cube runs on its own; jump at the right moment to clear spikes, pads and portals, and fly the ship in Liftoff. Includes practice mode and a level editor. <b>Platformer</b>: a precise platformer. Reach the goal, collect gems, and build your own levels in its editor. <b>Wave</b>: hold to fly the dart up and let go to dive, threading it between the spikes. Clearing every level in a world opens its portal in the Classic editor, so your levels can switch between cube, ship, wave and platformer. All three worlds share one set of skins.</li>
 </ul></div>
 
 <h3>Keyboard shortcuts</h3>
@@ -5032,8 +5032,8 @@ const GAMES=[
   {id:'lander',name:'Lander',labels:['Singleplayer']},
   {id:'geohunter',name:'GeoBowl',labels:['Singleplayer']},
   {id:'chess',name:'Chess',labels:['Multiplayer']},
-  /* Metrica: one tile for three games, Classic (geodash), Platformer (appel) and Wave (metrica-wave); each keeps its own saves */
-  {id:'metrica',name:'Metrica',labels:['Multiplayer'],modes:[['geodash','Classic','The cube runs on its own. Jump over spikes, pads and portals.'],['appel','Platformer','Reach the goal, collect gems and build your own levels.'],['metrica-wave','Wave','Hold to fly the dart up, let go to dive. Thread it between the spikes.']]},
+  /* Metrica: one tile for three worlds, Classic (geodash), Platformer (appel) and Wave (metrica-wave); each keeps its own saves */
+  {id:'metrica',name:'Metrica',labels:['Multiplayer'],modes:[['geodash','Classic','The cube runs on its own. Jump spikes, fly the ship and build levels that switch modes.'],['appel','Platformer','Reach the goal, collect gems and build your own levels.'],['metrica-wave','Wave','Hold to fly the dart up, let go to dive. Thread it between the spikes.']]},
   {id:'geodash',name:'Metrica: Classic',labels:['Multiplayer'],hide:true},
   {id:'appel',name:'Metrica: Platformer',labels:['Multiplayer'],hide:true},
   {id:'metrica-wave',name:'Metrica: Wave',labels:['Multiplayer'],hide:true}];
@@ -5206,7 +5206,7 @@ function metricaPick(gm){
   g.innerHTML=`<div class="mx" role="region" aria-label="${esc(gm.name)}"><header class="mx-top"><button class="mx-back" data-mx-back aria-label="Back" title="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
     <div class="mx-brand" data-mx-back>${esc(gm.name)}</div></header>
     <div class="mx-main"><div class="mx-wrap"><h1 class="mx-h1">${esc(gm.name)}</h1><div class="mx-modes">${gm.modes.map(([id,n,d],i)=>`<button class="mx-mode" data-game="${id}" aria-label="${esc(n)}">${MX_PV[id]||''}
-      <span class="mx-info"><span class="mx-lbl">Mode 0${i+1}</span><span class="mx-name">${esc(n)}</span><span class="mx-d">${esc(d)}</span>
+      <span class="mx-info"><span class="mx-lbl">World 0${i+1}</span><span class="mx-name">${esc(n)}</span><span class="mx-d">${esc(d)}</span>
       <span class="mx-go"><svg viewBox="0 0 10 10"><path d="M1 0l9 5-9 5z"/></svg>Play</span></span></button>`).join('')}</div></div></div></div>`;
   g.hidden=false;
   const ms=[...g.querySelectorAll('.mx-mode')];

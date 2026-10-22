@@ -139,6 +139,9 @@
   .card .note { color: var(--accent); margin: -6px 0 18px; display: flex; align-items: center; gap: 8px; }
   .card .note svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; }
   .card .col { display: flex; flex-direction: column; gap: 8px; }
+  .card.skin { width: min(460px, 100%); max-height: calc(100% - 8px); overflow-y: auto; }
+  .card.skin .big { margin-bottom: 14px; }
+  .mskin { margin-top: 12px; }
   @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
   @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
@@ -216,6 +219,163 @@
 <script>
 (function () {
 'use strict';
+/* MX:BEGIN  Metrica shared. The same block sits in all three worlds (geodash.html, appel.html, metrica-wave.html):
+   the one set of characters, how they are drawn, which ones are open, and reading the other worlds' saves (read only).
+   The pick of character is kept in each world's own save with the time it was picked (cube, cubeT); every world shows the newest. */
+var MX = (function () {
+  'use strict';
+  var COLORS = [
+    ['Cobalt', '#2b3fd3'], ['Ink', '#1d1d1f'], ['Paper', '#f2f0ea'], ['Vermilion', '#e0472f'], ['Amber', '#f2a516'], ['Forest', '#1f8a52'],
+    ['Teal', '#0f8b8d'], ['Sky', '#3d9cf0'], ['Violet', '#7a4bd8'], ['Rose', '#d6457a'], ['Lime', '#8cc63f'], ['Copper', '#c4692b'],
+    ['Slate', '#56606b'], ['Sand', '#cdb88e'], ['Plum', '#5e2b70'], ['Gold', '#d9b23c']
+  ];
+  /* 'eyes' is the Platformer world's runner; it is open from the start, like the first three */
+  var PATTERNS = [['frame', 'Frame'], ['dot', 'Dot'], ['cross', 'Cross'], ['split', 'Split'], ['bars', 'Bars'], ['ring', 'Ring'], ['grid', 'Grid'], ['face', 'Face'], ['eyes', 'Runner']];
+  var N = { classic: 6, plat: 10, wave: 5 };
+  var GAME = { classic: 'geodash', plat: 'appel', wave: 'metrica-wave' };
+  function isObj(o) { return !!o && typeof o === 'object' && !Array.isArray(o); }
+  function classicDone(gd, i) { var p = isObj(gd) && isObj(gd.prog) ? gd.prog['L' + (i + 1)] : null; return !!p && (p.best | 0) >= 100; }
+  function colorNeed(k) { return k < 6 ? -1 : Math.floor((k - 6) / 2); }
+  function patNeed(k) { return k < 3 || k === 8 ? -1 : k - 3; }
+  function colorOpen(k, gd, test) { var n = colorNeed(k); return !!test || n < 0 || classicDone(gd, n); }
+  function patOpen(k, gd, test) { var n = patNeed(k); return !!test || n < 0 || classicDone(gd, n); }
+  function cleanCube(c) {
+    if (!isObj(c)) return null;
+    var o = {}, ok = true;
+    ['c1', 'c2', 'p'].forEach(function (k) { var n = c[k], max = k === 'p' ? PATTERNS.length : COLORS.length; if (typeof n === 'number' && n >= 0 && n < max) o[k] = n | 0; else ok = false; });
+    return ok ? o : null;
+  }
+  function look(cube, gd, test) {
+    var c = cleanCube(cube) || { c1: 0, c2: 2, p: 0 };
+    var c1 = colorOpen(c.c1, gd, test) ? c.c1 : 0, c2 = colorOpen(c.c2, gd, test) ? c.c2 : 2, p = patOpen(c.p, gd, test) ? c.p : 0;
+    return { c1: COLORS[c1][1], c2: COLORS[c2][1], p: PATTERNS[p][0] };
+  }
+  /* which worlds are fully cleared; each one opens its portal in the Classic editor */
+  function worlds(gd, ap, wv, test) {
+    var r = { classic: true, plat: true, wave: true }, i;
+    if (test) return r;
+    for (i = 0; i < N.classic; i++) if (!classicDone(gd, i)) r.classic = false;
+    for (i = 0; i < N.plat; i++) { var b = isObj(ap) && isObj(ap.best) ? ap.best['c' + i] : null; if (!b || !(b.t > 0)) r.plat = false; }
+    for (i = 0; i < N.wave; i++) { var q = isObj(wv) && Array.isArray(wv.lv) ? wv.lv[i] : null; if (!isObj(q) || !(q.clr > 0)) r.wave = false; }
+    return r;
+  }
+  /* the newest pick across saves: [{ cube, cubeT }, ...] */
+  function newest(saves) {
+    var best = null, bt = -1;
+    saves.forEach(function (d) { if (!isObj(d)) return; var c = cleanCube(d.cube), t = typeof d.cubeT === 'number' && isFinite(d.cubeT) ? d.cubeT : 0; if (c && t > bt) { best = c; bt = t; } });
+    return best ? { cube: best, t: bt } : null;
+  }
+  function hexRgb(h) { var n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+  function mix(a, b, t) { var x = hexRgb(a), y = hexRgb(b); return 'rgb(' + Math.round(x[0] + (y[0] - x[0]) * t) + ',' + Math.round(x[1] + (y[1] - x[1]) * t) + ',' + Math.round(x[2] + (y[2] - x[2]) * t) + ')'; }
+  /* the face of a character of size c, centred on the origin; face < 0 turns the runner's eyes left */
+  function pattern(ctx, c, p, col, face) {
+    var w = Math.max(1, c * 0.075), q = c * 0.24, d;
+    ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineJoin = 'miter'; ctx.lineCap = 'butt';
+    if (p === 'frame') { ctx.strokeRect(-q, -q, q * 2, q * 2); d = c * 0.08; ctx.fillRect(-d, -d, d * 2, d * 2); }
+    else if (p === 'dot') { ctx.beginPath(); ctx.arc(0, 0, c * 0.2, 0, Math.PI * 2); ctx.fill(); }
+    else if (p === 'cross') { d = c * 0.085; ctx.fillRect(-c * 0.28, -d, c * 0.56, d * 2); ctx.fillRect(-d, -c * 0.28, d * 2, c * 0.56); }
+    else if (p === 'split') { var e = c * 0.5 - w * 1.4; ctx.beginPath(); ctx.moveTo(-e, -e); ctx.lineTo(e, -e); ctx.lineTo(e, e); ctx.closePath(); ctx.fill(); }
+    else if (p === 'bars') { d = c * 0.1; ctx.fillRect(-c * 0.22 - d / 2, -c * 0.28, d, c * 0.56); ctx.fillRect(c * 0.22 - d / 2, -c * 0.28, d, c * 0.56); ctx.fillRect(-d / 2, -c * 0.28, d, c * 0.56); }
+    else if (p === 'ring') { ctx.lineWidth = c * 0.1; ctx.beginPath(); ctx.arc(0, 0, c * 0.24, 0, Math.PI * 2); ctx.stroke(); d = c * 0.06; ctx.fillRect(-d, -d, d * 2, d * 2); }
+    else if (p === 'grid') { d = c * 0.18; var g2 = c * 0.04; ctx.fillRect(-d - g2, -d - g2, d, d); ctx.fillRect(g2, -d - g2, d, d); ctx.fillRect(-d - g2, g2, d, d); ctx.fillRect(g2, g2, d, d); }
+    else if (p === 'face') { d = c * 0.15; ctx.fillRect(-c * 0.27, -c * 0.22, d, d); ctx.fillRect(c * 0.12, -c * 0.22, d, d); ctx.fillRect(-c * 0.27, c * 0.1, c * 0.54, c * 0.11); }
+    else if (p === 'eyes') {
+      var ew = Math.max(1, c * 0.14), eh = c * 0.32, ey = -c * 0.2, f = face < 0 ? -1 : 1;
+      ctx.fillRect(f * c * 0.04 + (f > 0 ? 0 : -ew), ey, ew, eh); ctx.fillRect(f * c * 0.27 + (f > 0 ? 0 : -ew), ey, ew, eh);
+    }
+  }
+  /* a character: w x h box centred on (cx, cy), turned rot degrees clockwise. opt: { alpha, shadow, face, flat } */
+  function draw(ctx, cx, cy, w, h, rot, lk, dpr, opt) {
+    opt = opt || {};
+    var c = Math.min(w, h), c1 = lk.c1, sw = w / 2, sh = h / 2;
+    ctx.save();
+    ctx.globalAlpha = opt.alpha == null ? 1 : opt.alpha;
+    ctx.translate(cx, cy); if (rot) ctx.rotate(rot * Math.PI / 180);
+    if (opt.shadow !== false) { ctx.shadowColor = opt.shadowColor || 'rgba(28,24,16,0.22)'; ctx.shadowBlur = c * 0.25; ctx.shadowOffsetY = c * 0.06; }
+    if (lk.p === 'eyes' || opt.flat) ctx.fillStyle = c1;
+    else { var gr = ctx.createLinearGradient(-sw, -sh, sw, sh); gr.addColorStop(0, mix(c1, '#ffffff', 0.28)); gr.addColorStop(0.45, c1); gr.addColorStop(1, mix(c1, '#000000', 0.28)); ctx.fillStyle = gr; }
+    ctx.fillRect(-sw, -sh, w, h);
+    ctx.shadowColor = 'transparent';
+    var lw = Math.max(1, Math.round(1.5 * (dpr || 1)));
+    if (lk.p !== 'eyes') { ctx.strokeStyle = mix(c1, '#000000', 0.42); ctx.lineWidth = lw; ctx.strokeRect(-sw + lw / 2, -sh + lw / 2, w - lw, h - lw); }
+    if (w !== h) ctx.scale(w / c, h / c);
+    pattern(ctx, c, lk.p, lk.c2, opt.face == null ? 1 : opt.face);
+    ctx.restore();
+  }
+  /* read another world's save: cb(data or null). Inside the planner it asks the parent page; on its own it reads localStorage */
+  var framed = false; try { framed = !!(window.parent && window.parent !== window); } catch (e) { framed = true; }
+  function load(game, cb) {
+    if (!framed) { var d = null; try { d = JSON.parse(localStorage.getItem(game + '.save') || 'null'); } catch (e) { d = null; } cb(isObj(d) ? d : null); return; }
+    var reqId = 'mx' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), done = false;
+    function onMsg(e) {
+      var m = e.data;
+      if (!m || m.type !== 'game-load-res' || m.reqId !== reqId || done) return;
+      done = true; window.removeEventListener('message', onMsg);
+      var d = null; try { d = typeof m.data === 'string' && m.data ? JSON.parse(m.data) : null; } catch (err) { d = null; }
+      cb(isObj(d) ? d : null);
+    }
+    window.addEventListener('message', onMsg);
+    try { parent.postMessage({ type: 'game-load', game: game, reqId: reqId }, '*'); } catch (e) {}
+    setTimeout(function () { if (!done) { done = true; window.removeEventListener('message', onMsg); cb(null); } }, 3000);
+  }
+  /* the character picker (Platformer and Wave use it; Classic draws the same set in its own menu) */
+  var LOCK = '<svg viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>';
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  var cssDone = false;
+  function css() {
+    if (cssDone) return; cssDone = true;
+    var s = document.createElement('style');
+    s.textContent = '.mxk{display:flex;flex-direction:column;gap:10px}.mxk .mxk-l{font:600 11.5px/1.3 var(--font);letter-spacing:.07em;text-transform:uppercase;color:var(--fg2)}' +
+      '.mxk .mxk-pv{height:120px;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 1px var(--edge,var(--line));margin-bottom:6px}.mxk .mxk-pv canvas{width:72px;height:72px}' +
+      '.mxk .mxk-g{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px;margin-bottom:6px}' +
+      '.mxk .mxk-s{position:relative;aspect-ratio:1;border:0;border-radius:0;padding:0;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;color:var(--fg)}' +
+      '.mxk .mxk-s.on{box-shadow:inset 0 0 0 2px var(--fg),inset 0 0 0 4px var(--bg)}.mxk .mxk-s.lock{cursor:default}' +
+      '.mxk .mxk-s.lock::before{content:"";position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 62%,transparent)}' +
+      '.mxk .mxk-s svg{position:relative;width:13px;height:13px;fill:none;stroke:var(--fg);stroke-width:2}' +
+      '.mxk .mxk-p{background:var(--panel2,var(--box))}.mxk .mxk-p.on{box-shadow:inset 0 0 0 2px var(--fg)}.mxk .mxk-p canvas{width:30px;height:30px}.mxk .mxk-p.lock canvas{opacity:.25}' +
+      '.mxk .mxk-p.lock::before{display:none}.mxk .mxk-p svg{position:absolute}';
+    document.head.appendChild(s);
+  }
+  function paintCv(cv, lk) {
+    var d = Math.max(1, Math.min(4, window.devicePixelRatio || 1)), r = cv.getBoundingClientRect(), w = Math.max(1, Math.round((r.width || 30) * d));
+    if (cv.width !== w) { cv.width = w; cv.height = w; }
+    var ctx = cv.getContext('2d'); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, w, w);
+    draw(ctx, w / 2, w / 2, w * 0.7, w * 0.7, 0, lk, d, { shadow: false });
+  }
+  /* fills el with the picker; cur() gives the current cube, gd is the Classic save, pick(cube) is called on a choice */
+  function picker(el, cur, gd, test, pick) {
+    css();
+    var c = cleanCube(cur()) || { c1: 0, c2: 2, p: 0 }, h = '<div class="mxk"><div class="mxk-pv"><canvas data-mxpv></canvas></div>';
+    ['c1', 'c2'].forEach(function (k) {
+      h += '<div class="mxk-l">' + (k === 'c1' ? 'Primary' : 'Secondary') + '</div><div class="mxk-g">';
+      COLORS.forEach(function (col, i) {
+        var open = colorOpen(i, gd, test);
+        h += '<button class="mxk-s' + (c[k] === i ? ' on' : '') + (open ? '' : ' lock') + '" data-k="' + k + '" data-n="' + i + '" style="background:' + col[1] + '" title="' + esc(col[0]) + '">' + (open ? '' : LOCK) + '</button>';
+      });
+      h += '</div>';
+    });
+    h += '<div class="mxk-l">Pattern</div><div class="mxk-g">';
+    PATTERNS.forEach(function (pt, i) {
+      var open = patOpen(i, gd, test);
+      h += '<button class="mxk-s mxk-p' + (c.p === i ? ' on' : '') + (open ? '' : ' lock') + '" data-k="p" data-n="' + i + '" title="' + esc(pt[1]) + '"><canvas data-mxp="' + i + '"></canvas>' + (open ? '' : LOCK) + '</button>';
+    });
+    el.innerHTML = h + '</div></div>';
+    var lk = look(c, gd, test);
+    paintCv(el.querySelector('[data-mxpv]'), lk);
+    Array.prototype.forEach.call(el.querySelectorAll('[data-mxp]'), function (cv) { var l2 = { c1: lk.c1, c2: lk.c2, p: PATTERNS[+cv.getAttribute('data-mxp')][0] }; paintCv(cv, l2); });
+    Array.prototype.forEach.call(el.querySelectorAll('.mxk-s'), function (b) {
+      b.addEventListener('click', function () {
+        if (b.classList.contains('lock')) return;
+        var k = b.getAttribute('data-k'), n = +b.getAttribute('data-n'), nc = cleanCube(cur()) || { c1: 0, c2: 2, p: 0 };
+        nc[k] = n; pick(nc); picker(el, cur, gd, test, pick);
+      });
+    });
+  }
+  return { COLORS: COLORS, PATTERNS: PATTERNS, N: N, GAME: GAME, colorNeed: colorNeed, patNeed: patNeed, colorOpen: colorOpen, patOpen: patOpen,
+    cleanCube: cleanCube, look: look, worlds: worlds, newest: newest, mix: mix, draw: draw, pattern: pattern, load: load, picker: picker, pad2: pad2 };
+})();
+/* MX:END */
 
 /* =====================================================================
    Metrica: Wave
@@ -283,7 +443,20 @@ var framed = false; try { framed = !!(window.parent && window.parent !== window)
 /* testing mode: the planner sets window.SX_TEST for admins. Everything is open and nothing is saved. */
 var TEST = !!window.SX_TEST;
 function blankLv() { return { best: 0, time: 0, att: 0, clr: 0 }; }
-var S = { v: 1, open: 1, lv: [blankLv(), blankLv(), blankLv(), blankLv(), blankLv()], end: { best: 0, time: 0, runs: 0 }, dist: 0, att: 0, muted: false, theme: 'auto' };
+var S = { v: 1, open: 1, lv: [blankLv(), blankLv(), blankLv(), blankLv(), blankLv()], end: { best: 0, time: 0, runs: 0 }, dist: 0, att: 0, muted: false, theme: 'auto', cube: { c1: 0, c2: 2, p: 0 }, cubeT: 0 };
+/* the character (shared with the other worlds, MX): the Classic save opens colours and patterns, and the newest pick wins */
+var GD = null;
+function look() { return MX.look(S.cube, GD, TEST); }
+function waveDone() { return MX.worlds(null, null, S, TEST).wave; }
+function loadOthers() {
+  var n = 0, ap = null, fin = function () {
+    if (++n < 2) return;
+    var nw = MX.newest([S, GD, ap]);
+    if (nw && nw.t > (S.cubeT || 0)) { S.cube = nw.cube; S.cubeT = nw.t; }
+  };
+  MX.load(MX.GAME.classic, function (d) { GD = d; fin(); });
+  MX.load(MX.GAME.plat, function (d) { ap = d; fin(); });
+}
 function num(v, d) { return typeof v === 'number' && isFinite(v) && v >= 0 ? v : d; }
 var Store = {
   loaded: false, timer: null,
@@ -306,8 +479,11 @@ var Store = {
       S.dist = num(d.dist, 0); S.att = Math.floor(num(d.att, 0));
       if (typeof d.muted === 'boolean') S.muted = d.muted;
       if (d.theme === 'light' || d.theme === 'dark' || d.theme === 'auto') S.theme = d.theme;
+      var cc = MX.cleanCube(d.cube); if (cc) S.cube = cc;
+      if (typeof d.cubeT === 'number' && isFinite(d.cubeT)) S.cubeT = d.cubeT;
     }
     Store.loaded = true;
+    loadOthers();
     Theme.apply(); UI.refreshBar();
     if (UI.screen === 'menu') { UI.sel = UI.defaultSel(); UI.menu(); }
   },
@@ -703,12 +879,13 @@ var Game = {
   },
   finish: function () {
     Game.phase = 'done'; Game.timer = 0; Game.trail.push([Game.x, Game.y]); Game.dir = 0;
-    var rec = S.lv[Game.idx], first = rec.clr === 0;
+    var rec = S.lv[Game.idx], first = rec.clr === 0, wasDone = waveDone();
     rec.clr++; rec.best = Math.max(rec.best, Game.target());
     var fastest = !rec.time || Game.t < rec.time; if (fastest) rec.time = Game.t;
     var unlocked = null;
     if (S.open < Game.idx + 2) { S.open = Game.idx + 2; unlocked = Game.idx + 1 < 5 ? 'Level ' + pad2(Game.idx + 2) + ' unlocked' : 'Endless unlocked'; }
     S.dist += Game.target() * MPU;
+    if (!wasDone && waveDone() && !TEST) unlocked = (unlocked ? unlocked + ', ' : '') + 'Wave portal unlocked';
     Game.info = { time: Game.t, att: Game.sessAtt, unlocked: unlocked, first: first, fastest: fastest };
     Store.save(true); Snd.done(); UI.hud();
   }
@@ -838,13 +1015,14 @@ var Render = {
     ctx.globalAlpha = 1;
   },
   player: function (ctx, v, C, x, y, dir) {
-    var c = v.cell, s = c * 0.9;
+    var c = v.cell, s = c * 1.05, lk = look();
     ctx.save(); ctx.translate(v.sx(x), v.sy(y)); ctx.rotate(dir > 0 ? -Math.PI / 4 : dir < 0 ? Math.PI / 4 : 0);
     ctx.shadowColor = C.shadow; ctx.shadowBlur = c * 0.25; ctx.shadowOffsetY = c * 0.06;
     ctx.beginPath(); ctx.moveTo(s * 0.55, 0); ctx.lineTo(-s * 0.45, -s * 0.38); ctx.lineTo(-s * 0.22, 0); ctx.lineTo(-s * 0.45, s * 0.38); ctx.closePath();
-    var gr = ctx.createLinearGradient(-s * 0.4, -s * 0.4, s * 0.5, s * 0.3); gr.addColorStop(0, C.accentHi); gr.addColorStop(0.5, C.accent); gr.addColorStop(1, C.accent2);
+    var gr = ctx.createLinearGradient(-s * 0.4, -s * 0.4, s * 0.5, s * 0.3); gr.addColorStop(0, MX.mix(lk.c1, '#ffffff', 0.28)); gr.addColorStop(0.5, lk.c1); gr.addColorStop(1, MX.mix(lk.c1, '#000000', 0.28));
     ctx.fillStyle = gr; ctx.fill(); ctx.shadowColor = 'transparent';
-    ctx.strokeStyle = C.accent2; ctx.lineWidth = Render.lw(v.dpr, 1.5); ctx.lineJoin = 'miter'; ctx.stroke();
+    ctx.strokeStyle = MX.mix(lk.c1, '#000000', 0.42); ctx.lineWidth = Render.lw(v.dpr, 1.5); ctx.lineJoin = 'miter'; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(s * 0.22, 0); ctx.lineTo(-s * 0.22, -s * 0.16); ctx.lineTo(-s * 0.1, 0); ctx.lineTo(-s * 0.22, s * 0.16); ctx.closePath(); ctx.fillStyle = lk.c2; ctx.fill();
     ctx.restore();
   }
 };
@@ -957,8 +1135,9 @@ var UI = {
     rows += '<button class="lrow endless' + (UI.sel === 5 ? ' on' : '') + (eo ? '' : ' locked') + '" data-i="5"><span class="n">00</span><span class="nm">Endless</span>' +
       (eo ? '<span class="pc' + (eb ? '' : ' z') + '">' + eb + ' m</span>' : '<span class="pc z lk">' + ICON.lock + '</span>') + '</button>';
     var top = '<div class="mtop"><div><span class="lbl">Cleared</span><b>' + Unlock.cleared() + ' / 5</b></div><div><span class="lbl">Attempts</span><b>' + S.att + '</b></div><div><span class="lbl">Distance</span><b>' + fmtKm(S.dist) + '</b></div></div>';
-    m.innerHTML = '<div class="mwrap"><div class="mcol">' + top + '<div class="list">' + rows + '</div></div><div class="detail" id="det"></div></div>';
+    m.innerHTML = '<div class="mwrap"><div class="mcol">' + top + '<div class="list">' + rows + '</div><button class="btn ghost mskin" data-a="skin">Skin</button></div><div class="detail" id="det"></div></div>';
     m.querySelectorAll('[data-i]').forEach(function (b) { b.addEventListener('click', function () { UI.sel = +b.getAttribute('data-i'); UI.menu(); }); });
+    m.querySelector('[data-a=skin]').addEventListener('click', UI.skin);
     UI.detail();
   },
   detail: function () {
@@ -1051,6 +1230,14 @@ var UI = {
     h += '</div></div>';
     o.innerHTML = h; o.hidden = false; UI.modal = { acts: acts };
     o.querySelectorAll('[data-k]').forEach(function (b) { b.addEventListener('click', function (ev) { ev.stopPropagation(); acts[+b.getAttribute('data-k')][2](); }); });
+    o.onpointerdown = function (ev) { ev.stopPropagation(); };
+  },
+  skin: function () {
+    var o = $('ovl'), acts = [['Done', '', UI.closeModal]];
+    o.innerHTML = '<div class="card skin"><div class="lbl">Character</div><div class="big">Skin</div><div id="skBody"></div><div class="col" style="margin-top:14px"><button class="btn wide" data-k="0">Done</button></div></div>';
+    o.hidden = false; UI.modal = { acts: acts };
+    MX.picker($('skBody'), function () { return S.cube; }, GD, TEST, function (cb) { S.cube = cb; S.cubeT = Date.now(); Store.save(); });
+    o.querySelector('[data-k]').addEventListener('click', function (ev) { ev.stopPropagation(); UI.closeModal(); });
     o.onpointerdown = function (ev) { ev.stopPropagation(); };
   },
   closeModal: function () { var o = $('ovl'); o.hidden = true; o.innerHTML = ''; UI.modal = null; },
