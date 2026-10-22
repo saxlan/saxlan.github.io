@@ -1,4 +1,4 @@
-/* Aglet shared code: runs in the page and on the Apps Script backend (pushed as a .js file).
+/* Agletic shared code: runs in the page and on the Apps Script backend (pushed as a .js file).
    Only block comments here and never two slashes in a row inside a string (kept from the Apps Script hosted days). */
 var SX = (function () {
   'use strict';

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Aglet</title>
+<title>Agletic</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='32' fill='%23111111'/%3E%3Cpath d='M13 34l8 8 13-15' stroke='%23ffffff' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M30 36l6 6 14-16' stroke='%23ffffff' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Alegreya+SC:wght@400;500&display=swap">
 <style>
@@ -38,7 +38,7 @@
   --accent:#8b97ff; --accent-fg:#101010; --danger:#e07a6d; --bgimg:var(--img-dark); color-scheme:dark;
 }
 *{box-sizing:border-box}
-/* ---------- the brand line: every heading and every line of text starts where AGLET starts (--gut, the page's
+/* ---------- the brand line: every heading and every line of text starts where AGLETIC starts (--gut, the page's
    side padding), and ends where the menu bar's last icon ends. Visible boxes (panels, cards, grids, text boxes, buttons)
    put their outer edge on that line instead (--reach is how far a box sticks out past it: none). ---------- */
 :root{--gut:30px;--pin:14px;--reach:0px}
@@ -995,7 +995,7 @@ html.splash-on,html.splash-on body{overflow:hidden}
 @media (min-width:900px){
   #spdoc .docs-in{max-width:1160px}
   #spdoc .docs-body{display:grid;grid-template-columns:210px minmax(0,1fr);column-gap:48px;align-items:start}
-  #spdoc .docs-toc{position:sticky;top:96px;margin-top:22px;max-height:calc(100vh - 112px);display:flex;flex-direction:column}
+  #spdoc .docs-toc{position:sticky;top:124px;margin-top:22px;max-height:calc(100vh - 140px);display:flex;flex-direction:column}
   #spdoc .dt-list{overflow-y:auto;overscroll-behavior:contain;min-height:0;flex:1 1 auto}
 }
 @media (max-width:899px){
@@ -1516,6 +1516,9 @@ html.home-on body::before{opacity:1}
 /* the day + on the calendar shows only on hover; the tutorial points at today's */
 html.tut-cadd .mcell.today .cadd{opacity:1}
 @media (prefers-reduced-motion: reduce){#tut,#tut .tut-hole,#tut .tut-card,#tut .tut-body{transition:none}}
+.ag-foot{font:500 11.5px var(--font-ui);letter-spacing:.08em;color:var(--fg2);margin-top:28px}
+#splash .sp-foot{text-align:center;padding:26px 0 30px;margin:0}
+.hm-kicker:empty,#splash .sp-kicker:empty{display:none}
 </style>
 </head>
 <body>
@@ -1533,7 +1536,7 @@ html.tut-cadd .mcell.today .cadd{opacity:1}
 <p>Everything you change saves to your account right away. The planner also reloads your data every 5 minutes and whenever you come back to its tab, so it stays the same across computers.</p>
 <ul>
 <li><b>Top bar</b>: Courses, Calendar, To-Do, Assignments, Resources<span class="g-chat"> and Chat</span>, then <span class="g-games">the games controller, </span>the gear (Settings), the speech bubble (Suggestions), the book (this Guide) and the moon or sun (theme). When the window is narrow, tabs that don't fit move under <b>More</b>; on a phone everything is under <b>Menu</b>.</li>
-<li><b>Home</b>: logging in opens it, and clicking Aglet in the top bar returns to it. It has a card for every page, plus Edit classes and Suggestions. Only Log out returns to the login page.</li>
+<li><b>Home</b>: logging in opens it, and clicking Agletic in the top bar returns to it. It has a card for every page, plus Edit classes and Suggestions. Only Log out returns to the login page.</li>
 <li><b>Login page</b>: the three lines at the top right open Games, Desmos and a dark mode switch that only applies to the login page. Scroll down, or press the arrow, for this documentation.</li>
 </ul>
 
@@ -1575,7 +1578,7 @@ html.tut-cadd .mcell.today .cadd{opacity:1}
 <li>Bell times: periods 1 and 2 run 8:10 to 9:40, 3 and 4 run 9:46 to 11:15, 5 and 6 run 11:19 to 1:19, 7 and 8 run 1:27 to 2:55.</li>
 <li><b>Lunch</b> for periods 5 and 6: A 11:21 to 11:51, B 11:51 to 12:21, C 12:21 to 12:51, D 12:51 to 1:21. The lunch you chose on Your Classes shows under that period on Today.</li>
 <li><b>Advisory</b> fills period 4 on Gold days when you have no period 4 class. The Advisory card on Courses sets which class you attend then.</li>
-<li>The calendar knows the Langley 2026-27 school year: holidays, breaks, teacher workdays, early release days and observances show on their dates, and days off are marked No School or Weekend.</li>
+<li>The calendar knows the 2026-27 school year: holidays, breaks, teacher workdays, early release days and observances show on their dates, and days off are marked No School or Weekend.</li>
 </ul>
 
 <h3>Calendar</h3>
@@ -1740,8 +1743,8 @@ html.tut-cadd .mcell.today .cadd{opacity:1}
       </div>
     </div></div>
   <div class="sp-mid">
-    <div class="sp-kicker sp-mv">Langley High School</div>
-    <h2 class="sp-title"><span class="l1 sp-mv">Aglet</span></h2>
+    <div class="sp-kicker sp-mv"></div>
+    <h2 class="sp-title"><span class="l1 sp-mv">Agletic</span></h2>
     <div class="sp-rule sp-mv"></div>
     <form class="sp-gate" id="spgate" autocomplete="off" onsubmit="return false">
       <input type="text" id="spuser" placeholder="Username" aria-label="Username" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="24">
@@ -1764,11 +1767,12 @@ html.tut-cadd .mcell.today .cadd{opacity:1}
     </div>
   </section>
   <div id="spdoc"></div>
+  <div class="ag-foot sp-foot" id="spfoot"></div>
  </div>
 </div>
 <header class="topbar">
   <div class="tb-in">
-  <h1 class="brand" id="brand">Aglet</h1>
+  <h1 class="brand" id="brand">Agletic</h1>
   <nav class="tabs" id="tabs">
     <div class="trow" id="trow">
       <button data-v="courses">Courses</button>
@@ -1910,7 +1914,7 @@ const SHOT_SVG=(()=>{
   st.textContent=Object.keys(SHOT_SVG).map(k=>'.shot-'+k+'{background-image:url("data:image/svg+xml,'+encodeURIComponent(SHOT_SVG[k])+'")}').join(' ');
   document.head.appendChild(st);})();
 'use strict';
-/* ---------- school year data (official Langley 2026-27 Green/Gold calendar) ---------- */
+/* ---------- school year data (official 2026-27 Green/Gold calendar) ---------- */
 const YEAR_START='2026-08-24', YEAR_END='2027-06-16';
 const NO_SCHOOL=new Set(['2026-09-04','2026-09-07','2026-09-21','2026-10-12','2026-11-02','2026-11-03',
 '2026-11-25','2026-11-26','2026-11-27','2026-12-21','2026-12-22','2026-12-23','2026-12-24','2026-12-25',
@@ -2018,8 +2022,8 @@ function fitPickers(){
     const ab=b.dataset.abbr;if(ab&&t.scrollWidth>t.clientWidth+1)t.textContent=ab;});
 }
 const cnHTML=c=>`<span class="cnm">${esc(cname(c))}</span>`;
-/* Langley 2026-27 bell schedule: P1/P2 8:10-9:40, P3/P4 9:46-11:15, P5/P6 11:19-1:19 (lunch block), P7/P8 1:27-2:55 */
-/* lunches inside periods 5/6 (Langley 2026-27): A 11:21, B 11:51, C 12:21, D 12:51, 30 minutes each */
+/* 2026-27 bell schedule: P1/P2 8:10-9:40, P3/P4 9:46-11:15, P5/P6 11:19-1:19 (lunch block), P7/P8 1:27-2:55 */
+/* lunches inside periods 5/6 (2026-27): A 11:21, B 11:51, C 12:21, D 12:51, 30 minutes each */
 const LUNCH_TIMES={A:'11:21-11:51',B:'11:51-12:21',C:'12:21-12:51',D:'12:51-1:21'};
 const PERIOD_TIMES={1:'8:10-9:40',2:'8:10-9:40',3:'9:46-11:15',4:'9:46-11:15',5:'11:19-1:19',6:'11:19-1:19',7:'1:27-2:55',8:'1:27-2:55'};
 
@@ -2053,7 +2057,7 @@ const undoStack=[];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 
-/* the backend: Aglet's Apps Script web app. Every call is one fetch POST of {fn,args} sent as text/plain (so the browser
+/* the backend: Agletic's Apps Script web app. Every call is one fetch POST of {fn,args} sent as text/plain (so the browser
    needs no CORS preflight); the answer is {ok:true,result} or {ok:false,error}. API_DOWN: the backend answered that it
    isn't set up yet, or couldn't be reached at all when the page started */
 const API_URL='https:'+SLASH2+'script.google.com/macros/s/AKfycbxxlprWa7By16BcRM8eCW6vLskmbDGWlTbkg0FwIio5cOg93KyJoHu2J17i4iM6-PD0/exec';
@@ -4250,6 +4254,7 @@ const HM_PAGES=[['courses','Courses','Every class with its period and what is co
   ['advisory','To-Do','Sticky notes and school events'],['assignments','Assignments','Everything not done yet, oldest first'],
   ['resources','Resources','Documents and links for each class'],['chat','Chat','Messages with friends and groups'],
   ['games','Games','Singleplayer and multiplayer games'],['guide','Guide','Every feature explained, step by step']];
+document.addEventListener('DOMContentLoaded',()=>{const f=document.getElementById('spfoot');if(f)f.textContent='\u00a9 '+new Date().getFullYear()+' YC';});
 const HM_URL='yuzhe-chen.github.io/aglet/';
 /* while the login page is turning into Home, Home's cards wait above the screen */
 let homeHold=false;
@@ -4275,9 +4280,9 @@ function renderHome(fly){
   if(el.dataset.sig!==sig){
     el.dataset.sig=sig;
     el.innerHTML=`<div class="hm-cards" id="hmcards">${pages.map(([k,n,d],i)=>`<button type="button" class="hm-card" id="hm-${k}" data-home-go="${k}" style="--i:${i}"><svg class="hm-ic" viewBox="0 0 24 24" aria-hidden="true">${HM_I[k]}</svg><svg class="hm-ar" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span class="hm-n">${n}</span><span class="hm-d">${d}</span></button>`).join('')}</div>
-      <div class="hm-side" id="hmside"><div class="hm-kicker">Langley High School</div><h2 class="hm-title"><span class="l1">Aglet</span></h2><div class="hm-rule"></div>
+      <div class="hm-side" id="hmside"><div class="hm-kicker"></div><h2 class="hm-title"><span class="l1">Agletic</span></h2><div class="hm-rule"></div>
       <div class="hm-btns"><button type="button" class="hm-btn" id="hm-classes" data-act="classes">Edit classes</button><button type="button" class="hm-btn alt" id="hm-sugg" data-act-sugg>Suggestions</button><button type="button" class="hm-btn alt" id="hm-tut" data-act-tut>Tutorial</button></div>
-      <div class="hm-url"><a href="https:${SLASH2}${HM_URL}" target="_blank" rel="noopener">${HM_URL}</a><button type="button" data-hm-copy aria-label="Copy link" title="Copy link"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12"/><path d="M5 15H3V3h12v2"/></svg></button><span class="hm-ok" aria-live="polite"></span></div></div>`;
+      <div class="hm-url"><a href="https:${SLASH2}${HM_URL}" target="_blank" rel="noopener">${HM_URL}</a><button type="button" data-hm-copy aria-label="Copy link" title="Copy link"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12"/><path d="M5 15H3V3h12v2"/></svg></button><span class="hm-ok" aria-live="polite"></span></div><div class="ag-foot">&copy; ${new Date().getFullYear()} YC</div></div>`;
     fly=true;
   }
   fitHomeGuide();
@@ -4472,7 +4477,7 @@ let splashShow=null,splashLeave=null;
     full:'No room for new accounts',busy:'Too many new accounts right now, try again later',conn:'Can’t connect, try again'};
   const fail=k=>{go.classList.remove('busy');msg.textContent=ERR[k]||ERR.conn;gate.classList.remove('bad');void gate.offsetWidth;gate.classList.add('bad');
     if(k==='wrong'||k==='mismatch'||k==='short'){code.value='';conf.value='';code.focus();}};
-  ERR.setup='Aglet isn’t set up yet. Check back soon.';
+  ERR.setup='Agletic isn’t set up yet. Check back soon.';
   gate.addEventListener('submit',async e=>{
     e.preventDefault();
     if(busy)return;
@@ -4531,7 +4536,7 @@ let splashShow=null,splashLeave=null;
   document.getElementById('spdown').addEventListener('click',e=>{e.stopPropagation();glide(docTop());});
   /* the documentation under the wallpaper: the Guide, with its contents column */
   function buildSpDoc(){const d=document.getElementById('spdoc'),tpl=document.getElementById('docs-tpl');if(!d||d.firstChild||!tpl)return;
-    d.innerHTML=`<div class="docs-in"><div class="res-head"><div class="rh-text"><span class="rc">Aglet</span><span class="rt">Documentation</span></div></div><div class="docs-body"><nav class="docs-toc" aria-label="Contents"></nav><div class="rdoc udoc">${tpl.innerHTML}</div></div></div>`;
+    d.innerHTML=`<div class="docs-in"><div class="res-head"><div class="rh-text"><span class="rc">Agletic</span><span class="rt">Documentation</span></div></div><div class="docs-body"><nav class="docs-toc" aria-label="Contents"></nav><div class="rdoc udoc">${tpl.innerHTML}</div></div></div>`;
     docsToc(sp);}
   document.documentElement.classList.add('splash-on');
   if(passKey){
@@ -4565,7 +4570,7 @@ const tutShown=el=>{if(!el||!el.isConnected)return false;const r=el.getBoundingC
 const tutFind=s=>!s?null:typeof s==='function'?s():[...document.querySelectorAll(s)].find(tutShown)||null;
 const tutUp=s=>()=>{const b=tutFind(s);return b&&b.parentElement;};
 const TUT_STEPS=[
-  {v:'home',t:'Welcome',p:'Here’s a quick tour of Aglet. It takes about a minute.'},
+  {v:'home',t:'Welcome',p:'Here’s a quick tour of Agletic. It takes about a minute.'},
   {v:'home',games:1,s:'#gamesbtn',m:'#mmenu [data-act-games]',click:1,t:'Games',
     p:'Games live here, for when you need a break. Press <kbd>H</kbd> at any time to hide them and jump straight back to the planner.'},
   {v:'home',s:'#hm-classes',click:1,t:'Your classes',p:'Start with your classes. Edit classes is where you add them, and where you change them later.'},
@@ -4717,7 +4722,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('[data-act-tut]')||!s
 /* ---------- guide: the book button (top bar, phone menu, opening screen) opens and closes it; Esc or × closes ---------- */
 function openDocs(){
   const d=document.getElementById('docs'),tpl=document.getElementById('docs-tpl');
-  if(!d.firstChild)d.innerHTML=`<div class="docs-in"><button class="hbtn res-x" data-docs-close title="Close">×</button><div class="res-head"><div class="rh-text"><span class="rc">Aglet</span><span class="rt">Guide</span></div></div><div class="docs-body"><nav class="docs-toc" aria-label="Contents"></nav><div class="rdoc udoc">${tpl.innerHTML}</div></div></div>`,docsToc(d);
+  if(!d.firstChild)d.innerHTML=`<div class="docs-in"><button class="hbtn res-x" data-docs-close title="Close">×</button><div class="res-head"><div class="rh-text"><span class="rc">Agletic</span><span class="rt">Guide</span></div></div><div class="docs-body"><nav class="docs-toc" aria-label="Contents"></nav><div class="rdoc udoc">${tpl.innerHTML}</div></div></div>`,docsToc(d);
   /* signed in, the Guide is a page under the menu bar; on the opening screen it covers everything */
   const tb=document.querySelector('header.topbar');
   const fit=()=>d.style.setProperty('--tbh',(!document.documentElement.classList.contains('splash-on')&&tb?Math.max(0,Math.round(tb.getBoundingClientRect().bottom)):0)+'px');
@@ -4958,7 +4963,7 @@ addEventListener('resize',()=>{if(state.view==='chat')chatPaint();});
 /* ---------- suggestions: from the opening screen, a bug report or an idea; they go to the owner's review list ---------- */
 let suggKind='idea',suggFocus=null;
 function suggHTML(sent){
-  return `<div class="docs-in"><button class="hbtn res-x" data-sugg-close title="Close">×</button><div class="res-head"><div class="rh-text"><span class="rc">Aglet</span><span class="rt">Suggestions</span></div></div>
+  return `<div class="docs-in"><button class="hbtn res-x" data-sugg-close title="Close">×</button><div class="res-head"><div class="rh-text"><span class="rc">Agletic</span><span class="rt">Suggestions</span></div></div>
     <div class="hgroup"><button class="hbtn ${suggKind==='idea'?'on':''}" data-sugg-kind="idea">Suggestion</button><button class="hbtn ${suggKind==='bug'?'on':''}" data-sugg-kind="bug">Bug</button></div>
     <textarea id="sugg-t" maxlength="2000" aria-label="${suggKind==='bug'?'Bug':'Suggestion'}"></textarea>
     <div class="sg-row"><button class="kbtn" data-sugg-send>Send</button><span class="sg-msg" role="status">${sent?'Sent':''}</span></div>
@@ -5102,7 +5107,7 @@ function rolesPaint(msg){
     <button class="kbtn" data-rl-done="${esc(s.id)}">Done</button></div><div class="rl-st">${esc(s.text)}</div></div>`).join('');
   const kb=(k,l)=>`<button class="hbtn ${rlSK===k?'on':''}" data-rl-sk="${k}">${l}</button>`;
   d.innerHTML=`<div class="docs-in"><button class="hbtn res-x" data-rl-close title="Close">×</button>
-    <div class="res-head"><div class="rh-text"><span class="rc">Aglet</span><span class="rt">Administration</span></div></div>
+    <div class="res-head"><div class="rh-text"><span class="rc">Agletic</span><span class="rt">Administration</span></div></div>
     <div class="rl-grid${RLS?'':' two'}">
       <div class="rl-col"><h3>Administrators</h3>${RL.admins.map(n=>box(n,'admin')).join('')||'<div class="rl-none">None</div>'}
         <h3>Moderators</h3>${RL.moderators.map(n=>box(n,'mod')).join('')||'<div class="rl-none">None</div>'}
