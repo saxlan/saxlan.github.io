@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style>
-  /* Duolingo look: Fredoka headings, Nunito text, flat fills, 2px lines with a 4px bottom edge, chunky buttons that press down */
+  /* Rounded look: Fredoka headings, Nunito text, flat fills, 2px lines with a 4px bottom edge, chunky buttons that press down */
   :root {
     --display: 'Fredoka', 'Nunito', system-ui, sans-serif;
     --sans: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -17,7 +17,8 @@
     --bg: #ffffff; --soft: #f7f7f7; --panel: #ffffff; --line: #e5e5e5; --line-hi: #d0d0d0;
     --text: #4b4b4b; --dim: #777777; --faint: #afafaf;
     --green: #58cc02; --green-dark: #58a700; --green-wash: #d7ffb8;
-    --blue: #1cb0f6; --blue-dark: #1899d6; --blue-wash: #ddf4ff; --blue-line: #84d8ff;
+    --blue: #4b9af3; --blue-dark: #3c81db; --blue-wash: #e6f1ff; --blue-line: #a4ceff;
+    --pri: #4b9af3; --pri-dark: #3c81db; --pri-hi: #5ea6f6; --pri-light: #a4ceff; --pri-wash: #e6f1ff; --pri-text: #3c81db;
     --red: #ff4b4b; --red-dark: #ea2b2b; --red-wash: #ffdfe0;
     --gold: #ffc800; --gold-dark: #e5a400; --purple: #ce82ff; --orange: #ff9600;
     --scrim: rgba(255, 255, 255, 0.92);
@@ -26,7 +27,8 @@
   :root[data-theme="dark"] {
     --bg: #131f24; --soft: #202f36; --panel: #131f24; --line: #37464f; --line-hi: #52656d;
     --text: #f1f7fb; --dim: #8799a3; --faint: #52656d;
-    --green-wash: #1f3a1a; --blue-wash: #18323f; --blue-line: #1f6f93; --red-wash: #3c2328;
+    --green-wash: #1f3a1a; --blue-wash: #1c3150; --blue-line: #3c81db; --red-wash: #3c2328;
+    --pri-wash: #1c3150; --pri-light: #78b0fc; --pri-text: #78b0fc;
     --scrim: rgba(19, 31, 36, 0.92);
     color-scheme: dark;
   }
@@ -45,11 +47,11 @@
   /* top bar */
   #bar { flex: none; position: relative; z-index: 20; height: 64px; display: flex; align-items: center; gap: 14px; padding: 0 20px;
     background: var(--bg); border-bottom: 2px solid var(--line); min-width: 0; }
-  .brand { cursor: pointer; font: 700 26px/1 var(--display); letter-spacing: -0.02em; white-space: nowrap; color: var(--green); }
-  #crumb { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 14px; border-left: 2px solid var(--line); line-height: 26px; }
+  .brand { cursor: pointer; font: 700 26px/1 var(--display); letter-spacing: -0.02em; white-space: nowrap; color: var(--pri-text); }
+  #crumb { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 14px; border-left: 2px solid var(--line); line-height: 26px; font-size: 15px; letter-spacing: 0; text-transform: none; }
   #crumb b { font-weight: 800; color: var(--text); }
   #crumb span { margin-left: 10px; }
-  #crumb .tag { color: var(--blue); }
+  #crumb .tag { color: var(--pri-text); }
   #bar .sp { flex: 1; min-width: 4px; }
   #hud { display: flex; align-items: center; gap: 6px; }
   .st { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; min-width: 52px; padding: 0 8px; }
@@ -60,22 +62,22 @@
   /* buttons: solid fill with a darker 4px edge; pressing shifts down and the edge shrinks */
   .btn { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; cursor: pointer;
     font: 800 14px/1.2 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
-    background: var(--green); color: #fff; border: 2px solid var(--green-dark); border-bottom-width: 4px; border-radius: 12px; }
+    background: var(--pri); color: #fff; border: 2px solid var(--pri-dark); border-bottom-width: 4px; border-radius: 12px; }
   .btn:not(:disabled):active { transform: translateY(2px); border-bottom-width: 2px; margin-bottom: 2px; }
-  .btn.ghost, .btn.line { background: var(--bg); color: var(--blue); border-color: var(--line); }
+  .btn.ghost, .btn.line { background: var(--bg); color: var(--pri-text); border-color: var(--line); }
   .btn.danger { background: var(--bg); color: var(--red); border-color: var(--line); }
   .btn.sm { min-height: 38px; padding: 0 14px; font-size: 12.5px; border-radius: 10px; border-bottom-width: 3px; }
   .btn.sm:not(:disabled):active { border-bottom-width: 2px; margin-bottom: 1px; transform: translateY(1px); }
   .btn.wide { width: 100%; }
   .btn:disabled { opacity: 0.45; cursor: default; }
   .btn svg { width: 14px; height: 14px; fill: currentColor; }
-  @media (hover: hover) { .btn:not(:disabled):hover { background: #61e002; } .btn.ghost:not(:disabled):hover, .btn.line:not(:disabled):hover, .btn.danger:not(:disabled):hover { background: var(--soft); } }
+  @media (hover: hover) { .btn:not(:disabled):hover { background: var(--pri-hi); } .btn.ghost:not(:disabled):hover, .btn.line:not(:disabled):hover, .btn.danger:not(:disabled):hover { background: var(--soft); } }
 
   /* icon buttons */
   .tb { width: 42px; height: 42px; flex: none; border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 12px; cursor: pointer; background: var(--bg); color: var(--dim);
     display: inline-flex; align-items: center; justify-content: center; padding: 0; }
   .tb:not(:disabled):active { transform: translateY(2px); border-bottom-width: 2px; }
-  .tb.on { background: var(--blue-wash); border-color: var(--blue-line); color: var(--blue); }
+  .tb.on { background: var(--blue-wash); border-color: var(--blue-line); color: var(--pri-text); }
   .tb:disabled { opacity: 0.4; cursor: default; }
   .tb svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
   .tb.plain { border-color: transparent; background: transparent; }
@@ -87,7 +89,7 @@
   .seg button { min-height: 42px; padding: 0 16px; border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 12px; cursor: pointer; background: var(--bg);
     font: 800 13.5px/1.2 var(--sans); letter-spacing: 0.05em; text-transform: uppercase; color: var(--dim); }
   .seg button:active { transform: translateY(2px); border-bottom-width: 2px; margin-bottom: 2px; }
-  .seg button.on { background: var(--blue-wash); border-color: var(--blue-line); color: var(--blue); }
+  .seg button.on { background: var(--blue-wash); border-color: var(--blue-line); color: var(--pri-text); }
   @media (hover: hover) { .seg button:not(.on):hover { background: var(--soft); color: var(--text); } }
 
   .inp { min-width: 0; height: 42px; padding: 0 14px; border: 2px solid var(--line); border-radius: 12px; background: var(--soft);
@@ -109,7 +111,7 @@
     border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 16px; background: var(--bg); cursor: pointer; text-align: left; color: var(--text); }
   .lrow:active { transform: translateY(2px); border-bottom-width: 2px; margin-bottom: 2px; }
   .lrow .n { grid-row: 1 / 3; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    background: var(--green); color: #fff; font: 700 17px/1 var(--display); font-variant-numeric: tabular-nums; box-shadow: inset 0 -4px 0 var(--green-dark); }
+    background: var(--pri); color: #fff; font: 700 17px/1 var(--display); font-variant-numeric: tabular-nums; box-shadow: inset 0 -4px 0 var(--pri-dark); }
   .lrow .nm { font: 700 18px/1.2 var(--display); letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lrow .pc { font: 800 15px/1 var(--sans); font-variant-numeric: tabular-nums; text-align: right; color: var(--text); }
   .lrow .pc.z { color: var(--faint); }
@@ -153,12 +155,12 @@
   .card .stats { margin-bottom: 22px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .card .col { display: flex; flex-direction: column; gap: 10px; }
   .card .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .card .note { color: var(--blue); margin: -6px 0 20px; display: flex; align-items: center; gap: 8px; font: 800 13px/1.35 var(--sans); letter-spacing: 0.04em; text-transform: uppercase; }
+  .card .note { color: var(--pri-text); margin: -6px 0 20px; display: flex; align-items: center; gap: 8px; font: 800 13px/1.35 var(--sans); letter-spacing: 0.04em; text-transform: uppercase; }
   .card .note svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; flex: none; }
 
   #flash { position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%); z-index: 6; pointer-events: none; text-align: center; white-space: nowrap; }
   #flash b { display: block; font: 700 88px/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--text); }
-  #flash .lbl { margin-top: 10px; color: var(--blue); font-size: 14px; }
+  #flash .lbl { margin-top: 10px; color: var(--pri-text); font-size: 14px; }
   #flash.go { animation: flash .9s ease-out both; }
   @keyframes flash { 0% { opacity: 0; } 15% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
   #flash:not(.go) { opacity: 0; }
@@ -176,23 +178,36 @@
   #pbar .lbl { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--text); }
   #pbar .lbl b { font: 700 18px/1 var(--display); color: var(--text); }
   #pbar .meter { flex: 1; height: 16px; border: 3px solid var(--bg); box-sizing: content-box; }
-  #pbar .meter i { background: var(--green); }
+  #pbar .meter i { background: var(--pri); }
   #pDist { min-width: 120px; }
   #pTime { min-width: 52px; text-align: right; }
   .mtop { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
   .mtop > div { padding: 12px 14px; border: 2px solid var(--line); border-radius: 14px; min-width: 0; }
   .mtop b { display: block; font: 700 22px/1.1 var(--display); font-variant-numeric: tabular-nums; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
   .lrow.endless { margin-top: 6px; }
+  .lrow.endless .nm, .lrow.endless .pc { grid-row: 1 / 3; }
   .lrow.endless .n { background: var(--purple); box-shadow: inset 0 -4px 0 #a568cc; }
   .lrow.endless.locked .n { background: var(--line); box-shadow: inset 0 -4px 0 var(--line-hi); }
   .pvwrap.locked canvas { opacity: 0.45; }
   .card.skin { width: min(460px, 100%); }
   .card.skin .big { margin-bottom: 14px; }
+  /* the Done button stays in view while the colours scroll */
+  .card.skin .col { position: sticky; bottom: -26px; margin: 14px -26px -26px; padding: 12px 26px 26px; background: var(--bg); }
   .mskin { margin-top: 12px; }
   .card .note { margin: -6px 0 18px; }
   .scene { display: inline-flex; align-items: center; gap: 8px; }
   .scene i { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
 
+  /* a narrow level panel (small desktop windows): two stats per row so the numbers never cut off */
+  .detail { container-type: inline-size; }
+  @container (max-width: 620px) { .dbody .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  /* short desktop windows: the level panel and its Play button fit without scrolling */
+  @media (min-width: 861px) and (max-height: 820px) {
+    .mwrap { padding-top: 20px; }
+    .pvwrap { aspect-ratio: 16 / 6; }
+    .dbody { gap: 14px; padding: 18px 24px 20px; }
+    .dname { font-size: 38px; }
+  }
   @media (max-width: 860px) {
     .mwrap { grid-template-columns: minmax(0, 1fr); }
     .dname { font-size: 34px; }
@@ -211,6 +226,10 @@
     #pDist { min-width: 0; }
     #flash b { font-size: 64px; }
     .card .big { font-size: 32px; }
+    .card { padding: 20px; }
+    .card.skin .col { bottom: -20px; margin: 14px -20px -20px; padding: 12px 20px 20px; }
+    .card .stats > div { padding: 10px; }
+    .card .stats b { font-size: 19px; }
     .mtop b { font-size: 18px; }
     .dacts .btn { flex: 1; }
   }
@@ -258,7 +277,7 @@
    and a pick made in Platformer or Wave is written through to the Classic save at once. */
 var MX = (function () {
   'use strict';
-  /* the order is fixed (saves hold indexes); the colours are Duolingo's */
+  /* the order is fixed (saves hold indexes); the colours come from the shared game palette */
   var COLORS = [
     ['Blue', '#1cb0f6'], ['Charcoal', '#4b4b4b'], ['Snow', '#ffffff'], ['Red', '#ff4b4b'], ['Yellow', '#ffc800'], ['Green', '#58cc02'],
     ['Teal', '#20c9a6'], ['Sky', '#84d8ff'], ['Purple', '#ce82ff'], ['Pink', '#ff86d0'], ['Lime', '#a5ed6e'], ['Orange', '#ff9600'],
@@ -413,7 +432,7 @@ var MX = (function () {
       '.mxk .mxk-g{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;margin-bottom:6px}' +
       '.mxk .mxk-s{position:relative;aspect-ratio:1;border:2px solid rgba(0,0,0,.08);border-bottom-width:4px;border-radius:12px;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text,#4b4b4b)}' +
       '.mxk .mxk-s:active{transform:translateY(2px);border-bottom-width:2px}' +
-      '.mxk .mxk-s.on{box-shadow:0 0 0 3px var(--bg,#fff),0 0 0 5px #1cb0f6}.mxk .mxk-s.lock{cursor:default;transform:none;border-bottom-width:4px}' +
+      '.mxk .mxk-s.on{box-shadow:0 0 0 3px var(--bg,#fff),0 0 0 5px var(--pri,#4b9af3)}.mxk .mxk-s.lock{cursor:default;transform:none;border-bottom-width:4px}' +
       '.mxk .mxk-s.lock::before{content:"";position:absolute;inset:0;border-radius:9px;background:color-mix(in srgb,var(--bg,#fff) 62%,transparent)}' +
       '.mxk .mxk-s svg{position:relative;width:14px;height:14px;fill:none;stroke:var(--text,#4b4b4b);stroke-width:2.2;stroke-linecap:round}' +
       '.mxk .mxk-p{background:var(--soft,#f7f7f7);border-color:var(--line,#e5e5e5)}.mxk .mxk-p canvas{width:30px;height:30px}.mxk .mxk-p.lock canvas{opacity:.25}' +
@@ -588,22 +607,22 @@ var Unlock = {
 };
 
 /* ---------------- 4. theme ---------------- */
-/* Flat Duolingo-style scenes: sky, far hills, clouds (stars at night), the terrain's top band, lip and fill, blocks and spikes.
-   Each level has its own scene; Endless moves through all of them. The dark theme sinks every scene toward Duolingo's dark blue. */
+/* Flat scenes: sky, far hills, clouds (stars at night), the terrain's top band, lip and fill, blocks and spikes.
+   Each level has its own scene; Endless moves through all of them. The dark theme sinks every scene toward the planner's dark blue. */
 function hexRgb(h) { var n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
 function hexMix(a, b, t) {
   var x = hexRgb(a), y = hexRgb(b), h = function (v) { v = Math.round(v); return (v < 16 ? '0' : '') + v.toString(16); };
   return '#' + h(x[0] + (y[0] - x[0]) * t) + h(x[1] + (y[1] - x[1]) * t) + h(x[2] + (y[2] - x[2]) * t);
 }
 var SCENES = [
-  { name: 'Meadow',  sky: '#ddf4ff', far: '#c4ee9c', far2: '#aee37c', cloud: '#ffffff', top: '#58cc02', top2: '#58a700', soil: '#eab27a', soil2: '#d89a5c', block: '#ffffff', lip: '#e5e5e5', line: '#d5dde2', spike: '#ff4b4b', spike2: '#ea2b2b' },
-  { name: 'Beach',   sky: '#e1f6ff', far: '#9fdffc', far2: '#7fd2fb', cloud: '#ffffff', top: '#ffd77a', top2: '#f0bb4b', soil: '#fbe7b5', soil2: '#f2d38c', block: '#ffffff', lip: '#d6eefb', line: '#bfe2f5', spike: '#ff9600', spike2: '#e07f00' },
-  { name: 'Desert',  sky: '#fff2d2', far: '#ffd98c', far2: '#ffca66', cloud: '#fff9ec', top: '#ffc800', top2: '#e5a400', soil: '#f8d68e', soil2: '#eebf62', block: '#fffaf0', lip: '#f4e0b5', line: '#ecd29e', spike: '#ff4b4b', spike2: '#ea2b2b' },
-  { name: 'Candy',   sky: '#ffe9f7', far: '#ffc9ec', far2: '#ffb3e3', cloud: '#ffffff', top: '#ff86d0', top2: '#e86ab9', soil: '#ffd3ef', soil2: '#f8b9e1', block: '#ffffff', lip: '#f8d9ec', line: '#efc7df', spike: '#ce82ff', spike2: '#a568cc' },
-  { name: 'Snow',    sky: '#e8f6ff', far: '#cfeafb', far2: '#b9e0f8', cloud: '#ffffff', top: '#ffffff', top2: '#cfe9f8', soil: '#c6e6fa', soil2: '#b0dbf6', block: '#f2faff', lip: '#cde9f9', line: '#b8ddf3', spike: '#ff4b4b', spike2: '#ea2b2b' },
-  { name: 'Night',   sky: '#2f3d78', far: '#3c4d92', far2: '#4a5ca6', cloud: '#ffe17a', top: '#ce82ff', top2: '#a568cc', soil: '#4b3f8e', soil2: '#40357c', block: '#6272bd', lip: '#44529a', line: '#7d8dd6', spike: '#ffc800', spike2: '#e5a400', ink: 1 },
-  { name: 'Volcano', sky: '#ffe4d8', far: '#ffb89c', far2: '#ffa07f', cloud: '#fff5f0', top: '#6f6f6f', top2: '#4b4b4b', soil: '#8a7b74', soil2: '#7a6b64', block: '#ffffff', lip: '#f3d6cb', line: '#e9c5b8', spike: '#ff4b4b', spike2: '#ea2b2b' },
-  { name: 'Sunset',  sky: '#ffe2cc', far: '#ffbf94', far2: '#ffa877', cloud: '#fff4ea', top: '#ce82ff', top2: '#a568cc', soil: '#f2c9ff', soil2: '#e3b0f5', block: '#ffffff', lip: '#f3dcf9', line: '#e8c8f2', spike: '#ff4b4b', spike2: '#ea2b2b' }
+  { name: 'Meadow',  sky: '#ddf4ff', far: '#c4ee9c', far2: '#aee37c', cloud: '#ffffff', top: '#58cc02', top2: '#58a700', soil: '#eab27a', soil2: '#d89a5c', block: '#4f6d7a', lip: '#3a5360', line: '#263b45', spike: '#ff4b4b', spike2: '#ea2b2b' },
+  { name: 'Beach',   sky: '#e1f6ff', far: '#9fdffc', far2: '#7fd2fb', cloud: '#ffffff', top: '#ffd77a', top2: '#f0bb4b', soil: '#fbe7b5', soil2: '#f2d38c', block: '#3d7ea6', lip: '#2c6386', line: '#1c4a68', spike: '#ff9600', spike2: '#e07f00' },
+  { name: 'Desert',  sky: '#fff2d2', far: '#ffd98c', far2: '#ffca66', cloud: '#fff9ec', top: '#ffc800', top2: '#e5a400', soil: '#f8d68e', soil2: '#eebf62', block: '#a0603a', lip: '#7f4826', line: '#5e3318', spike: '#ff4b4b', spike2: '#ea2b2b' },
+  { name: 'Candy',   sky: '#ffe9f7', far: '#ffc9ec', far2: '#ffb3e3', cloud: '#ffffff', top: '#ff86d0', top2: '#e86ab9', soil: '#ffd3ef', soil2: '#f8b9e1', block: '#8a5cc8', lip: '#6c43a6', line: '#4f2d82', spike: '#ff4b4b', spike2: '#ea2b2b' },
+  { name: 'Snow',    sky: '#e8f6ff', far: '#cfeafb', far2: '#b9e0f8', cloud: '#ffffff', top: '#ffffff', top2: '#cfe9f8', soil: '#c6e6fa', soil2: '#b0dbf6', block: '#4a7fae', lip: '#36658f', line: '#244c70', spike: '#ff4b4b', spike2: '#ea2b2b' },
+  { name: 'Night',   sky: '#2f3d78', far: '#3c4d92', far2: '#4a5ca6', cloud: '#ffe17a', top: '#ce82ff', top2: '#a568cc', soil: '#4b3f8e', soil2: '#40357c', block: '#aab6f5', lip: '#7e8ce0', line: '#4d5bb5', spike: '#ffc800', spike2: '#e5a400', ink: 1 },
+  { name: 'Volcano', sky: '#ffe4d8', far: '#ffb89c', far2: '#ffa07f', cloud: '#fff5f0', top: '#6f6f6f', top2: '#4b4b4b', soil: '#8a7b74', soil2: '#7a6b64', block: '#4a4f63', lip: '#363a4b', line: '#232633', spike: '#ff4b4b', spike2: '#ea2b2b' },
+  { name: 'Sunset',  sky: '#ffe2cc', far: '#ffbf94', far2: '#ffa877', cloud: '#fff4ea', top: '#ce82ff', top2: '#a568cc', soil: '#f2c9ff', soil2: '#e3b0f5', block: '#3c7a8c', lip: '#2c5e6d', line: '#1d4450', spike: '#ff4b4b', spike2: '#ea2b2b' }
 ];
 /* each level's scene, and the order Endless runs through them (one every ENDLESS_SCENE units) */
 var LEVEL_SCENES = [0, 1, 4, 5, 6], ENDLESS_SCENES = [0, 2, 3, 7, 1, 4, 5, 6], ENDLESS_SCENE = 200;
@@ -617,8 +636,9 @@ var Theme = {
     C.sky = m(sc.sky, 0.84); C.far = m(sc.far, 0.74); C.far2 = m(sc.far2, 0.7); C.cloud = m(sc.cloud, 0.82);
     C.top = dark ? hexMix(sc.top, '#000000', 0.12) : sc.top; C.top2 = dark ? hexMix(sc.top2, '#000000', 0.2) : sc.top2;
     C.soil = m(sc.soil, 0.62); C.soil2 = m(sc.soil2, 0.58);
-    C.block = dark ? '#33474f' : sc.block; C.lip = dark ? '#23343b' : sc.lip; C.line = dark ? '#536a74' : sc.line;
-    C.spike = sc.spike; C.spike2 = sc.spike2;
+    /* blocks: a solid fill well apart from the sky, a darker lip, and a crisp outline (dark on light skies, light in the dark theme) */
+    C.block = dark ? hexMix(sc.block, '#ffffff', 0.22) : sc.block; C.lip = dark ? sc.block : sc.lip; C.line = dark ? hexMix(sc.block, '#ffffff', 0.62) : sc.line;
+    C.spike = sc.spike; C.spike2 = sc.spike2; C.spikeL = hexMix(sc.spike2, '#000000', 0.4);
     var ink = dark || sc.ink;
     C.fg = ink ? '#f1f7fb' : '#4b4b4b'; C.fg2 = ink ? '#a9bcc6' : '#777777'; C.fg3 = ink ? 'rgba(241,247,251,0.45)' : 'rgba(75,75,75,0.4)';
     C.mark = ink ? 'rgba(255,255,255,0.22)' : 'rgba(75,75,75,0.16)'; C.trail = ink ? '#ffffff' : '#ffffff';
@@ -1098,7 +1118,7 @@ var Render = {
         var o = obs[j], p = o.p, k;
         if (o.t === 'b') {
           var x0 = Math.round(v.sx(o.bb[0])), x1 = Math.round(v.sx(o.bb[2])), y0 = Math.round(v.sy(o.bb[3])), y1 = Math.round(v.sy(o.bb[1]));
-          var R = Math.min(Math.round(v.cell * 0.22), (x1 - x0) / 2, (y1 - y0) / 2), lw = Math.max(2, Math.round(v.cell * 0.07)), lip = Math.max(3, Math.round(v.cell * 0.18));
+          var R = Math.min(Math.round(v.cell * 0.22), (x1 - x0) / 2, (y1 - y0) / 2), lw = Math.max(2, Math.round(v.cell * 0.08)), lip = Math.max(3, Math.round(v.cell * 0.2));
           RR(ctx, x0, y0, x1 - x0, y1 - y0, R); ctx.fillStyle = C.line; ctx.fill();
           ctx.save(); RR(ctx, x0 + lw, y0 + lw, x1 - x0 - lw * 2, y1 - y0 - lw * 2, Math.max(0, R - lw)); ctx.clip();
           ctx.fillStyle = C.block; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
@@ -1106,14 +1126,18 @@ var Render = {
           ctx.restore();
         } else if (o.t === 'd') {
           var cx = v.sx((o.bb[0] + o.bb[2]) / 2), cy = v.sy((o.bb[1] + o.bb[3]) / 2), rr = (o.bb[2] - o.bb[0]) / 2 * v.cell;
-          ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, v.cell * 0.06);
+          ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, v.cell * 0.06) + 2 * Math.max(1.5, v.cell * 0.035);
+          ctx.strokeStyle = C.spikeL; ctx.beginPath(); ctx.moveTo(cx, cy - rr); ctx.lineTo(cx + rr, cy); ctx.lineTo(cx, cy + rr); ctx.lineTo(cx - rr, cy); ctx.closePath(); ctx.stroke();
+          ctx.lineWidth = Math.max(2, v.cell * 0.06);
           ctx.fillStyle = C.spike2; ctx.strokeStyle = C.spike2; ctx.beginPath(); ctx.moveTo(cx, cy - rr); ctx.lineTo(cx + rr, cy); ctx.lineTo(cx, cy + rr); ctx.lineTo(cx - rr, cy); ctx.closePath(); ctx.fill(); ctx.stroke();
           ctx.fillStyle = C.spike; ctx.strokeStyle = C.spike; ctx.beginPath(); ctx.moveTo(cx, cy - rr); ctx.lineTo(cx, cy + rr); ctx.lineTo(cx - rr, cy); ctx.closePath(); ctx.fill(); ctx.stroke();
           ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(cx - rr * 0.32, cy - rr * 0.2, rr * 0.13, 0, Math.PI * 2); ctx.fill();
         } else {
           /* spikes: the left half lighter, the right half darker */
           var tip = o.t === 'sf' ? p[1] : p[2], base0 = p[0], base1 = o.t === 'sf' ? p[2] : p[1], mx = (base0[0] + base1[0]) / 2;
-          ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, v.cell * 0.06);
+          ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, v.cell * 0.06) + 2 * Math.max(1.5, v.cell * 0.035);
+          ctx.strokeStyle = C.spikeL; ctx.beginPath(); ctx.moveTo(v.sx(base0[0]), v.sy(base0[1])); ctx.lineTo(v.sx(tip[0]), v.sy(tip[1])); ctx.lineTo(v.sx(base1[0]), v.sy(base1[1])); ctx.closePath(); ctx.stroke();
+          ctx.lineWidth = Math.max(2, v.cell * 0.06);
           ctx.fillStyle = C.spike2; ctx.strokeStyle = C.spike2; ctx.beginPath(); ctx.moveTo(v.sx(base0[0]), v.sy(base0[1])); ctx.lineTo(v.sx(tip[0]), v.sy(tip[1])); ctx.lineTo(v.sx(base1[0]), v.sy(base1[1])); ctx.closePath(); ctx.fill(); ctx.stroke();
           ctx.fillStyle = C.spike; ctx.strokeStyle = C.spike; ctx.beginPath(); ctx.moveTo(v.sx(base0[0]), v.sy(base0[1])); ctx.lineTo(v.sx(tip[0]), v.sy(tip[1])); ctx.lineTo(v.sx(mx), v.sy(base0[1])); ctx.closePath(); ctx.fill(); ctx.stroke();
         }
@@ -1332,7 +1356,7 @@ var UI = {
     var ink = Game.pal().fg; if (UI.ink !== ink) { UI.ink = ink; $('pbar').style.setProperty('--text', ink); }
   },
   flash: function (big, small) {
-    var f = $('flash'); f.innerHTML = '<b style="color:' + (Game.on ? Game.pal().fg : '') + '">' + esc(big) + '</b>' + (small ? '<div class="lbl">' + esc(small) + '</div>' : '');
+    var f = $('flash'); f.innerHTML = '<b style="color:' + (Game.on ? Game.pal().fg : '') + '">' + esc(big) + '</b>' + (small ? '<div class="lbl" style="color:' + (Game.on ? Game.pal().fg : '') + '">' + esc(small) + '</div>' : '');
     f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
     clearTimeout(UI.flashT); UI.flashT = setTimeout(function () { f.classList.remove('go'); }, 900);
   },
@@ -1363,7 +1387,7 @@ var UI = {
     else acts.push(['Endless', '', function () { UI.play('endless', 0); }]);
     acts.push(['Replay', 'ghost', function () { UI.play('level', i); }]);
     acts.push(['Levels', 'ghost', function () { UI.sel = i < 4 ? i + 1 : 5; UI.toMenu(); }]);
-    UI.card('Complete', 'Level ' + pad2(i + 1) + '  ' + LEVELS[i].name, stats, inf.unlocked ? ICON.open + '<span>' + esc(inf.unlocked) + '</span>' : (inf.fastest && !inf.first ? '<span>New best time</span>' : null), acts);
+    UI.card('Complete', 'Level ' + pad2(i + 1) + ', ' + LEVELS[i].name, stats, inf.unlocked ? ICON.open + '<span>' + esc(inf.unlocked) + '</span>' : (inf.fastest && !inf.first ? '<span>New best time</span>' : null), acts);
   },
   card: function (title, sub, stats, note, acts) {
     var o = $('ovl'), h = '<div class="card"><div class="lbl">' + esc(sub || '') + '</div><div class="big">' + esc(title) + '</div>';
@@ -1378,10 +1402,10 @@ var UI = {
   },
   skin: function () {
     var o = $('ovl'), acts = [['Done', '', UI.closeModal]];
-    o.innerHTML = '<div class="card skin"><div class="lbl">Character</div><div class="big">Skin</div><div id="skBody"></div><div class="col" style="margin-top:14px"><button class="btn wide" data-k="0">Done</button></div></div>';
+    o.innerHTML = '<div class="card skin"><div class="lbl">Character</div><div class="big">Skin</div><div id="skBody"></div><div class="col"><button class="btn wide" data-a="done">Done</button></div></div>';
     o.hidden = false; UI.modal = { acts: acts };
     MX.picker($('skBody'), function () { return S.cube; }, GD, TEST, function (cb) { S.cube = cb; S.cubeT = Date.now(); Store.save(true); MX.share(GAME, cb, S.cubeT); });
-    o.querySelector('[data-k]').addEventListener('click', function (ev) { ev.stopPropagation(); UI.closeModal(); });
+    o.querySelector('[data-a=done]').addEventListener('click', function (ev) { ev.stopPropagation(); UI.closeModal(); });
     o.onpointerdown = function (ev) { ev.stopPropagation(); };
   },
   closeModal: function () { var o = $('ovl'); o.hidden = true; o.innerHTML = ''; UI.modal = null; },

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style>
-  /* Duolingo look: Fredoka headings, Nunito text, flat fills, 2px lines with a 4px bottom edge, chunky buttons that press down */
+  /* Rounded look: Fredoka headings, Nunito text, flat fills, 2px lines with a 4px bottom edge, chunky buttons that press down */
   :root {
     --display: 'Fredoka', 'Nunito', system-ui, sans-serif;
     --sans: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -17,7 +17,8 @@
     --bg: #ffffff; --soft: #f7f7f7; --panel: #ffffff; --line: #e5e5e5; --line-hi: #d0d0d0;
     --text: #4b4b4b; --dim: #777777; --faint: #afafaf;
     --green: #58cc02; --green-dark: #58a700; --green-wash: #d7ffb8;
-    --blue: #1cb0f6; --blue-dark: #1899d6; --blue-wash: #ddf4ff; --blue-line: #84d8ff;
+    --pri: #4b9af3; --pri-dark: #3c81db; --pri-hi: #5ea6f6; --pri-light: #a4ceff; --pri-wash: #e6f1ff; --pri-text: #3c81db;
+    --blue: #4b9af3; --blue-dark: #3c81db; --blue-wash: #e6f1ff; --blue-line: #a4ceff;
     --red: #ff4b4b; --red-dark: #ea2b2b; --red-wash: #ffdfe0;
     --gold: #ffc800; --gold-dark: #e5a400; --purple: #ce82ff; --orange: #ff9600;
     --scrim: rgba(255, 255, 255, 0.92);
@@ -26,7 +27,8 @@
   :root[data-theme="dark"] {
     --bg: #131f24; --soft: #202f36; --panel: #131f24; --line: #37464f; --line-hi: #52656d;
     --text: #f1f7fb; --dim: #8799a3; --faint: #52656d;
-    --green-wash: #1f3a1a; --blue-wash: #18323f; --blue-line: #1f6f93; --red-wash: #3c2328;
+    --green-wash: #1f3a1a; --blue-wash: #1c3150; --blue-line: #3c81db; --red-wash: #3c2328;
+    --pri-wash: #1c3150; --pri-light: #78b0fc; --pri-text: #78b0fc;
     --scrim: rgba(19, 31, 36, 0.92);
     color-scheme: dark;
   }
@@ -45,11 +47,12 @@
   /* top bar */
   #bar { flex: none; position: relative; z-index: 20; height: 64px; display: flex; align-items: center; gap: 14px; padding: 0 20px;
     background: var(--bg); border-bottom: 2px solid var(--line); min-width: 0; }
-  .brand { cursor: pointer; font: 700 26px/1 var(--display); letter-spacing: -0.02em; white-space: nowrap; color: var(--green); }
-  #crumb { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 14px; border-left: 2px solid var(--line); line-height: 26px; }
-  #crumb b { font-weight: 800; color: var(--text); }
+  .brand { cursor: pointer; font: 700 26px/1 var(--display); letter-spacing: -0.02em; white-space: nowrap; color: var(--pri-text); }
+  #crumb { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 14px; border-left: 2px solid var(--line); line-height: 26px;
+    font: 700 16px/26px var(--display); letter-spacing: 0; text-transform: none; color: var(--dim); }
+  #crumb b { font-weight: 700; color: var(--text); }
   #crumb span { margin-left: 10px; }
-  #crumb .tag { color: var(--blue); }
+  #crumb .tag { color: var(--pri-text); font: 800 12px/26px var(--sans); letter-spacing: 0.06em; text-transform: uppercase; }
   #bar .sp { flex: 1; min-width: 4px; }
   #hud { display: flex; align-items: center; gap: 6px; }
   .st { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; min-width: 52px; padding: 0 8px; }
@@ -60,22 +63,22 @@
   /* buttons: solid fill with a darker 4px edge; pressing shifts down and the edge shrinks */
   .btn { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; cursor: pointer;
     font: 800 14px/1.2 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
-    background: var(--green); color: #fff; border: 2px solid var(--green-dark); border-bottom-width: 4px; border-radius: 12px; }
+    background: var(--pri); color: #fff; border: 2px solid var(--pri-dark); border-bottom-width: 4px; border-radius: 12px; }
   .btn:not(:disabled):active { transform: translateY(2px); border-bottom-width: 2px; margin-bottom: 2px; }
-  .btn.ghost, .btn.line { background: var(--bg); color: var(--blue); border-color: var(--line); }
+  .btn.ghost, .btn.line { background: var(--bg); color: var(--pri-text); border-color: var(--line); }
   .btn.danger { background: var(--bg); color: var(--red); border-color: var(--line); }
   .btn.sm { min-height: 38px; padding: 0 14px; font-size: 12.5px; border-radius: 10px; border-bottom-width: 3px; }
   .btn.sm:not(:disabled):active { border-bottom-width: 2px; margin-bottom: 1px; transform: translateY(1px); }
   .btn.wide { width: 100%; }
   .btn:disabled { opacity: 0.45; cursor: default; }
   .btn svg { width: 14px; height: 14px; fill: currentColor; }
-  @media (hover: hover) { .btn:not(:disabled):hover { background: #61e002; } .btn.ghost:not(:disabled):hover, .btn.line:not(:disabled):hover, .btn.danger:not(:disabled):hover { background: var(--soft); } }
+  @media (hover: hover) { .btn:not(:disabled):hover { background: var(--pri-hi); } .btn.ghost:not(:disabled):hover, .btn.line:not(:disabled):hover, .btn.danger:not(:disabled):hover { background: var(--soft); } }
 
   /* icon buttons */
   .tb { width: 42px; height: 42px; flex: none; border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 12px; cursor: pointer; background: var(--bg); color: var(--dim);
     display: inline-flex; align-items: center; justify-content: center; padding: 0; }
   .tb:not(:disabled):active { transform: translateY(2px); border-bottom-width: 2px; }
-  .tb.on { background: var(--blue-wash); border-color: var(--blue-line); color: var(--blue); }
+  .tb.on { background: var(--blue-wash); border-color: var(--blue-line); color: var(--pri-text); }
   .tb:disabled { opacity: 0.4; cursor: default; }
   .tb svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
   .tb.plain { border-color: transparent; background: transparent; }
@@ -87,7 +90,7 @@
   .seg button { min-height: 42px; padding: 0 16px; border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 12px; cursor: pointer; background: var(--bg);
     font: 800 13.5px/1.2 var(--sans); letter-spacing: 0.05em; text-transform: uppercase; color: var(--dim); }
   .seg button:active { transform: translateY(2px); border-bottom-width: 2px; margin-bottom: 2px; }
-  .seg button.on { background: var(--blue-wash); border-color: var(--blue-line); color: var(--blue); }
+  .seg button.on { background: var(--blue-wash); border-color: var(--blue-line); color: var(--pri-text); }
   @media (hover: hover) { .seg button:not(.on):hover { background: var(--soft); color: var(--text); } }
 
   .inp { min-width: 0; height: 42px; padding: 0 14px; border: 2px solid var(--line); border-radius: 12px; background: var(--soft);
@@ -109,7 +112,7 @@
     border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 16px; background: var(--bg); cursor: pointer; text-align: left; color: var(--text); }
   .lrow:active { transform: translateY(2px); border-bottom-width: 2px; margin-bottom: 2px; }
   .lrow .n { grid-row: 1 / 3; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    background: var(--green); color: #fff; font: 700 17px/1 var(--display); font-variant-numeric: tabular-nums; box-shadow: inset 0 -4px 0 var(--green-dark); }
+    background: var(--pri); color: #fff; font: 700 17px/1 var(--display); font-variant-numeric: tabular-nums; box-shadow: inset 0 -4px 0 var(--pri-dark); }
   .lrow .nm { font: 700 18px/1.2 var(--display); letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lrow .pc { font: 800 15px/1 var(--sans); font-variant-numeric: tabular-nums; text-align: right; color: var(--text); }
   .lrow .pc.z { color: var(--faint); }
@@ -123,7 +126,7 @@
   .meter i::after { content: ""; position: absolute; left: 8px; right: 8px; top: 3px; height: 3px; border-radius: 99px; background: rgba(255,255,255,0.35); }
   .meter.p i { background: var(--blue); }
   .lnew { margin-top: 12px; }
-  .empty { padding: 26px 16px; border: 2px dashed var(--line); border-radius: 16px; color: var(--faint); font: 800 13px/1.3 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; text-align: center; }
+  .empty { padding: 26px 16px; border: 2px dashed var(--line); border-radius: 16px; color: var(--dim); font: 800 13px/1.3 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; text-align: center; }
   .pips { display: inline-flex; gap: 4px; vertical-align: middle; }
   .pips i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
   .pips i.f { background: var(--gold); }
@@ -153,12 +156,12 @@
   .card .stats { margin-bottom: 22px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .card .col { display: flex; flex-direction: column; gap: 10px; }
   .card .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .card .note { color: var(--blue); margin: -6px 0 20px; display: flex; align-items: center; gap: 8px; font: 800 13px/1.35 var(--sans); letter-spacing: 0.04em; text-transform: uppercase; }
+  .card .note { color: var(--pri-text); margin: -6px 0 20px; display: flex; align-items: center; gap: 8px; font: 800 13px/1.35 var(--sans); letter-spacing: 0.04em; text-transform: uppercase; }
   .card .note svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; flex: none; }
 
   #flash { position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%); z-index: 6; pointer-events: none; text-align: center; white-space: nowrap; }
   #flash b { display: block; font: 700 88px/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--text); }
-  #flash .lbl { margin-top: 10px; color: var(--blue); font-size: 14px; }
+  #flash .lbl { margin-top: 10px; color: var(--pri-text); font-size: 14px; }
   #flash.go { animation: flash .9s ease-out both; }
   @keyframes flash { 0% { opacity: 0; } 15% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
   #flash:not(.go) { opacity: 0; }
@@ -205,7 +208,7 @@
   /* editor dock: the palette on top, then tools, the chosen item's settings and the scrubber */
   #dock { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 10px 20px 12px; background: var(--bg); border-top: 2px solid var(--line); max-height: 46vh; overflow-y: auto; scrollbar-width: none; }
   #dock::-webkit-scrollbar { display: none; }
-  .drow, .drow2 { display: flex; align-items: center; gap: 12px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .drow, .drow2 { display: flex; flex-shrink: 0; align-items: center; gap: 12px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
   .drow { flex-wrap: wrap; row-gap: 8px; overflow: visible; }
   .drow::-webkit-scrollbar, .drow2::-webkit-scrollbar { display: none; }
   .tg { display: flex; gap: 4px; align-items: center; flex: none; flex-wrap: wrap; }
@@ -219,7 +222,7 @@
   .tool .tlk { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
   .tool .tlk svg { width: 15px; height: 15px; fill: none; stroke: var(--dim); stroke-width: 2.2; stroke-linecap: round; }
   .tool.on { background: var(--blue-wash); border-color: var(--blue-line); }
-  .tool kbd { position: absolute; right: 3px; top: 1px; font: 800 9px/1 var(--sans); color: var(--faint); }
+  .tool kbd { position: absolute; right: 3px; top: 1px; font: 800 9px/1 var(--sans); color: var(--dim); }
   @media (hover: hover) { .tool:not(.on):hover { background: var(--soft); } }
   #rotTb svg { transition: transform .2s; }
   .props { display: flex; align-items: center; gap: 6px; flex: none; min-height: 38px; }
@@ -237,13 +240,13 @@
   .wrow .lbl, .mstrip .lbl { display: flex; align-items: center; gap: 4px; font-size: 10.5px; white-space: nowrap; margin-top: 2px; }
   .wrow .lbl { white-space: normal; }
   .wrow .lbl svg, .mstrip .lbl svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.2; flex: none; stroke-linecap: round; }
-  .wrow .on .lbl, .mstrip .on .lbl { color: var(--green); }
+  .wrow .on .lbl, .mstrip .on .lbl { color: var(--pri-text); }
   .wrow .off, .mstrip .off { color: var(--faint); }
   .wrow .off b, .mstrip .off b { color: var(--faint); }
   .wrow .off canvas, .mstrip .off canvas { opacity: 0.3; }
   .mstrip { display: flex; gap: 6px; flex-wrap: wrap; }
   .mstrip > div { padding: 4px 12px 4px 6px; border: 2px solid var(--line); border-radius: 12px; }
-  .mstrip > div.on { background: var(--green-wash); border-color: transparent; }
+  .mstrip > div.on { background: var(--pri-wash); border-color: transparent; }
   #mpad { position: absolute; right: 20px; bottom: 20px; z-index: 5; display: flex; gap: 8px; }
   #mpad .tb { width: 68px; height: 68px; }
   #mpad .tb.dn { background: var(--soft); transform: translateY(2px); border-bottom-width: 2px; }
@@ -258,6 +261,13 @@
   .scrub .lbl { font-variant-numeric: tabular-nums; min-width: 64px; text-align: right; }
   #edName { width: 240px; }
 
+  @media (min-width: 861px) and (max-height: 820px) {
+    .mwrap { padding-top: 20px; padding-bottom: 20px; }
+    .pvwrap { aspect-ratio: 16 / 5.4; }
+    .dbody { padding: 18px 22px 20px; gap: 14px; }
+    .dname { font-size: 38px; }
+    .stats > div { padding: 10px 12px; }
+  }
   @media (max-width: 860px) {
     .mwrap { grid-template-columns: minmax(0, 1fr); }
     .dname { font-size: 34px; }
@@ -282,8 +292,11 @@
     #bar.playing .brand { font-size: 18px; }
     .mstrip { display: none; }
     #dock { padding: 8px 10px; }
-    .drow .tg { flex: 1 1 100%; }
+    .drow { column-gap: 4px; }
+    .drow .tg { flex: 0 1 auto; }
     .drow .tg + .tg { border-left: 0; padding-left: 0; }
+    .drow2 { order: -1; }
+    .drow2 .tg + .tg { border-left: 0; padding-left: 0; }
     .drow2 { flex-wrap: wrap; row-gap: 8px; }
     .drow2 .scrub { flex-basis: 100%; }
     .tool { width: 40px; height: 40px; }
@@ -306,16 +319,16 @@
       <div class="st"><span class="k">Best</span><b id="hBest">0%</b></div>
     </div>
     <div id="acts"></div>
-    <button class="tb plain" id="bTheme"></button>
-    <button class="tb plain" id="bSound"></button>
+    <button class="tb plain" id="bTheme" aria-label="Theme"></button>
+    <button class="tb plain" id="bSound" aria-label="Sound"></button>
   </header>
   <div id="stage">
     <canvas id="cv"></canvas>
     <div id="flash"></div>
     <div id="mpad" hidden><button class="tb" id="mpl" aria-label="Left"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><button class="tb" id="mpr" aria-label="Right"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button></div>
     <div id="prac" hidden>
-      <button class="tb" id="bCp"></button>
-      <button class="tb" id="bCpDel"></button>
+      <button class="tb" id="bCp" aria-label="Checkpoint"></button>
+      <button class="tb" id="bCpDel" aria-label="Remove checkpoint"></button>
     </div>
     <div id="menu"></div>
     <div id="ovl" class="ovl" hidden></div>
@@ -377,7 +390,7 @@ var ICON = {
    and a pick made in Platformer or Wave is written through to the Classic save at once. */
 var MX = (function () {
   'use strict';
-  /* the order is fixed (saves hold indexes); the colours are Duolingo's */
+  /* the order is fixed (saves hold indexes); the colours come from the shared game palette */
   var COLORS = [
     ['Blue', '#1cb0f6'], ['Charcoal', '#4b4b4b'], ['Snow', '#ffffff'], ['Red', '#ff4b4b'], ['Yellow', '#ffc800'], ['Green', '#58cc02'],
     ['Teal', '#20c9a6'], ['Sky', '#84d8ff'], ['Purple', '#ce82ff'], ['Pink', '#ff86d0'], ['Lime', '#a5ed6e'], ['Orange', '#ff9600'],
@@ -532,7 +545,7 @@ var MX = (function () {
       '.mxk .mxk-g{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;margin-bottom:6px}' +
       '.mxk .mxk-s{position:relative;aspect-ratio:1;border:2px solid rgba(0,0,0,.08);border-bottom-width:4px;border-radius:12px;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text,#4b4b4b)}' +
       '.mxk .mxk-s:active{transform:translateY(2px);border-bottom-width:2px}' +
-      '.mxk .mxk-s.on{box-shadow:0 0 0 3px var(--bg,#fff),0 0 0 5px #1cb0f6}.mxk .mxk-s.lock{cursor:default;transform:none;border-bottom-width:4px}' +
+      '.mxk .mxk-s.on{box-shadow:0 0 0 3px var(--bg,#fff),0 0 0 5px var(--pri,#4b9af3)}.mxk .mxk-s.lock{cursor:default;transform:none;border-bottom-width:4px}' +
       '.mxk .mxk-s.lock::before{content:"";position:absolute;inset:0;border-radius:9px;background:color-mix(in srgb,var(--bg,#fff) 62%,transparent)}' +
       '.mxk .mxk-s svg{position:relative;width:14px;height:14px;fill:none;stroke:var(--text,#4b4b4b);stroke-width:2.2;stroke-linecap:round}' +
       '.mxk .mxk-p{background:var(--soft,#f7f7f7);border-color:var(--line,#e5e5e5)}.mxk .mxk-p canvas{width:30px;height:30px}.mxk .mxk-p.lock canvas{opacity:.25}' +
@@ -678,29 +691,29 @@ function shown(id) { var p = S.prog[id] || {}, q = {}; for (var k in p) q[k] = p
 function prog(id) { var p = S.prog[id]; if (!p) p = S.prog[id] = { best: 0, prac: 0, att: 0, jumps: 0, done: 0, time: 0 }; return p; }
 
 /* ---------------- 4. theme ---------------- */
-/* Flat Duolingo-style art. A scene is a set of colours for the sky, the far hills, the ground and the blocks; every level picks one
-   (def.scene). The dark theme keeps the scene's hues but sinks them toward Duolingo's dark background. */
+/* Flat rounded art. A scene is a set of colours for the sky, the far hills, the ground and the blocks; every level picks one
+   (def.scene). The dark theme keeps the scene's hues but sinks them toward the dark theme's background. */
 function hexMix(a, b, t) {
   var x = hexRgb(a), y = hexRgb(b), h = function (v) { v = Math.round(v); return (v < 16 ? '0' : '') + v.toString(16); };
   return '#' + h(x[0] + (y[0] - x[0]) * t) + h(x[1] + (y[1] - x[1]) * t) + h(x[2] + (y[2] - x[2]) * t);
 }
 var SCENES = [
-  { name: 'Meadow',  sky: '#ddf4ff', far: '#c4ee9c', far2: '#aee37c', cloud: '#ffffff', top: '#58cc02', top2: '#58a700', soil: '#eab27a', soil2: '#d89a5c', block: '#ffffff', lip: '#e5e5e5', line: '#d5dde2' },
-  { name: 'Beach',   sky: '#e1f6ff', far: '#9fdffc', far2: '#7fd2fb', cloud: '#ffffff', top: '#ffd77a', top2: '#f0bb4b', soil: '#fbe7b5', soil2: '#f2d38c', block: '#ffffff', lip: '#d6eefb', line: '#bfe2f5' },
-  { name: 'Desert',  sky: '#fff2d2', far: '#ffd98c', far2: '#ffca66', cloud: '#fff9ec', top: '#ffc800', top2: '#e5a400', soil: '#f8d68e', soil2: '#eebf62', block: '#fffaf0', lip: '#f4e0b5', line: '#ecd29e' },
-  { name: 'Candy',   sky: '#ffe9f7', far: '#ffc9ec', far2: '#ffb3e3', cloud: '#ffffff', top: '#ff86d0', top2: '#e86ab9', soil: '#ffd3ef', soil2: '#f8b9e1', block: '#ffffff', lip: '#f8d9ec', line: '#efc7df' },
-  { name: 'Snow',    sky: '#e8f6ff', far: '#cfeafb', far2: '#b9e0f8', cloud: '#ffffff', top: '#ffffff', top2: '#cfe9f8', soil: '#c6e6fa', soil2: '#b0dbf6', block: '#f2faff', lip: '#cde9f9', line: '#b8ddf3' },
-  { name: 'Night',   sky: '#2f3d78', far: '#3c4d92', far2: '#4a5ca6', cloud: '#ffe17a', top: '#ce82ff', top2: '#a568cc', soil: '#4b3f8e', soil2: '#40357c', block: '#6272bd', lip: '#44529a', line: '#7d8dd6', ink: '#ffffff' },
-  { name: 'Volcano', sky: '#ffe4d8', far: '#ffb89c', far2: '#ffa07f', cloud: '#fff5f0', top: '#6f6f6f', top2: '#4b4b4b', soil: '#8a7b74', soil2: '#7a6b64', block: '#ffffff', lip: '#f3d6cb', line: '#e9c5b8' }
+  { name: 'Meadow',  sky: '#ddf4ff', far: '#c4ee9c', far2: '#aee37c', cloud: '#ffffff', top: '#58cc02', top2: '#58a700', soil: '#eab27a', soil2: '#d89a5c', block: '#4f6d7a', lip: '#3a5360', line: '#263b45' },
+  { name: 'Beach',   sky: '#e1f6ff', far: '#9fdffc', far2: '#7fd2fb', cloud: '#ffffff', top: '#ffd77a', top2: '#f0bb4b', soil: '#fbe7b5', soil2: '#f2d38c', block: '#3d7ea6', lip: '#2c6386', line: '#1c4a68' },
+  { name: 'Desert',  sky: '#fff2d2', far: '#ffd98c', far2: '#ffca66', cloud: '#fff9ec', top: '#ffc800', top2: '#e5a400', soil: '#f8d68e', soil2: '#eebf62', block: '#a0603a', lip: '#7f4826', line: '#5e3318' },
+  { name: 'Candy',   sky: '#ffe9f7', far: '#ffc9ec', far2: '#ffb3e3', cloud: '#ffffff', top: '#ff86d0', top2: '#e86ab9', soil: '#ffd3ef', soil2: '#f8b9e1', block: '#8a5cc8', lip: '#6c43a6', line: '#4f2d82' },
+  { name: 'Snow',    sky: '#e8f6ff', far: '#cfeafb', far2: '#b9e0f8', cloud: '#ffffff', top: '#ffffff', top2: '#cfe9f8', soil: '#c6e6fa', soil2: '#b0dbf6', block: '#4a7fae', lip: '#36658f', line: '#244c70' },
+  { name: 'Night',   sky: '#2f3d78', far: '#3c4d92', far2: '#4a5ca6', cloud: '#ffe17a', top: '#ce82ff', top2: '#a568cc', soil: '#4b3f8e', soil2: '#40357c', block: '#aab6f5', lip: '#7e8ce0', line: '#4d5bb5', ink: '#ffffff' },
+  { name: 'Volcano', sky: '#ffe4d8', far: '#ffb89c', far2: '#ffa07f', cloud: '#fff5f0', top: '#6f6f6f', top2: '#4b4b4b', soil: '#8a7b74', soil2: '#7a6b64', block: '#4a4f63', lip: '#363a4b', line: '#232633' }
 ];
 var SCENE_COUNT = SCENES.length;
 /* shared by every scene: items, hazards and the special blocks */
 var BASE_PAL = {
-  spike: '#ff4b4b', spike2: '#ea2b2b', accent: '#1cb0f6', accent2: '#1899d6', onAccent: '#ffffff',
+  spike: '#ff4b4b', spike2: '#ea2b2b', spikeL: '#a3161b', accent: '#1cb0f6', accent2: '#1899d6', onAccent: '#ffffff',
   gold: '#ffc800', gold2: '#e5a400', rose: '#ce82ff', rose2: '#a568cc', green: '#58cc02', green2: '#58a700', orange: '#ff9600', orange2: '#e07f00',
-  ice: '#c9f1ff', ice2: '#96def9', lava: '#ff9600', lava2: '#ff4b4b', lava3: '#ffc800', gem: '#1cb0f6', gem2: '#1899d6', gem3: '#9fe3ff',
-  brick: '#ff8f66', brick2: '#e2683f', stone: '#cfc8bd', stone2: '#b3aa9c', wood: '#e9a55e', wood2: '#c9823c', metal: '#a9bccd', metal2: '#869cb1',
-  glass: '#d4f4ff', glass2: '#8fdcfa', crumb: '#ead2ae', crumb2: '#cfae7e', leaf: '#58cc02', leaf2: '#58a700', petal: '#ff86d0', petal2: '#ffffff',
+  ice: '#bfeefc', ice2: '#86d6f7', lava: '#ff9600', lava2: '#ff4b4b', lava3: '#ffc800', gem: '#1cb0f6', gem2: '#1899d6', gem3: '#9fe3ff',
+  brick: '#ff8f66', brick2: '#e2683f', stone: '#c4bcaf', stone2: '#a39887', wood: '#e9a55e', wood2: '#c9823c', metal: '#9fb3c6', metal2: '#7d93a9',
+  glass: '#b4e7fb', glass2: '#7fcff2', crumb: '#e2c494', crumb2: '#c39f69', leaf: '#58cc02', leaf2: '#58a700', petal: '#ff86d0', petal2: '#ffffff',
   danger: '#ff4b4b', shadow: 'rgba(0,0,0,0)'
 };
 var Theme = {
@@ -715,8 +728,11 @@ var Theme = {
     C.sky = m(sc.sky, 0.84); C.far = m(sc.far, 0.74); C.far2 = m(sc.far2, 0.7); C.cloud = m(sc.cloud, 0.82);
     C.top = dark ? hexMix(sc.top, '#000000', 0.12) : sc.top; C.top2 = dark ? hexMix(sc.top2, '#000000', 0.2) : sc.top2;
     C.soil = m(sc.soil, 0.62); C.soil2 = m(sc.soil2, 0.58);
-    C.block = dark ? '#33474f' : sc.block; C.lip = dark ? '#23343b' : sc.lip; C.line = dark ? '#536a74' : sc.line;
-    if (dark) { C.stone = '#5b6a72'; C.stone2 = '#46545b'; C.metal = '#5f7488'; C.metal2 = '#4a5d70'; C.glass = '#25485a'; C.glass2 = '#1f6f93'; C.crumb = '#6d5a43'; C.crumb2 = '#574735'; C.ice = '#2b5a70'; C.ice2 = '#1f6f93'; }
+    /* blocks: a solid fill well apart from the sky, a darker lip, and a crisp outline (dark on light skies, light in the dark theme) */
+    C.block = dark ? hexMix(sc.block, '#ffffff', 0.22) : sc.block; C.lip = dark ? sc.block : sc.lip; C.line = dark ? hexMix(sc.block, '#ffffff', 0.62) : sc.line;
+    if (dark) { C.stone = '#7d8b93'; C.stone2 = '#5f6d75'; C.metal = '#7891a8'; C.metal2 = '#5c7489'; C.glass = '#3a7d9c'; C.glass2 = '#2d6884'; C.crumb = '#8f7656'; C.crumb2 = '#6f5a41'; C.ice = '#3f86a6'; C.ice2 = '#2f6d8a'; }
+    ['brick', 'stone', 'wood', 'metal', 'glass', 'ice', 'crumb', 'gold'].forEach(function (t) { C[t + 'L'] = dark ? hexMix(C[t], '#ffffff', 0.5) : hexMix(C[t], '#000000', 0.42); });
+    C.soilL = dark ? hexMix(C.soil, '#ffffff', 0.45) : hexMix(C.soil, '#000000', 0.38);
     C.bg = C.sky; C.stars = !!sc.ink;
     var ink = dark || sc.ink;
     C.fg = ink ? '#f1f7fb' : '#4b4b4b'; C.fg2 = ink ? '#a9bcc6' : '#777777';
@@ -792,7 +808,7 @@ var TYPES = {
   mship: { kind: 'portal', rects: [0.18, -1.5, 0.82, 2.5], rot: 0, mode: 1 },
   mwave: { kind: 'portal', rects: [0.18, -1.5, 0.82, 2.5], rot: 0, mode: 2 },
   mplat: { kind: 'portal', rects: [0.18, -1.5, 0.82, 2.5], rot: 0, mode: 3 },
-  /* added with the Duolingo update: more block designs (solid, tiles join their own kind), the Wave world's hazards,
+  /* added with the rounded restyle: more block designs (solid, tiles join their own kind), the Wave world's hazards,
      the Platformer world's gems, spring, start and goal, and decorations that nothing touches */
   brick: { kind: 'solid', rects: [0, 0, 1, 1], rot: 0, tile: 1 },
   stone: { kind: 'solid', rects: [0, 0, 1, 1], rot: 0, tile: 1 },
@@ -950,7 +966,12 @@ var mixHex = MX.mix;
    The cube's rules are exactly the original ones; ship, wave and platformer have their own branch. */
 var PH = { DT: 1 / 240, SPEED: 10.4, G: 96, JUMP: 21, MAXF: 26, SNAP: 0.5, INNER: 0.3, HAZ: 0.4, SPIN: 411,
   SHIP_UP: 60, SHIP_DOWN: 52, SHIP_MAX: 10.5, WAVE_H: 0.3, WAVE_IN: 0.2, WAVE_HAZ: 0.22,
-  PLAT_V: 7.6, PLAT_ACC: 70, PLAT_AIR: 44, PLAT_ICE: 9, PLAT_W: 0.46, CONV: 4, SLOPE_SNAP: 0.55, CRUMBLE: 84 };
+  PLAT_V: 7.8125, PLAT_W: 0.46, CONV: 4, SLOPE_SNAP: 0.55, CRUMBLE: 84,
+  /* the Platformer world's own rules (appel.html, 32 px tiles turned into cells): its gravity, jump, short hop on release, hang at the top,
+     ground and air control, ice, coyote time, jump buffer and wall jumps. Mixed levels use these inside a platformer portal. */
+  PJ_G: 71.875, PJ_JUMP: 23.125, PJ_CUT: 0.45, PJ_HANGV: 2.5, PJ_HANGG: 0.55, PJ_MAXF: 28.125, PJ_COY: 0.09, PJ_BUF: 0.12,
+  PJ_ACCG: 81.25, PJ_ACCA: 56.25, PJ_DECG: 93.75, PJ_DECA: 34.375, PJ_TURN: 162.5, PJ_ICEA: 21.875, PJ_ICED: 8.125,
+  PJ_SLIDE: 5, PJ_WJX: 9.0625, PJ_WJY: 21.5625, PJ_WLOCK: 0.14, PJ_WCOY: 0.08 };
 var EV = { JUMP: 1, ORB: 2, PAD: 4, PORTAL: 8, DIE: 16, WIN: 32, LAND: 64, KEY: 128, CHECK: 256, TRIG: 512, MODE: 1024, GEM: 2048 };
 function rotRect(rc, k) {
   var x0 = rc[0], y0 = rc[1], x1 = rc[2], y1 = rc[3];
@@ -990,7 +1011,8 @@ var Physics = {
   newState: function (W) {
     var tt = new Int32Array(W.trigs.length); tt.fill(-1);
     return { x: W.start ? W.start.x + 0.5 : 0, y: W.start ? W.start.y + 0.5 : 0.5, gems: 0, vy: 0, g: 1, ground: true, held: false, buf: false, dead: false, won: false, tick: 0, jumps: 0, rot: 0, used: new Uint8Array(W.n),
-      m: 0, vx: 0, lo: 0, hi: 0, keys: 0, onM: 0, mx: 0, ti: 0, face: 1, conv: 0, ice: 0, wasConv: 0, wasIce: 0, wh: false, ot: new Int32Array(W.n), tt: tt };
+      m: 0, vx: 0, lo: 0, hi: 0, keys: 0, onM: 0, mx: 0, ti: 0, face: 1, conv: 0, ice: 0, wasConv: 0, wasIce: 0, wh: false, ot: new Int32Array(W.n), tt: tt,
+      jb: 0, coy: 0, jmp: false, wt: 0, ws: 0, lock: 0 };
   },
   clone: function (s) { var c = {}; for (var k in s) { var v = s[k]; c[k] = ArrayBuffer.isView(v) ? v.slice() : v; } return c; },
   lower: function (xs, v) { var lo = 0, hi = xs.length; while (lo < hi) { var m = (lo + hi) >> 1; if (xs[m] < v) lo = m + 1; else hi = m; } return lo; },
@@ -1026,7 +1048,7 @@ var Physics = {
     if (o.conv) s.conv = o.conv;
     if (o.ice) s.ice = 1;
     if (o.mv) s.onM = o.i + 1;
-    if (o.bounce && s.m !== MODE.WAVE) { s.vy = o.bounce * g; s.ground = false; return true; }
+    if (o.bounce && s.m !== MODE.WAVE) { s.vy = o.bounce * g; s.ground = false; s.jmp = false; s.coy = 0; return true; }
     return false;
   },
   /* surface of a slope at the player's leading corner; floor slopes (r 0, 1) are walked on with normal gravity, ceiling slopes (r 2, 3) with flipped */
@@ -1083,7 +1105,7 @@ var Physics = {
     return false;
   },
   step: function (W, s, held, lr) {
-    var ev = 0, DT = PH.DT, list, k, o;
+    var ev = 0, DT = PH.DT, list, k, o, pressed = held && !s.held;
     if (held && !s.held) s.buf = true;
     if (!held) s.buf = false;
     s.held = held; s.tick++;
@@ -1129,13 +1151,33 @@ var Physics = {
       if ((W.kinds.slope || W.kinds.ledge) && Physics.extras(W, s, list, hh, hh, py, wasGround, ib)) { s.dead = true; return ev | EV.DIE; }
       if (s.conv && s.ground) s.x += s.conv * PH.CONV * DT;
     } else if (m === MODE.PLAT) {
+      /* the Platformer world's physics: a fresh press jumps (buffered, with coyote time), letting go early cuts the jump short,
+         gravity eases off at the top while held, and a press against a wall in the air wall jumps */
       var hw = PH.PLAT_W;
       if (lr) s.face = lr;
-      if (s.ground && held && !(ev & EV.ORB)) { s.vy = PH.JUMP * s.g; s.ground = false; s.buf = false; s.jumps++; ev |= EV.JUMP; }
-      var acc = wasGround ? (s.wasIce ? PH.PLAT_ICE : PH.PLAT_ACC) : PH.PLAT_AIR, tv = lr * PH.PLAT_V;
-      s.vx = s.vx < tv ? Math.min(tv, s.vx + acc * DT) : Math.max(tv, s.vx - acc * DT);
-      s.vy -= PH.G * g * DT;
-      if (s.vy * g < -PH.MAXF) s.vy = -PH.MAXF * g;
+      s.jb = pressed ? PH.PJ_BUF : Math.max(0, s.jb - DT);
+      if (s.lock > 0) s.lock -= DT;
+      else {
+        var tv = lr * PH.PLAT_V, acc;
+        if (wasGround && s.wasIce) acc = lr === 0 ? PH.PJ_ICED : PH.PJ_ICEA;
+        else if (wasGround) acc = lr === 0 ? PH.PJ_DECG : (s.vx * lr < 0 ? PH.PJ_TURN : PH.PJ_ACCG);
+        else acc = lr === 0 ? PH.PJ_DECA : PH.PJ_ACCA;
+        s.vx = s.vx < tv ? Math.min(tv, s.vx + acc * DT) : Math.max(tv, s.vx - acc * DT);
+      }
+      var gr = PH.PJ_G;
+      if (s.jmp && held && Math.abs(s.vy) < PH.PJ_HANGV) gr *= PH.PJ_HANGG;
+      s.vy -= gr * g * DT;
+      if (s.vy * g < -PH.PJ_MAXF) s.vy = -PH.PJ_MAXF * g;
+      var wall = s.ground ? 0 : Physics.platWall(W, s, hw, hh);
+      if (wall) { s.wt = PH.PJ_WCOY; s.ws = wall; } else s.wt = s.ground ? 0 : Math.max(0, s.wt - DT);
+      if (wall && lr === wall && s.vy * g < -PH.PJ_SLIDE) s.vy = -PH.PJ_SLIDE * g;
+      if (s.jb > 0 && !(ev & EV.ORB)) {
+        if (s.ground || s.coy > 0) { s.vy = PH.PJ_JUMP * g; s.jb = 0; s.coy = 0; s.ground = false; s.buf = false; s.jmp = true; s.jumps++; ev |= EV.JUMP; }
+        else if (s.wt > 0) { s.vy = PH.PJ_WJY * g; s.vx = -s.ws * PH.PJ_WJX; s.lock = PH.PJ_WLOCK; s.face = -s.ws; s.jb = 0; s.buf = false; s.jmp = true; s.wt = 0; s.jumps++; ev |= EV.JUMP; }
+      }
+      if (ev & EV.ORB) s.jmp = false;
+      if (s.jmp && !held && s.vy * g > 0) { s.vy *= PH.PJ_CUT; s.jmp = false; }
+      if (s.vy * g <= 0) s.jmp = false;
       /* across first, pushed out of walls; then up and down */
       s.x += (s.vx + (wasGround ? s.wasConv * PH.CONV : 0)) * DT;
       if (s.x < hw) { s.x = hw; s.vx = 0; }
@@ -1160,6 +1202,7 @@ var Physics = {
       }
       if ((W.kinds.slope || W.kinds.ledge) && Physics.extras(W, s, list, hw, hh, py, wasGround, ib)) { s.dead = true; return ev | EV.DIE; }
       s.wasConv = s.ground ? s.conv : 0; s.wasIce = s.ground ? s.ice : 0;
+      s.coy = s.ground ? PH.PJ_COY : Math.max(0, s.coy - DT);
     } else {
       /* ship and wave fly between the corridor's floor and ceiling (lo, hi) */
       var wave = m === MODE.WAVE, h2 = wave ? PH.WAVE_H : hh, kb = wave ? PH.WAVE_IN : ib;
@@ -1196,7 +1239,7 @@ var Physics = {
         if (m === MODE.WAVE) continue;
         s.used[o.i] = 1;
         if (o.flip) { s.g = -s.g; s.vy = -o.v * s.g; ev |= EV.PORTAL; } else s.vy = o.v * s.g;
-        s.ground = false; ev |= EV.PAD;
+        s.ground = false; s.jmp = false; s.coy = 0; ev |= EV.PAD;
       } else if (o.kind === 'portal') {
         if (o.mode >= 0) { if (s.m !== o.mode) Physics.setMode(s, o); }
         else if (s.g !== o.g) { s.g = o.g; s.vy *= 0.5; if (s.vy * s.g > 2) s.vy = 2 * s.g; s.ground = false; ev |= EV.PORTAL; }
@@ -1218,9 +1261,23 @@ var Physics = {
     if (s.x >= W.end) { s.won = true; ev |= EV.WIN; }
     return ev;
   },
-  /* entering a mode portal; ship and wave get a ten cell corridor around the portal */
+  /* touching a solid side while in the air (Platformer): 1 on the right, -1 on the left */
+  platWall: function (W, s, hw, hh) {
+    var list = Physics.near(W, s.x - 2, s.x + 1), k, o, p = 0.094, b = s.y - hh + 0.1, t = s.y + hh - 0.1;
+    for (k = 0; k < list.length; k++) {
+      o = list[k];
+      if (o.kind !== 'solid' || ((o.door || o.crumble) && Physics.gone(s, o))) continue;
+      if (!(t > o.y0 && b < o.y1)) continue;
+      if (s.x + hw + p > o.x0 && s.x + hw < o.x1) return 1;
+      if (s.x - hw - p < o.x1 && s.x - hw > o.x0) return -1;
+    }
+    return 0;
+  },
+  /* entering a mode portal; ship and wave get a ten cell corridor around the portal. Each mode keeps its own rules, so the
+     Platformer's jump state starts fresh on the way in and is cleared on the way out */
   setMode: function (s, o) {
     s.m = o.mode; s.ground = false; s.vx = s.m === MODE.PLAT ? PH.PLAT_V * 0.5 : 0;
+    s.jb = 0; s.coy = 0; s.jmp = false; s.wt = 0; s.ws = 0; s.lock = 0;
     if (s.m === MODE.SHIP || s.m === MODE.WAVE) {
       var c = o.y + 0.5; s.lo = Math.max(0, Math.round(c - 5)); s.hi = s.lo + 10;
       s.vy *= 0.4; if (s.y < s.lo + 0.6) s.y = s.lo + 0.6; if (s.y > s.hi - 0.6) s.y = s.hi - 0.6;
@@ -1244,16 +1301,16 @@ View.prototype.rows = function () { return this.h / this.cell; };
 var RR = MX.rr;
 /* the face and edge colours of each joining tile: [face, lip (the darker bottom band), line] */
 function tileCols(C, t) {
-  if (t === 'brick') return [C.brick, C.brick2, C.brick2];
-  if (t === 'stone') return [C.stone, C.stone2, C.stone2];
-  if (t === 'wood') return [C.wood, C.wood2, C.wood2];
-  if (t === 'grass') return [C.soil, C.soil2, C.soil2];
-  if (t === 'metal') return [C.metal, C.metal2, C.metal2];
-  if (t === 'glass') return [C.glass, C.glass2, C.glass2];
-  if (t === 'ice') return [C.ice, C.ice2, C.ice2];
-  if (t === 'crumble') return [C.crumb, C.crumb2, C.crumb2];
-  if (t === 'door') return [C.gold, C.gold2, C.gold2];
-  if (t === 'conv') return [C.metal, C.metal2, C.metal2];
+  if (t === 'brick') return [C.brick, C.brick2, C.brickL];
+  if (t === 'stone') return [C.stone, C.stone2, C.stoneL];
+  if (t === 'wood') return [C.wood, C.wood2, C.woodL];
+  if (t === 'grass') return [C.soil, C.soil2, C.soilL];
+  if (t === 'metal') return [C.metal, C.metal2, C.metalL];
+  if (t === 'glass') return [C.glass, C.glass2, C.glassL];
+  if (t === 'ice') return [C.ice, C.ice2, C.iceL];
+  if (t === 'crumble') return [C.crumb, C.crumb2, C.crumbL];
+  if (t === 'door') return [C.gold, C.gold2, C.goldL];
+  if (t === 'conv') return [C.metal, C.metal2, C.metalL];
   return [C.block, C.lip, C.line];
 }
 var Render = {
@@ -1348,7 +1405,7 @@ var Render = {
   /* a box with rounded outer corners where it meets air, an outline on open sides and a darker lip along an open bottom.
      ex: [top, right, bottom, left] open; tex(ctx, x0, y0, x1, y1) draws the face's pattern (clipped) */
   box: function (ctx, x0, y0, x1, y1, ex, cols, c, tex) {
-    var R = Math.round(c * 0.18), lw = Math.max(2, Math.round(c * 0.055)), lip = Math.max(2, Math.round(c * 0.14));
+    var R = Math.round(c * 0.18), lw = Math.max(2, Math.round(c * 0.075)), lip = Math.max(3, Math.round(c * 0.16));
     var rad = [ex[0] && ex[3] ? R : 0, ex[0] && ex[1] ? R : 0, ex[2] && ex[1] ? R : 0, ex[2] && ex[3] ? R : 0];
     var path = function (a0, b0, a1, b1, rs) {
       ctx.beginPath(); ctx.moveTo(a0 + rs[0], b0); ctx.lineTo(a1 - rs[1], b0); if (rs[1]) ctx.arcTo(a1, b0, a1, b0 + rs[1], rs[1]);
@@ -1453,7 +1510,9 @@ var Render = {
     if (r) ctx.rotate(r * Math.PI / 2);
     var tri = function (x0, x1, top, col, col2) {
       var mx = (x0 + x1) / 2;
-      ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(1, c * 0.04);
+      ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(1, c * 0.04) + 2 * Math.max(1.5, c * 0.035);
+      ctx.strokeStyle = C.spikeL; ctx.beginPath(); ctx.moveTo(x0, h); ctx.lineTo(mx, top); ctx.lineTo(x1, h); ctx.closePath(); ctx.stroke();
+      ctx.lineWidth = Math.max(1, c * 0.04);
       ctx.fillStyle = col2; ctx.strokeStyle = col2; ctx.beginPath(); ctx.moveTo(x0, h); ctx.lineTo(mx, top); ctx.lineTo(x1, h); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.fillStyle = col; ctx.strokeStyle = col; ctx.beginPath(); ctx.moveTo(x0, h); ctx.lineTo(mx, top); ctx.lineTo(mx, h); ctx.closePath(); ctx.fill(); ctx.stroke();
     };
@@ -1461,7 +1520,7 @@ var Render = {
       Render.box(ctx, -h, 0, h, h, all, tileCols(C, 'block'), c, null);
     } else if (t === 'ledge') {
       var bar = Math.max(3, Math.round(c * 0.22));
-      Render.box(ctx, -h, -h, h, -h + bar, all, [C.wood, C.wood2, C.wood2], c * 0.7, null);
+      Render.box(ctx, -h, -h, h, -h + bar, all, [C.wood, C.wood2, C.woodL], c * 0.7, null);
       ctx.fillStyle = C.wood2; RR(ctx, -h + c * 0.12, -h + bar, c * 0.12, c * 0.16, c * 0.04); ctx.fill(); RR(ctx, h - c * 0.24, -h + bar, c * 0.12, c * 0.16, c * 0.04); ctx.fill();
     } else if (t === 'spike') tri(-c * 0.42, c * 0.42, h - c * 0.66, C.spike, C.spike2);
     else if (t === 'mini') tri(-c * 0.28, c * 0.28, h - c * 0.32, C.spike, C.spike2);
@@ -1470,11 +1529,14 @@ var Render = {
     else if (t === 'teeth') { var wd3 = (c - c * 0.08) / 3; for (k = 0; k < 3; k++) tri(-h + c * 0.04 + k * wd3, -h + c * 0.04 + (k + 1) * wd3, h - c * 0.32, C.spike, C.spike2); }
     else if (t === 'dia') {
       var dr = c * 0.36;
-      ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(1, c * 0.04);
+      ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(1, c * 0.04) + 2 * Math.max(1.5, c * 0.035);
+      ctx.strokeStyle = C.spikeL; ctx.beginPath(); ctx.moveTo(0, -dr); ctx.lineTo(dr, 0); ctx.lineTo(0, dr); ctx.lineTo(-dr, 0); ctx.closePath(); ctx.stroke();
+      ctx.lineWidth = Math.max(1, c * 0.04);
       ctx.fillStyle = C.spike2; ctx.strokeStyle = C.spike2; ctx.beginPath(); ctx.moveTo(0, -dr); ctx.lineTo(dr, 0); ctx.lineTo(0, dr); ctx.lineTo(-dr, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.fillStyle = C.spike; ctx.strokeStyle = C.spike; ctx.beginPath(); ctx.moveTo(0, -dr); ctx.lineTo(0, dr); ctx.lineTo(-dr, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
     } else if (t === 'lava') {
       var lt = h - c * 0.62;
+      ctx.fillStyle = C.spikeL; ctx.fillRect(-h, lt - Math.max(2, c * 0.05), c, h - lt + Math.max(2, c * 0.05));
       ctx.fillStyle = C.lava2; ctx.fillRect(-h, lt, c, h - lt);
       ctx.fillStyle = C.lava; ctx.fillRect(-h, lt, c, h - lt - c * 0.12);
       ctx.fillStyle = C.lava3; ctx.beginPath(); ctx.moveTo(-h, lt + c * 0.14);
@@ -1484,6 +1546,7 @@ var Render = {
     } else if (t === 'pad' || t === 'pad2' || t === 'padg') {
       var col = t === 'pad' ? C.gold : t === 'pad2' ? C.rose : C.accent, col2 = t === 'pad' ? C.gold2 : t === 'pad2' ? C.rose2 : C.accent2;
       ctx.globalAlpha = used ? 0.45 : 1;
+      var po = Math.max(1.5, c * 0.04); RR(ctx, -c * 0.38 - po, h - c * 0.24 - po, c * 0.76 + po * 2, c * 0.24 + po, c * 0.1 + po); ctx.fillStyle = hexMix(col2, '#000000', 0.35); ctx.fill();
       RR(ctx, -c * 0.38, h - c * 0.24, c * 0.76, c * 0.24, c * 0.1); ctx.fillStyle = col2; ctx.fill();
       RR(ctx, -c * 0.38, h - c * 0.24, c * 0.76, c * 0.15, c * 0.075); ctx.fillStyle = col; ctx.fill();
       ctx.fillStyle = '#ffffff'; RR(ctx, -c * 0.22, h - c * 0.2, c * 0.16, c * 0.05, c * 0.025); ctx.fill();
@@ -1499,6 +1562,7 @@ var Render = {
     } else if (t === 'orb' || t === 'orb2' || t === 'orbg') {
       var oc = t === 'orb' ? C.gold : t === 'orb2' ? C.rose : C.accent, oc2 = t === 'orb' ? C.gold2 : t === 'orb2' ? C.rose2 : C.accent2, rr2 = c * 0.3;
       ctx.globalAlpha = used ? 0.35 : 1;
+      ctx.fillStyle = hexMix(oc2, '#000000', 0.35); ctx.beginPath(); ctx.arc(0, 0, rr2 + Math.max(1.5, c * 0.04), 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = oc2; ctx.beginPath(); ctx.arc(0, 0, rr2, 0, Math.PI * 2); ctx.fill();
       ctx.save(); ctx.beginPath(); ctx.arc(0, 0, rr2, 0, Math.PI * 2); ctx.clip();
       ctx.fillStyle = oc; ctx.beginPath(); ctx.arc(0, -rr2 * 0.16, rr2 * 0.92, 0, Math.PI * 2); ctx.fill(); ctx.restore();
@@ -1905,10 +1969,9 @@ var Game = {
     }
     FX.draw(ctx, v, dpr, C);
     if (Game.fade > 0.001) { ctx.globalAlpha = clamp(Game.fade, 0, 1); ctx.fillStyle = C.bg; ctx.fillRect(0, 0, sf.w, sf.h); ctx.globalAlpha = 1; }
-    /* progress */
-    /* progress: a rounded Duolingo bar with its percentage */
+    /* progress: a rounded bar with its percentage, gold like the Normal meter (blue in practice, like the Practice meter) */
     var pw = Math.round(Math.min(sf.w * 0.4, 420 * dpr)), ph = Math.round(14 * dpr), px0 = Math.round((sf.w - pw) / 2), py0 = Math.round(14 * dpr);
-    var frac = clamp(s.x / Game.W.end, 0, 1), fc = Game.practice ? C.accent : C.green;
+    var frac = clamp(s.x / Game.W.end, 0, 1), fc = Game.practice ? '#4b9af3' : C.gold;
     ctx.fillStyle = Theme.mode === 'dark' ? '#37464f' : '#ffffff'; RR(ctx, px0 - 2 * dpr, py0 - 2 * dpr, pw + 4 * dpr, ph + 4 * dpr, ph); ctx.fill();
     ctx.fillStyle = Theme.mode === 'dark' ? '#202f36' : '#e5e5e5'; RR(ctx, px0, py0, pw, ph, ph / 2); ctx.fill();
     if (frac > 0) { var fw = Math.max(ph, Math.round(pw * frac)); ctx.fillStyle = fc; RR(ctx, px0, py0, fw, ph, ph / 2); ctx.fill();
@@ -2375,7 +2438,7 @@ var UI = {
     } else rows = UI.cubeOptions();
     var tb = function (k, label) { return '<button data-tab="' + k + '" class="' + (tab === k ? 'on' : '') + '">' + label + '</button>'; };
     m.innerHTML = '<div class="mwrap"><div class="mcol"><div class="seg">' + tb('main', 'Levels') + tb('user', 'Created') + tb('cube', 'Skin') + '</div>' +
-      (tab === 'cube' ? rows : '<div class="list">' + rows + '</div>') + (tab === 'user' ? '<button class="btn ghost lnew" data-a="new">New level</button>' : '') + '</div>' +
+      (tab === 'cube' ? rows : '<div class="list">' + rows + '</div>') + (tab === 'user' && list.length ? '<button class="btn ghost lnew" data-a="new">New level</button>' : '') + '</div>' +
       '<div class="detail" id="det"></div></div>';
     m.querySelectorAll('[data-tab]').forEach(function (b) { b.addEventListener('click', function () { UI.tab = b.getAttribute('data-tab'); UI.menu(); }); });
     m.querySelectorAll('[data-i]').forEach(function (b) { b.addEventListener('click', function () { UI.sel = +b.getAttribute('data-i'); UI.menu(); }); });
