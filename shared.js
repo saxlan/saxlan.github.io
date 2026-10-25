@@ -456,7 +456,7 @@ function normalizeCourse(input){
     (courses || []).forEach(function (c) { var s = SX.courseScore(text, c); if (s > bestScore) { bestScore = s; best = c; } });
     return bestScore >= 3 ? best : null;
   };
-  SX.PALETTE = ['#3f72b4', '#b23a2e', '#6d4aa8', '#c27a10', '#1d7f6b', '#96305c', '#5a6b7a', '#2f8f9d', '#8a6a00', '#4d7c2a', '#b8572a', '#7a4e9c'];
+  SX.PALETTE = ['#2b8cff', '#ff3b30', '#a259ff', '#ff9500', '#00c48c', '#ff2d87', '#5b6cff', '#00bcd4', '#ffcc00', '#34c759', '#ff6b35', '#af52de'];
   SX.MAX_CLASSES = 10;
   /* a new class from a calendar course name; the page turns its name into the proper one (normalizeCourse) on next load */
   function newClass(d, name) {
