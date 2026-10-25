@@ -15,301 +15,226 @@
   Additions beyond the original: constellations, large slow asteroids, fresh
   random terrain each game with three pads, and a Mars orbit and landing.
 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style>
-  :root { --bg: #02071e; --body-fg: rgba(255,255,255,0.75); --head-fg: #fff;
-    --meter: linear-gradient(90deg, hsl(142deg 100% 48%) 0%, hsl(84deg 100% 42%) 6%, hsl(61deg 100% 35%) 15%, hsl(41deg 100% 40%) 29%, hsl(25deg 100% 44%) 50%, hsl(0deg 100% 46%) 100%); }
+  /* ---------- Duolingo look: Fredoka headings, Nunito body, flat colors,
+     white cards with a 2px line and a 4px bottom edge, chunky buttons ---------- */
+  :root { --bg: #131f24; --green: #58cc02; --green-dark: #58a700; --green-wash: #d7ffb8; --blue: #1cb0f6; --blue-dark: #1899d6;
+    --red: #ff4b4b; --red-dark: #ea2b2b; --gold: #ffc800; --gold-dark: #e5a400; --gold-wash: #fff5d3; --orange: #ff9600; --purple: #ce82ff;
+    --text: #4b4b4b; --dim: #777; --faint: #afafaf; --line: #e5e5e5; --soft: #f7f7f7;
+    --font: "Nunito", -apple-system, BlinkMacSystemFont, sans-serif; --display: "Fredoka", "Nunito", -apple-system, sans-serif; }
   html, body { height: 100%; overflow: hidden; }
-  body { --sfs: clamp(12px, 2vmin, 16px); margin: 0; background: var(--bg); overflow: hidden;
-    -webkit-user-select: none; user-select: none; outline: none;
-    font: 400 18px/1.5 -apple-system, BlinkMacSystemFont, sans-serif; color: var(--body-fg); }
+  body { margin: 0; background: var(--bg); overflow: hidden; -webkit-user-select: none; user-select: none; outline: none;
+    font: 700 16px/1.4 var(--font); color: var(--text); }
   canvas { display: block; outline: none; }
   body.playing, body.playing canvas { cursor: none; }
   #stage { display: flex; align-items: center; justify-content: center; width: 100vw; height: 100vh; height: 100dvh;
     touch-action: none; -webkit-touch-callout: none; }
-  /* ---------- shared HUD-style UI: small uppercase labels, bold numerals,
-     square panels, one button style everywhere ---------- */
-  :root { --panel: rgba(6, 14, 40, 0.86); --panel-solid: #0b1430; --lbl: rgba(255,255,255,0.72); --orange: #ff6b1a; --orange-edge: #b9450a;
-    --noise: none; --line: 16px; --font: -apple-system, BlinkMacSystemFont, sans-serif; }
-  .lbl { font: 400 12px/1.3 var(--font); letter-spacing: 1px; text-transform: uppercase; color: var(--lbl); }
-  .num { font: 800 24px/1 var(--font); color: #fff; font-variant-numeric: tabular-nums; }
-  .unit { font: 400 14px/1 var(--font); letter-spacing: 1px; text-transform: uppercase; color: #fff; margin-left: 5px; }
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; box-sizing: border-box; min-height: 50px; padding: 12px 22px;
-    border-radius: 2px; background: var(--panel); color: #fff; cursor: pointer; outline: none; position: relative;
-    font: 800 14px/1 var(--font); letter-spacing: 0.12em; text-transform: uppercase; box-shadow: inset 0 -3px 0 rgba(0,0,0,0.4);
-    transition: transform 0.12s, box-shadow 0.12s, opacity 0.4s, background 0.15s; }
-  .btn.primary { background: var(--orange); box-shadow: inset 0 -3px 0 var(--orange-edge); }
-  .btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-  .btn.wait { opacity: 0.4; cursor: default; }
-  @media (hover: hover) { .btn:not(.wait):not(.off):not(.max):hover { transform: translateY(-1px); box-shadow: inset 0 -4px 0 rgba(0,0,0,0.4); }
-    .btn.primary:not(.wait):not(.off):not(.max):hover { background: #ff7a2e; box-shadow: inset 0 -4px 0 var(--orange-edge); } }
-  .btn:not(.wait):not(.off):not(.max):active { transform: translateY(2px); box-shadow: inset 0 -1px 0 rgba(0,0,0,0.4); }
-  .btn kbd, kbd.k { display: none; font: 700 11px/1 var(--font); padding: 4px 6px; border-radius: 1px; background: rgba(255,255,255,0.2); letter-spacing: 0.06em; }
-  body.kb .btn kbd { display: inline-block; }
-  .coinchip svg, .coins svg, .sh-coins svg, .buy svg { width: 18px; height: 18px; flex: none; }
+  .lbl { font: 800 12px/1.3 var(--font); letter-spacing: 0.04em; text-transform: uppercase; color: var(--dim); }
+  .num { font: 700 22px/1 var(--display); color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .card { background: #fff; border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 16px; box-sizing: border-box; }
 
-  /* ---------- end of round screen: the original layout ---------- */
-  #over { display: none; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-    max-width: calc(800px + 16vw); width: 100%; height: 100svh; box-sizing: border-box; padding: 7vmin 8vmin;
-    flex-direction: column; justify-content: flex-start; gap: clamp(10px, 2.2vmin, 20px); overflow-y: auto; touch-action: pan-y; }
+  /* buttons: solid fill, darker 4px bottom edge, press moves down */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; box-sizing: border-box; min-height: 48px; padding: 0 20px;
+    border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 12px; background: #fff; color: var(--blue);
+    cursor: pointer; outline: none; position: relative; white-space: nowrap;
+    font: 800 15px/1 var(--font); letter-spacing: 0.04em; text-transform: uppercase; transition: background 0.1s, opacity 0.3s; }
+  .btn.primary { background: var(--green); border-color: var(--green-dark); color: #fff; }
+  .btn.wait { opacity: 0.45; cursor: default; }
+  @media (hover: hover) { .btn:not(.wait):not(.off):not(.max):hover { background: var(--soft); }
+    .btn.primary:not(.wait):not(.off):not(.max):hover { background: #61e002; } }
+  .btn:not(.wait):not(.off):not(.max):active { transform: translateY(2px); border-bottom-width: 2px; margin-bottom: 2px; }
+  .btn kbd, kbd.k { display: none; font: 800 11px/1 var(--font); padding: 4px 6px; border-radius: 6px; background: rgba(0,0,0,0.12); letter-spacing: 0.04em; }
+  .btn:not(.primary) kbd { background: var(--soft); color: var(--faint); }
+  body.kb .btn kbd { display: inline-block; }
+  .coinchip svg, .coins svg, .sh-coins svg, .buy svg { width: 20px; height: 20px; flex: none; }
+
+  /* ---------- end of round: one white card ---------- */
+  #over { display: none; position: absolute; inset: 0; box-sizing: border-box; padding: 4vmin 16px;
+    align-items: flex-start; justify-content: center; overflow-y: auto; touch-action: pan-y; }
   #over.on { display: flex; }
-  #over > :first-child { margin-top: auto; }
-  #over > :last-child { margin-bottom: auto; }
-  #scrim { display: none; position: fixed; inset: 0; background: rgba(2, 6, 22, 0.5); pointer-events: none; }
+  #overCard { width: 100%; max-width: 680px; margin: auto 0; padding: 26px 28px 24px; display: flex; flex-direction: column; gap: 14px; }
+  #scrim { display: none; position: fixed; inset: 0; background: rgba(19, 31, 36, 0.45); pointer-events: none; }
   body.ended #scrim { display: block; }
-  #over h1 { font: 900 clamp(26px, 6.4vmin, 58px)/1.08 var(--font); color: #fff; margin: 0; }
-  /* one line: points, coins, base progress; same size as the stat rows */
-  .scoreline { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 30px; font: 800 var(--line)/1 var(--font); color: #fff;
-    letter-spacing: 1px; text-transform: uppercase; }
-  .pill { font-variant-numeric: tabular-nums; }
+  #over h1 { font: 700 clamp(24px, 4.6vmin, 38px)/1.12 var(--display); letter-spacing: -0.02em; color: var(--text); margin: 0; }
+  .scoreline { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font: 800 14px/1 var(--font); letter-spacing: 0.04em; text-transform: uppercase; }
+  .scoreline > * { min-height: 34px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: 2px solid var(--line); }
+  .pill { display: inline-flex; align-items: center; color: var(--blue); font-variant-numeric: tabular-nums; }
   .pill span.t { margin-left: 6px; }
-  .coinchip { display: none; align-items: center; gap: 7px; color: #ffd35a; font-variant-numeric: tabular-nums; }
-  .coinchip .unit { margin-left: 0; font: inherit; color: inherit; }
+  .coinchip { display: none; align-items: center; gap: 7px; color: var(--gold-dark); background: var(--gold-wash); border-color: #ffe48a !important; font-variant-numeric: tabular-nums; }
   .coinchip.on { display: inline-flex; }
-  .segs { display: none; align-items: center; gap: 10px; }
+  .segs { display: none; align-items: center; gap: 10px; color: var(--dim); }
   .segs.on { display: inline-flex; }
-  .segs b { display: inline-flex; gap: 3px; }
-  .segs b i { width: 22px; height: 10px; background: rgba(255,255,255,0.22); }
-  .segs b i.f { background: #f6c400; }
-  .segs b i.f2 { background: #3fd07a; }
-  /* notices: plain text with a small badge icon, no boxes */
-  .note { display: none; align-items: flex-start; gap: 12px; font: 800 var(--line)/1.3 var(--font); letter-spacing: 1px; text-transform: uppercase; }
+  .segs b { display: inline-flex; gap: 4px; }
+  .segs b i, .lrow .bs i { width: 20px; height: 10px; border-radius: 5px; background: var(--line); }
+  .segs b i.f, .lrow .bs i.f { background: var(--gold); }
+  .segs b i.f2, .lrow .bs i.f2 { background: var(--green); }
+  .note { display: none; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 12px; font: 800 15px/1.3 var(--font); }
   .note.on { display: flex; }
-  .note svg { width: 22px; height: 22px; flex: none; margin-top: -2px; }
-  .note small { display: block; font: 400 12px/1.4 var(--font); letter-spacing: 1px; color: var(--lbl); margin-top: 4px; }
-  .note.warn { color: #ffcb52; }
-  .note.lost { color: #ff8d7a; }
-  .note.good { color: #84e6a9; }
-  .gauge { --mh: 16px; font: 400 12px/1.3 var(--font); text-transform: uppercase; letter-spacing: 1px; color: var(--lbl); padding: 0 0 20px; }
-  .gauge + .gauge { margin-top: calc(-1 * clamp(10px, 2.2vmin, 20px) + 2px); }
-  @media screen and (min-height: 800px) { .gauge { --mh: 20px; } }
+  .note svg { width: 22px; height: 22px; flex: none; }
+  .note small { display: block; font: 700 13px/1.4 var(--font); color: var(--dim); margin-top: 3px; }
+  .note.warn { background: var(--gold-wash); color: #b07d00; }
+  .note.lost { background: #ffdfe0; color: var(--red-dark); }
+  .note.good { background: var(--green-wash); color: var(--green-dark); }
+  .gauge { --mh: 14px; font: 800 12px/1.3 var(--font); text-transform: uppercase; letter-spacing: 0.04em; color: var(--dim); padding: 0 0 22px; }
+  .gauge + .gauge { margin-top: -6px; }
   .gauge > div:first-child { margin-bottom: 6px; }
-  .bar { position: relative; height: var(--mh); background: var(--noise), var(--meter); border-radius: 0; }
-  .knob { --tx: 0%; position: absolute; top: 100%; left: 0; width: 0; height: 0; color: #fff; white-space: nowrap;
+  .bar { position: relative; height: var(--mh); border-radius: 8px;
+    background: linear-gradient(90deg, var(--green) 0 25%, var(--gold) 25% 50%, var(--orange) 50% 75%, var(--red) 75% 100%); }
+  .knob { --tx: 0%; position: absolute; top: 100%; left: 0; width: 0; height: 0; color: var(--text); white-space: nowrap;
     transition: all 1s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
-  .knob .lbl2 { position: absolute; top: 6px; left: 0; transform: translateX(var(--tx)); font: 800 14px/1 var(--font); letter-spacing: 0.5px;
+  .knob .lbl2 { position: absolute; top: 6px; left: 0; transform: translateX(var(--tx)); font: 800 14px/1 var(--font);
     transition: transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
-  .knob .lbl2 i { font-style: normal; font-weight: 400; font-size: 12px; letter-spacing: 1px; margin-left: 3px; }
-  .knob::before { content: ""; position: absolute; width: 4px; height: calc(var(--mh) + 6px); background: #fff; left: -2px; top: calc(-3px - var(--mh)); }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); row-gap: clamp(8px, 1.8vmin, 14px); column-gap: clamp(16px, 4vmin, 34px); margin: 4px 0 8px; }
-  .row { display: flex; align-items: baseline; gap: 8px; font: 400 var(--line)/1.2 var(--font); letter-spacing: 1px; text-transform: uppercase; color: var(--lbl); }
-  .row::after { content: none; }
-  .row .lead { flex: 1; border-bottom: 2px dotted rgba(255,255,255,0.3); transform: translateY(-4px); }
-  .row .v { font: 800 var(--line)/1 var(--font); color: #fff; letter-spacing: 0; font-variant-numeric: tabular-nums; text-transform: none; }
-  .row .v i { text-transform: uppercase; }
-  .row .v i { font-style: normal; font-weight: 400; font-size: inherit; letter-spacing: 1px; margin-left: 5px; }
-  .btns { display: flex; flex-wrap: wrap; gap: 12px; width: 100%; }
-  .btns #again { flex: 1; min-width: 200px; }
-  .btns.solo #homeBtn { flex: 1; background: var(--orange); box-shadow: inset 0 -3px 0 var(--orange-edge); }
-  @media screen and (max-width: 560px) { .btns .btn { flex: 1 1 100%; } #over { padding: 6vmin 16px; } }
+  .knob .lbl2 i { font-style: normal; font-weight: 700; font-size: 12px; color: var(--dim); margin-left: 3px; }
+  .knob::before { content: ""; position: absolute; width: 6px; height: calc(var(--mh) + 8px); background: #fff; border: 2px solid var(--text); border-radius: 4px;
+    box-sizing: border-box; left: -3px; top: calc(-4px - var(--mh)); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px 12px; }
+  .row { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: var(--soft);
+    font: 800 13px/1.2 var(--font); letter-spacing: 0.04em; text-transform: uppercase; color: var(--dim); min-width: 0; }
+  .row .lead { flex: 1; }
+  .row .v { font: 700 17px/1 var(--display); color: var(--text); letter-spacing: 0; font-variant-numeric: tabular-nums; text-transform: none; white-space: nowrap; }
+  .row .v i { font-style: normal; font: 800 11px/1 var(--font); letter-spacing: 0.04em; color: var(--dim); margin-left: 4px; text-transform: uppercase; }
+  .btns { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; margin-top: 4px; }
+  .btns .btn { flex: 1 1 0; }
+  .btns #again { flex: 1.4 1 0; }
+  .btns.solo #homeBtn { background: var(--green); border-color: var(--green-dark); color: #fff; }
+  @media screen and (max-width: 560px) { #overCard { padding: 20px 16px 18px; } .btns #again { flex: 1 1 100%; } .btns .btn { font-size: 13px; padding: 0 12px; } .btns .btn kbd { display: none; } }
 
   /* ---------- home screen ---------- */
-  #home { display: none; position: fixed; inset: 0; pointer-events: none; color: #fff; overflow: hidden; contain: layout paint; }
+  #home { display: none; position: fixed; inset: 0; pointer-events: none; color: var(--text); overflow: hidden; contain: layout paint; }
   body.athome #home { display: block; }
   #home > * { transition: opacity 0.35s ease-out, transform 0.35s ease-out; }
   body.launching #home > * { opacity: 0; transform: translateY(10px); pointer-events: none !important; }
-  .panel { background: var(--panel); border-radius: 2px; }
-  .hTop { position: absolute; top: 18px; left: 20px; display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: 270px; }
-  .brand { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; }
-  .brand .title { font: 900 26px/1 var(--font); letter-spacing: 0.16em; color: #fff; pointer-events: auto; cursor: pointer; }
-  .coins { display: inline-flex; align-items: center; gap: 6px; }
-  .sxtest { align-self: flex-start; padding: 5px 8px 4px; border-radius: 1px; background: var(--orange); color: #fff; font: 800 10px/1 var(--font); letter-spacing: 0.12em; box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3); }
-  .coins .num { font-size: 22px; }
+  .hTop { position: absolute; top: 18px; left: 20px; display: flex; flex-direction: column; align-items: stretch; gap: 10px; width: 290px; }
+  .brand { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 12px 10px 16px; }
+  .brand .title { font: 700 30px/1 var(--display); letter-spacing: -0.02em; color: var(--green); pointer-events: auto; cursor: pointer; }
+  .coins { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; background: var(--gold-wash); }
+  .coins .num { font-size: 20px; color: var(--gold-dark); }
+  .sxtest { align-self: flex-start; padding: 6px 10px; border-radius: 8px; background: var(--purple); color: #fff; font: 800 11px/1 var(--font); letter-spacing: 0.06em; }
   .tut { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; }
-  .tut .row2 { display: flex; align-items: center; gap: 5px; }
+  .tut .row2 { display: flex; align-items: center; gap: 6px; }
   .tut .lb { margin-left: auto; padding-left: 10px; }
-  .tut .or { font: 400 11px/1 var(--font); color: var(--lbl); margin: 0 2px; text-transform: uppercase; letter-spacing: 1px; }
-  .cap { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 6px; box-sizing: border-box;
-    border-radius: 1px; background: rgba(255,255,255,0.16); color: #fff; font: 800 12px/1 var(--font); letter-spacing: 0.04em;
-    box-shadow: inset 0 -2px 0 rgba(0,0,0,0.4); transition: background 0.08s, transform 0.08s; }
-  .cap.on { background: var(--orange); transform: translateY(2px); box-shadow: none; }
-  .log { position: absolute; top: 18px; right: 20px; width: 300px; box-sizing: border-box; padding: 12px 14px 8px; pointer-events: auto; }
-  /* flight log: a ruled log book with BODY / LANDINGS / BASE columns */
-  .log h2 { margin: 0 0 10px; display: flex; justify-content: space-between; align-items: baseline; }
-  .log h2 .ttl { font: 900 18px/1 var(--font); letter-spacing: 0.16em; text-transform: uppercase; color: #fff; }
-  .lhead, .lrow { display: grid; grid-template-columns: 1fr 72px 64px; align-items: center; column-gap: 8px; }
-  .lhead { padding-bottom: 6px; font-size: 11px; }
+  .tut .or { font: 800 11px/1 var(--font); color: var(--faint); margin: 0 2px; text-transform: uppercase; }
+  .cap { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; padding: 0 8px; box-sizing: border-box;
+    border-radius: 8px; border: 2px solid var(--line); border-bottom-width: 4px; background: #fff; color: var(--text); font: 800 13px/1 var(--font);
+    transition: background 0.08s, transform 0.08s; }
+  .cap.on { background: var(--blue); border-color: var(--blue-dark); color: #fff; transform: translateY(2px); border-bottom-width: 2px; margin-bottom: 2px; }
+  .log { position: absolute; top: 18px; right: 20px; width: 300px; padding: 14px 16px 12px; pointer-events: auto; }
+  .log h2 { margin: 0 0 8px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .log h2 .ttl { font: 700 20px/1 var(--display); letter-spacing: -0.01em; color: var(--text); }
+  .lhead, .lrow { display: grid; grid-template-columns: minmax(0, 1fr) 70px 50px; align-items: center; column-gap: 8px; }
+  .lhead { padding-bottom: 4px; font-size: 11px; color: var(--faint); }
   .lhead span:nth-child(2), .lrow .n { text-align: right; }
-  .lrow { padding: 6px 0 5px; background: linear-gradient(rgba(255,255,255,0.14), rgba(255,255,255,0.14)) bottom / 100% 1px no-repeat; }
-  .lrow .nm { display: flex; align-items: center; gap: 8px; min-width: 0; font: 700 12px/1 var(--font); letter-spacing: 1px; text-transform: uppercase; color: #fff; }
-  .lrow .dot { width: 8px; height: 8px; flex: none; }
-  .lrow .n { font: 800 15px/1 var(--font); color: #fff; font-variant-numeric: tabular-nums; }
-  .lrow.dim .n { color: rgba(255,255,255,0.4); }
+  .lrow { padding: 6px 0; border-top: 2px solid var(--soft); }
+  .lrow .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 800 14px/1.1 var(--font); color: var(--text); }
+  .lrow .n { font: 700 16px/1 var(--display); color: var(--blue); font-variant-numeric: tabular-nums; }
+  .lrow.dim .n { color: var(--faint); }
   .lrow .bs { display: flex; gap: 3px; justify-content: flex-end; }
-  .lrow .bs i { width: 14px; height: 8px; background: rgba(255,255,255,0.2); }
-  .lrow .bs i.f { background: #f6c400; } .lrow .bs i.f2 { background: #3fd07a; }
-  .lrow .bs.na { color: rgba(255,255,255,0.3); font: 400 11px/1 var(--font); }
-  .hBottom { position: absolute; left: 0; right: 0; bottom: max(18px, 3.5vh); display: flex; justify-content: center; }
-  .launch { pointer-events: auto; min-height: 60px; padding: 12px 30px; gap: 16px; }
-  .launch .lw { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-  .launch .lt { font: 900 22px/1 var(--font); letter-spacing: 0.16em; }
-  .launch .ld { font: 400 11px/1 var(--font); letter-spacing: 1px; opacity: 0.9; }
-  .shopBtn { position: absolute; left: 20px; bottom: max(18px, 3.5vh); pointer-events: auto; background: #2a2f36; min-height: 60px; padding: 0 18px 0 12px; overflow: hidden; }
-  .shopBtn::before, .shopBtn::after { content: ""; position: absolute; left: 0; right: 0; height: 4px;
-    background: repeating-linear-gradient(-45deg, #f6c400 0 6px, #1b1d21 6px 12px); }
-  .shopBtn::before { top: 0; } .shopBtn::after { bottom: 0; }
-  .muteBtn { position: absolute; right: 20px; bottom: max(18px, 3.5vh); pointer-events: auto; min-height: 44px; font-size: 12px; --cut: 10px; padding-left: calc(16px + var(--cut)); }
-  @media screen and (max-width: 700px) { .muteBtn { right: 12px; bottom: calc(max(18px, 3.5vh) + 132px); min-height: 36px; } }
-  .shopBtn svg { width: 32px; height: 32px; display: block; }
-  @media screen and (max-width: 700px) {
-    .hTop { top: 12px; left: 12px; right: 12px; width: auto; }
-    .brand { padding: 10px 12px; } .brand .title { font-size: 22px; }
-    .log { top: 64px; left: 12px; right: 12px; width: auto; padding: 8px 12px 4px; }
-    .log.cutL { right: auto; left: 12px; }
-    .lrow { padding: 4px 0; }
-    .lrow .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
-    .tut { position: fixed; left: 0; right: 0; margin: 0 auto; width: max-content; bottom: calc(max(18px, 3.5vh) + 74px); flex-direction: row; gap: 16px; padding: 8px 12px; white-space: nowrap; }
-    body.launching .tut { transform: translateY(10px); }
-    .tut .lb { margin-left: 4px; padding-left: 0; }
-    .launch { padding: 10px 24px; } .launch .lt { font-size: 19px; }
-    .shopBtn { left: 12px; padding: 0 12px; } .shopBtn .st { display: none; }
-    .hBottom { padding-left: 40px; }
-  }
-
-  /* ---------- shop: hangar workshop ---------- */
-  #shop { display: none; position: fixed; inset: 0; background: rgba(2, 6, 22, 0.62); align-items: center; justify-content: center;
-    padding: 16px; box-sizing: border-box; overflow-y: auto; }
-  body.shopping #shop { display: flex; }
-  .sh-panel { width: 100%; max-width: 640px; margin: auto; border-radius: 2px; overflow: hidden; color: #fff;
-    background-color: #20252c; background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 24px 24px; }
-  .hazard { height: 10px; background: repeating-linear-gradient(-45deg, #f6c400 0 10px, #1b1d21 10px 20px); }
-  .sh-head { display: flex; align-items: center; gap: 12px; padding: 16px 18px 6px; }
-  .sh-head .tt { flex: 1; }
-  .sh-kicker { color: #f6c400; }
-  .sh-title { font: 900 26px/1.1 var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: #fff; }
-  .sh-coins { display: inline-flex; align-items: center; gap: 7px; padding: 10px 12px; border-radius: 2px; background: #14181d; }
-  .sh-coins .num { font-size: 20px; }
-  .sh-x { min-height: 40px; width: 40px; padding: 0; font-size: 18px; }
-  .sh-items { display: flex; flex-direction: column; gap: 10px; padding: 12px 18px 20px; }
-  .item { display: grid; grid-template-columns: 72px 1fr auto; gap: 16px; align-items: center; padding: 12px; border-radius: 2px; background: #2c323a; }
-  .item .ic { width: 72px; height: 72px; border-radius: 1px; background: #14181d; display: flex; align-items: center; justify-content: center; }
-  .item .ic svg { width: 54px; height: 54px; }
-  .item .nm { font: 800 15px/1.2 var(--font); letter-spacing: 0.1em; text-transform: uppercase; color: #fff; }
-  .item .inf { margin-top: 4px; }
-  .pips { display: flex; gap: 4px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
-  .pips i { width: 16px; height: 8px; background: #4a525c; }
-  .pips i.on { background: #f6c400; }
-  .pips span { margin-left: 8px; }
-  .buy { flex-direction: column; gap: 6px; min-width: 120px; }
-  .buy .bl { font: 400 11px/1 var(--font); letter-spacing: 1px; }
-  .buy .bp { display: inline-flex; align-items: center; gap: 6px; font: 800 20px/1 var(--font); font-variant-numeric: tabular-nums; letter-spacing: 0; }
-  .buy.off { background: #3a414a; box-shadow: inset 0 -3px 0 rgba(0,0,0,0.4); color: #9aa3ad; cursor: default; }
-  .buy.max { background: #2f7a48; box-shadow: inset 0 -3px 0 #1d4d2d; cursor: default; }
-  .item.flash { animation: flash 0.6s ease-out; }
-  @keyframes flash { from { background: #5b5a3a; } to { background: #2c323a; } }
-  @media screen and (max-width: 520px) {
-    .sh-head { flex-wrap: wrap; padding: 14px 14px 4px; } .sh-items { padding: 10px 14px 16px; }
-    .item { grid-template-columns: 56px 1fr; gap: 12px; } .item .ic { width: 56px; height: 56px; } .item .ic svg { width: 42px; height: 42px; }
-    .buy { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; }
-  }
-  /* ---------- mission-control panel language: one angled edge (the other
-     flat), a thin strip of construction tape, a hologram flight log ---------- */
-  :root { --cut: 14px; --tape: repeating-linear-gradient(-45deg, #f6c400 0 6px, #1b1d21 6px 12px); --holo: #7fe6ff; }
-  .cutR { clip-path: polygon(0 0, 100% 0, calc(100% - var(--cut)) 100%, 0 100%); }
-  .cutL { clip-path: polygon(0 0, 100% 0, 100% 100%, var(--cut) 100%); }
-  .cutB { clip-path: polygon(0 0, 100% 0, calc(100% - var(--cut)) 100%, var(--cut) 100%); }
-  .brand, .sh-panel, .item { position: relative; }
-  @media screen and (min-width: 701px) { .tut.holo { position: relative; } }
-  @media screen and (max-width: 700px) { .hTop { width: auto; } }
-  @media screen and (max-width: 700px) { .sxtest { position: fixed; top: 26px; right: 14px; } }
-  .holo h2 { padding-left: 6px; }
-  .tape::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--tape); }
-  .brand { padding-top: 15px; }
-  /* the angled side adds space instead of cutting into the content */
-  .hTop { width: 290px; }
-  .brand.cutR, .tut.cutR { padding-right: calc(14px + var(--cut)); }
-  .log.cutL { --cut: 16px; width: auto; padding-left: calc(14px + var(--cut)); padding-bottom: 16px; }
-  .log .lhead { padding-bottom: 1px; }
-  .lhead, .lrow { grid-template-columns: 96px 76px 54px; }
-  .shopBtn.cutR { padding-right: calc(18px + var(--cut)); }
-  .launch.cutB { padding-left: calc(30px + var(--cut)); padding-right: calc(30px + var(--cut)); }
-  .item.cutR { padding-right: calc(12px + var(--cut)); }
-  .buy.cutR { padding-right: calc(14px + var(--cut)); }
-  .sh-panel.cutR { padding-right: var(--cut); background-clip: border-box; }
-  /* end screen buttons: one slanted strip cut into interlocking segments */
-  #over .btns { gap: 6px; }
-  #over .seg-r { clip-path: polygon(0 0, 100% 0, calc(100% - var(--cut)) 100%, 0 100%); padding-right: calc(22px + var(--cut)); }
-  #over .seg-p { clip-path: polygon(var(--cut) 0, 100% 0, calc(100% - var(--cut)) 100%, 0 100%); padding-left: calc(22px + var(--cut)); padding-right: calc(22px + var(--cut)); }
-  #over .seg-l { clip-path: polygon(var(--cut) 0, 100% 0, 100% 100%, 0 100%); padding-left: calc(22px + var(--cut)); }
-  /* neighbors overlap by the slant so the gap along the cut is a thin even line */
-  #over #again + .seg-p, #over .seg-p + .seg-l { margin-left: calc(-6px - var(--cut) + 5px); }
-  #over .btns.solo .seg-p { margin-left: 0; }
-  @media screen and (max-width: 560px) { #over .btns #again { flex: 1 1 100%; } #over .btns #homeBtn, #over .btns #copy { flex: 1 1 0; }
-    #over .btns .btn { font-size: 12px; letter-spacing: 0.06em; } #over .btns .btn kbd { display: none; }
-    #over #again + .seg-p { margin-left: 0; } }
-  /* hologram controls: projected key outlines */
-  .holo .cap { clip-path: none; background: rgba(127, 230, 255, 0.08); color: #e6fbff; box-shadow: inset 0 0 0 1px rgba(127, 230, 255, 0.7); padding-right: 6px; }
-  .holo .cap.on { background: rgba(127, 230, 255, 0.45); color: #04121f; transform: none; }
-  .holo .or { color: rgba(160, 235, 255, 0.7); }
-  .launch { --cut: 18px; padding-left: 40px; padding-right: 40px; }
-  .shopBtn { --cut: 12px; padding-right: 26px; }
-  .sh-panel { --cut: 26px; }
-  .item { --cut: 12px; }
-  .buy { --cut: 10px; padding-right: 20px; }
-  #over .btn { --cut: 12px; }
-  .cap { clip-path: polygon(0 0, 100% 0, calc(100% - 5px) 100%, 0 100%); padding-right: 8px; }
-  /* hologram flight log */
-  .holo { background: linear-gradient(180deg, rgba(14, 72, 104, 0.8), rgba(6, 34, 62, 0.88)); color: #e2f9ff; overflow: hidden; }
-  .holo::after { content: ""; position: absolute; inset: 0; pointer-events: none;
-    background: repeating-linear-gradient(0deg, rgba(127, 230, 255, 0.07) 0 1px, transparent 1px 3px); animation: holo 7s infinite steps(1); }
-  @keyframes holo { 0%, 100% { opacity: 1; } 31% { opacity: 0.55; } 32% { opacity: 1; } 73% { opacity: 0.75; } 74% { opacity: 1; } }
-  .holo .ttl { color: var(--holo); }
-  .holo .lbl { color: rgba(160, 235, 255, 0.72); }
-  .holo .lrow { background: linear-gradient(rgba(127, 230, 255, 0.22), rgba(127, 230, 255, 0.22)) bottom / 100% 1px no-repeat; }
-  .holo .lrow .nm, .holo .lrow .n { color: #eafbff; }
-  .holo .lrow.dim .n { color: rgba(160, 235, 255, 0.4); }
-  .holo .lrow .bs i { background: rgba(127, 230, 255, 0.22); }
-  .holo .lrow .bs i.f { background: #f6c400; } .holo .lrow .bs i.f2 { background: #3fd07a; }
-  .ticks { height: 5px; margin: -4px 0 8px; background: repeating-linear-gradient(90deg, rgba(127, 230, 255, 0.55) 0 1px, transparent 1px 9px);
-    -webkit-mask: linear-gradient(90deg, #000 60%, transparent); mask: linear-gradient(90deg, #000 60%, transparent); }
-  .brk { position: absolute; width: 12px; height: 12px; pointer-events: none; }
-  .brk.tl { left: 6px; top: 6px; background: linear-gradient(var(--holo), var(--holo)) 0 0 / 12px 2px no-repeat, linear-gradient(var(--holo), var(--holo)) 0 0 / 2px 12px no-repeat; }
-  .brk.tr { right: 6px; top: 6px; background: linear-gradient(var(--holo), var(--holo)) 100% 0 / 12px 2px no-repeat, linear-gradient(var(--holo), var(--holo)) 100% 0 / 2px 12px no-repeat; }
-  .brk.br { right: 6px; bottom: 6px; background: linear-gradient(var(--holo), var(--holo)) 100% 100% / 12px 2px no-repeat, linear-gradient(var(--holo), var(--holo)) 100% 100% / 2px 12px no-repeat; }
-  @media (prefers-reduced-motion: reduce) { .holo::after { animation: none; } }
-  /* course choice under the flight log, once the inner route is unlocked */
+  .lrow .bs i { width: 14px; height: 8px; border-radius: 4px; }
+  .lrow .bs.na { color: var(--faint); font: 800 12px/1 var(--font); }
   .route { display: none; align-items: center; gap: 6px; margin-top: 10px; }
   .route.on { display: flex; }
   .route .lbl { margin-right: auto; }
-  .route .cap { cursor: pointer; padding: 0 9px; }
-  /* admin only: permanent shield toggle, directly above the Sound button */
-  #shieldBtn { bottom: calc(max(18px, 3.5vh) + 54px); }
-  /* Saxlan has no leaderboards: the button and the end screen link stay hidden */
-  #lbBtn, #finLb { display: none !important; }
-  /* leaderboard button: directly above the Shop button */
-  .lbBtn { position: absolute; left: 20px; bottom: calc(max(18px, 3.5vh) + 72px); pointer-events: auto; min-height: 44px; font-size: 12px; --cut: 10px; padding-right: calc(16px + var(--cut)); }
-  @media screen and (max-width: 700px) { .lbBtn { left: 12px; bottom: calc(max(18px, 3.5vh) + 132px); min-height: 36px; } }
-  /* leaderboard and end of game: hangar panels like the shop */
-  #lb, #fin { display: none; position: fixed; inset: 0; background: rgba(2, 6, 22, 0.62); align-items: center; justify-content: center;
-    padding: 16px; box-sizing: border-box; overflow-y: auto; z-index: 30; }
-  body.ranking #lb, body.finale #fin { display: flex; }
+  .route .cap, .lb-tabs .cap { cursor: pointer; padding: 0 12px; height: 34px; }
+  .route .cap.on, .lb-tabs .cap.on { background: #ddf4ff; border-color: #84d8ff; color: var(--blue); transform: none; border-bottom-width: 4px; margin-bottom: 0; }
+  .hBottom { position: absolute; left: 0; right: 0; bottom: max(18px, 3.5vh); display: flex; justify-content: center; pointer-events: none; }
+  .launch { pointer-events: auto; min-height: 62px; padding: 0 34px; gap: 16px; border-radius: 16px; border-bottom-width: 5px; }
+  .btn.primary.launch { background: var(--blue); border-color: var(--blue-dark); }
+  @media (hover: hover) { .btn.primary.launch:not(.wait):hover { background: #2ec0ff; } }
+  .launch .lw { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .launch .lt { font: 800 22px/1 var(--font); letter-spacing: 0.06em; }
+  .launch .ld { font: 800 11px/1 var(--font); letter-spacing: 0.04em; opacity: 0.85; }
+  .shopBtn { position: absolute; left: 20px; bottom: max(18px, 3.5vh); pointer-events: auto; min-height: 54px; padding: 0 18px 0 12px; color: var(--purple); }
+  .shopBtn svg { width: 32px; height: 32px; display: block; }
+  .muteBtn { position: absolute; right: 20px; bottom: max(18px, 3.5vh); pointer-events: auto; min-height: 44px; font-size: 13px; color: var(--dim); }
+  .lbBtn { position: absolute; left: 20px; bottom: calc(max(18px, 3.5vh) + 66px); pointer-events: auto; min-height: 44px; font-size: 13px; color: var(--gold-dark); }
+  #shieldBtn { bottom: calc(max(18px, 3.5vh) + 56px); }
+  @media screen and (max-width: 700px) {
+    .hTop { top: 12px; left: 12px; right: 12px; width: auto; }
+    .brand { padding: 8px 10px 8px 14px; } .brand .title { font-size: 26px; }
+    .sxtest { position: fixed; top: 24px; right: 150px; }
+    .log { top: 82px; left: 12px; right: 12px; width: auto; padding: 10px 12px 8px; }
+    .lrow { padding: 4px 0; }
+    .lrow .nm { font-size: 13px; }
+    .tut { position: fixed; left: 0; right: 0; margin: 0 auto; width: max-content; bottom: calc(max(18px, 3.5vh) + 74px); flex-direction: row; gap: 14px; padding: 8px 12px; white-space: nowrap; }
+    body.launching .tut { transform: translateY(10px); }
+    .tut .lb { margin-left: 4px; padding-left: 0; }
+    .tut { gap: 10px; padding: 8px 10px; max-width: calc(100vw - 24px); box-sizing: border-box; }
+    .tut .row2 { gap: 4px; }
+    .tut .cap { min-width: 26px; height: 28px; padding: 0 6px; font-size: 12px; }
+    .tut .lbl { font-size: 11px; }
+    .launch { padding: 0 22px; min-height: 58px; } .launch .lt { font-size: 19px; }
+    .shopBtn { left: 12px; padding: 0 10px; min-height: 58px; } .shopBtn .st { display: none; }
+    .muteBtn { right: 12px; bottom: calc(max(18px, 3.5vh) + 132px); min-height: 40px; padding: 0 14px; font-size: 12px; }
+    .lbBtn { left: 12px; bottom: calc(max(18px, 3.5vh) + 132px); min-height: 40px; padding: 0 14px; font-size: 12px; }
+    #shieldBtn { bottom: calc(max(18px, 3.5vh) + 180px); }
+    .hBottom { padding-left: 40px; }
+  }
+
+  /* ---------- shop, leaderboard, finale: white dialog cards ---------- */
+  #shop, #lb, #fin { display: none; position: fixed; inset: 0; background: rgba(19, 31, 36, 0.55); align-items: center; justify-content: center;
+    padding: 16px; box-sizing: border-box; overflow-y: auto; }
+  #lb, #fin { z-index: 30; }
+  body.shopping #shop, body.ranking #lb, body.finale #fin { display: flex; }
+  .sh-panel { width: 100%; max-width: 620px; margin: auto; color: var(--text); background: #fff; border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 20px; overflow: hidden; }
+  .sh-head { display: flex; align-items: center; gap: 12px; padding: 18px 20px 6px; }
+  .sh-head .tt { flex: 1; min-width: 0; }
+  .sh-kicker { color: var(--purple); }
+  .sh-title { font: 700 28px/1.1 var(--display); letter-spacing: -0.02em; color: var(--text); }
+  .sh-coins { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border-radius: 12px; background: var(--gold-wash); }
+  .sh-coins .num { font-size: 20px; color: var(--gold-dark); }
+  .sh-x { min-height: 44px; width: 44px; padding: 0; font-size: 22px; color: var(--faint); }
+  .sh-items { display: flex; flex-direction: column; gap: 12px; padding: 12px 20px 22px; }
+  .item { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 12px; border-radius: 16px; border: 2px solid var(--line); border-bottom-width: 4px; }
+  .item .ic { width: 72px; height: 72px; border-radius: 14px; background: var(--soft); display: flex; align-items: center; justify-content: center; }
+  .item .ic svg { width: 54px; height: 54px; }
+  .item .nm { font: 700 19px/1.15 var(--display); letter-spacing: -0.01em; color: var(--text); }
+  .item .inf { margin-top: 3px; text-transform: none; letter-spacing: 0; font-size: 13px; }
+  .pips { display: flex; gap: 4px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+  .pips i { width: 18px; height: 10px; border-radius: 5px; background: var(--line); }
+  .pips i.on { background: var(--gold); }
+  .pips span { margin-left: 8px; }
+  .buy { flex-direction: column; gap: 5px; min-width: 124px; min-height: 58px; padding: 0 14px; }
+  .buy .bl { font: 800 11px/1 var(--font); letter-spacing: 0.04em; opacity: 0.85; }
+  .buy .bp { display: inline-flex; align-items: center; gap: 6px; font: 700 19px/1 var(--display); letter-spacing: 0; font-variant-numeric: tabular-nums; }
+  .buy.off { background: var(--soft); color: var(--faint); cursor: default; }
+  .buy.max { background: var(--gold-wash); border-color: #ffe48a; color: var(--gold-dark); cursor: default; }
+  .item.flash { animation: flash 0.6s ease-out; }
+  @keyframes flash { from { background: var(--green-wash); } to { background: #fff; } }
+  @media screen and (max-width: 520px) {
+    .sh-head { flex-wrap: wrap; padding: 14px 14px 4px; } .sh-items { padding: 10px 14px 16px; }
+    .item { grid-template-columns: 56px minmax(0, 1fr); gap: 12px; } .item .ic { width: 56px; height: 56px; } .item .ic svg { width: 42px; height: 42px; }
+    .buy { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; min-height: 48px; }
+  }
   #lb .sh-panel { max-width: 560px; }
-  .lb-tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 18px 4px; }
-  .lb-tabs .cap { cursor: pointer; padding: 0 12px 0 9px; }
-  .lb-info { padding: 8px 18px 0; color: #f6c400; }
-  .lb-rows { margin: 8px 18px 20px; max-height: min(52vh, 520px); overflow-y: auto; background: #14181d; border-radius: 1px; }
-  .lb-row { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; padding: 9px 14px 8px;
-    background: linear-gradient(rgba(255,255,255,0.08), rgba(255,255,255,0.08)) bottom / 100% 1px no-repeat; }
-  .lb-row .rk { font: 800 14px/1 var(--font); color: rgba(255,255,255,0.55); font-variant-numeric: tabular-nums; }
-  .lb-row .nm { font: 700 13px/1.2 var(--font); letter-spacing: 1px; text-transform: uppercase; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .lb-row .v { font: 800 16px/1 var(--font); color: #fff; font-variant-numeric: tabular-nums; }
-  .lb-row.me { background: var(--orange); box-shadow: inset 0 -3px 0 var(--orange-edge); }
-  .lb-row.me .rk { color: #fff; }
+  .lb-tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 20px 4px; }
+  .lb-info { padding: 8px 20px 0; }
+  .lb-rows { margin: 8px 20px 20px; max-height: min(52vh, 520px); overflow-y: auto; border: 2px solid var(--line); border-radius: 14px; }
+  .lb-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 14px; border-top: 2px solid var(--soft); }
+  .lb-row:first-child { border-top: 0; }
+  .lb-row .rk { font: 700 16px/1 var(--display); color: var(--faint); font-variant-numeric: tabular-nums; }
+  .lb-row .nm { font: 800 14px/1.2 var(--font); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-row .v { font: 700 17px/1 var(--display); color: var(--blue); font-variant-numeric: tabular-nums; }
+  .lb-row.me { background: #ddf4ff; }
+  .lb-row.me .rk { color: var(--blue); }
   .lb-msg { padding: 22px 14px; text-align: center; }
   #fin .sh-panel { max-width: 600px; }
-  .fin-body { padding: 18px 24px 22px; display: flex; flex-direction: column; gap: 14px; }
-  .fin-title { margin: 0; font: 900 clamp(26px, 5.4vmin, 46px)/1.08 var(--font); color: #fff; }
-  .fin-grid { display: flex; flex-direction: column; gap: 10px; }
-  .fin-credits { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; }
-  .fin-credits b { color: #fff; font-weight: 800; }
+  .fin-body { padding: 22px 24px 22px; display: flex; flex-direction: column; gap: 14px; }
+  .fin-title { margin: 0; font: 700 clamp(26px, 5vmin, 40px)/1.1 var(--display); letter-spacing: -0.02em; color: var(--orange); }
+  .fin-grid { display: flex; flex-direction: column; gap: 8px; }
+  .fin-credits { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; text-transform: none; letter-spacing: 0; font-size: 13px; }
+  .fin-credits b { color: var(--text); font-weight: 800; }
   #fin .btns .btn { flex: 1; }
-  @media screen and (max-width: 700px) { #shieldBtn { bottom: calc(max(18px, 3.5vh) + 176px); } }
+  /* Saxlan has no leaderboards: the button and the end screen link stay hidden */
+  #lbBtn, #finLb { display: none !important; }
 </style>
 </head>
 <body tabindex="-1">
 <div id="stage"></div>
 <div id="scrim"></div>
-<div id="over">
+<div id="over"><div class="card" id="overCard">
   <h1 id="oDesc"></h1>
   <div class="note" id="oNote"></div>
   <div class="scoreline"><div class="pill"><span id="oScore"></span><span class="t">points</span><span id="oType" hidden></span></div><span class="coinchip" id="oCoins"></span><span class="segs" id="oBase"></span></div>
@@ -325,27 +250,24 @@
     <div class="row" id="rBases" style="display:none"><span id="lBases">Base Bonus</span><span class="lead"></span><span class="v"><span id="sBases"></span><i>COINS</i></span></div>
   </div>
   <div class="btns" id="btnRow">
-    <div class="btn primary wait seg-r" id="again" role="button" tabindex="0"><span id="againLabel">Play again</span><kbd>Space</kbd></div>
-    <div class="btn wait seg-p tape" id="homeBtn" role="button" tabindex="0"><span>Back to home screen</span><kbd>B</kbd></div>
-    <div class="btn seg-l" id="copy" role="button" tabindex="0"><span id="copyLabel">Copy Stats</span></div>
+    <div class="btn primary wait" id="again" role="button" tabindex="0"><span id="againLabel">Play again</span><kbd>Space</kbd></div>
+    <div class="btn wait" id="homeBtn" role="button" tabindex="0"><span>Back to home screen</span><kbd>B</kbd></div>
+    <div class="btn" id="copy" role="button" tabindex="0"><span id="copyLabel">Copy Stats</span></div>
   </div>
-</div>
+</div></div>
 <div id="fin" role="dialog" aria-label="Mission complete">
-  <div class="sh-panel cutR">
-    <div class="hazard"></div>
+  <div class="sh-panel">
     <div class="fin-body">
       <div class="lbl sh-kicker">Mission complete</div>
       <h1 class="fin-title">You landed on the Sun</h1>
       <div class="fin-grid" id="finStats"></div>
-      <div class="fin-credits lbl"><span><b>Lander</b> after Lander by Eric Morris</span><span><b>Music</b> after Gustav Holst, The Planets</span><span><b>Made for</b> Saxon Planner</span></div>
+      <div class="fin-credits lbl"><span><b>Lander</b> after Lander by Edwin Morris</span><span><b>Music</b> after Gustav Holst, The Planets</span><span><b>Made for</b> Saxon Planner</span></div>
       <div class="btns"><div class="btn" id="finLb" role="button" tabindex="-1" aria-hidden="true">Leaderboard</div><div class="btn primary" id="finOk" role="button" tabindex="0">Continue</div></div>
     </div>
-    <div class="hazard"></div>
   </div>
 </div>
 <div id="lb" role="dialog" aria-label="Leaderboard">
-  <div class="sh-panel cutR">
-    <div class="hazard"></div>
+  <div class="sh-panel">
     <div class="sh-head">
       <div class="tt"><div class="sh-kicker lbl">Mission control</div><div class="sh-title">Leaderboard</div></div>
       <div class="btn sh-x" id="lbX" role="button" tabindex="0" aria-label="Close">&#215;</div>
@@ -353,31 +275,28 @@
     <div class="lb-tabs" id="lbTabs"></div>
     <div class="lb-info lbl" id="lbInfo"></div>
     <div class="lb-rows" id="lbRows"></div>
-    <div class="hazard"></div>
   </div>
 </div>
 <div id="home">
   <div class="hTop">
-    <div class="brand panel cutR tape"><div class="title">LANDER</div><div class="coins"><span class="coinIco"></span><span class="num" id="hCoins">0</span></div></div>
-    <div class="tut panel holo cutR" id="tut"></div>
+    <div class="brand card"><div class="title">lander</div><div class="coins"><span class="coinIco"></span><span class="num" id="hCoins">0</span></div></div>
+    <div class="tut card" id="tut"></div>
     <script>if (window.SX_TEST) document.write('<span class="sxtest">TEST</span>');</script>
   </div>
-  <div class="log panel holo cutL" id="hLog"><span class="brk tl"></span><span class="brk tr"></span><span class="brk br"></span><h2><span class="ttl">Flight log</span><span class="lbl" id="hTotal"></span></h2><div class="ticks"></div><div class="lhead lbl"><span>Body</span><span>Landings</span><span style="text-align:right">Base</span></div><div class="rows" id="hRows"></div><div class="route" id="hRoute"><span class="lbl">Route</span><span class="cap" role="button" tabindex="0" data-r="outer">Outer</span><span class="cap" role="button" tabindex="0" data-r="inner">Inner</span></div></div>
-  <div class="btn muteBtn cutL" id="muteBtn" role="button" tabindex="0"><span class="st">Sound on</span><kbd>M</kbd></div>
-  <div class="btn lbBtn cutR" id="lbBtn" role="button" tabindex="0"><span class="st">Leaderboard</span></div>
-  <div class="btn shopBtn cutR" id="shopBtn" role="button" tabindex="0" aria-label="Shop"><span class="shopIco"></span><span class="st">Shop</span></div>
-  <div class="hBottom"><div class="btn primary launch cutB" id="launchBtn" role="button" tabindex="0"><div class="lw"><div class="lt">Launch</div><div class="ld" id="hDest">Earth</div></div><kbd>Space</kbd></div></div>
+  <div class="log card" id="hLog"><h2><span class="ttl">Flight log</span><span class="lbl" id="hTotal"></span></h2><div class="lhead lbl"><span>Body</span><span>Landings</span><span style="text-align:right">Base</span></div><div class="rows" id="hRows"></div><div class="route" id="hRoute"><span class="lbl">Route</span><span class="cap" role="button" tabindex="0" data-r="outer">Outer</span><span class="cap" role="button" tabindex="0" data-r="inner">Inner</span></div></div>
+  <div class="btn muteBtn" id="muteBtn" role="button" tabindex="0"><span class="st">Sound on</span><kbd>M</kbd></div>
+  <div class="btn lbBtn" id="lbBtn" role="button" tabindex="0"><span class="st">Leaderboard</span></div>
+  <div class="btn shopBtn" id="shopBtn" role="button" tabindex="0" aria-label="Shop"><span class="shopIco"></span><span class="st">Shop</span></div>
+  <div class="hBottom"><div class="btn primary launch" id="launchBtn" role="button" tabindex="0"><div class="lw"><div class="lt">Launch</div><div class="ld" id="hDest">Earth</div></div><kbd>Space</kbd></div></div>
 </div>
 <div id="shop" role="dialog" aria-label="Shop">
-  <div class="sh-panel cutR">
-    <div class="hazard"></div>
+  <div class="sh-panel">
     <div class="sh-head">
       <div class="tt"><div class="sh-kicker lbl">Hangar 07</div><div class="sh-title">Workshop</div></div>
       <div class="sh-coins"><span class="coinIco"></span><span class="num" id="sCoins">0</span></div>
       <div class="btn sh-x" id="shopX" role="button" tabindex="0" aria-label="Close">&#215;</div>
     </div>
     <div class="sh-items" id="shopItems"></div>
-    <div class="hazard"></div>
   </div>
 </div>
 <script>
@@ -395,7 +314,8 @@
   var THRUST = 0.012;
   var thrust = THRUST;          // THRUST with the engine upgrade, set per flight
   var SLAM_SLACK_MS = 500, SLAM_GRACE_MS = 100;
-  var FONT = "-apple-system, BlinkMacSystemFont, sans-serif";
+  var FONT = "Nunito, -apple-system, BlinkMacSystemFont, sans-serif";
+  var DFONT = "Fredoka, Nunito, -apple-system, sans-serif";
   var BODY_STOPS = ["#DFE5E5", "#BDBCC3", "#4A4E6F", "#3D4264"];
   var ROCK = "#898482";
   // Every place the lander can visit, in order outward from Earth. "appear"
@@ -403,7 +323,7 @@
   // "orbit" where the view zooms out into orbit around it.
   var BODIES = [
     { id: "earth", name: "Earth", grav: 0.0035, pads: [0, 4, 8], starHide: 1, maxR: 0.24, orbitR: 0.18,
-      sky: ["#2a9fec", "#79cdfb", "#cdf1ff"], ground: { fill: "#5bbd3d", rock: [100, 22, 46] } },
+      sky: ["#2a9fec", "#79cdfb", "#cdf1ff"], flatSky: "#84d8ff", ground: { fill: "#58cc02", rock: [100, 22, 46] } },
     { id: "moon", name: "Moon", appear: 5000, orbit: 10000, grav: 0.0028, pads: [0, 4, 8], starHide: 0,
       sky: null, ground: { fill: "#757579", rock: [240, 3, 44] }, maxR: 0.2, orbitR: 0.16 },
     { id: "mars", name: "Mars", appear: 18000, orbit: 28000, grav: 0.003, pads: [8, 12, 16], starHide: 0.7,
@@ -422,7 +342,7 @@
       sky: ["#040509", "#14141d", "#2a2730"], ground: { fill: "#a68d6d", rock: [32, 22, 55] }, maxR: 0.12, orbitR: 0.1 },
     // The inner route, flown after coming back to Earth: Venus, then Mercury
     { id: "venus", name: "Venus", appear: 12000, orbit: 20000, grav: 0.0034, pads: [8, 12, 16], starHide: 1,
-      sky: ["#6b3c12", "#c27a2a", "#efbf73"], ground: { fill: "#99582c", rock: [22, 42, 34], top: [30, 52, 44], band: 9 }, maxR: 0.2, orbitR: 0.16 },
+      sky: ["#6b3c12", "#c27a2a", "#efbf73"], ground: { fill: "#99582c", rock: [22, 42, 34] }, maxR: 0.2, orbitR: 0.16 },
     // Mercury pulls about as hard as Mars (both about 0.38 g in reality); its ground is one flat color
     { id: "mercury", name: "Mercury", appear: 30000, orbit: 42000, grav: 0.003, pads: [12, 16, 20], starHide: 0,
       sky: null, ground: { fill: "#7d7974", rock: [30, 6, 44] }, maxR: 0.14, orbitR: 0.12 },
@@ -430,7 +350,7 @@
     // is far beyond any engine here (full thrust is about 3.4x Earth's pull), so it is set to 1.5x Earth's: the
     // strongest in the game, still hoverable with the stock engine
     { id: "sun", name: "Sun", appear: 64000, orbit: 80000, grav: 0.0052, pads: [30, 40, 50], starHide: 1,
-      sky: ["#2a0602", "#8f2207", "#f0701a"], ground: { fill: "#ffa21f", rock: [30, 90, 50] }, maxR: 0.3, orbitR: 0.22 }
+      sky: ["#2a0602", "#8f2207", "#f0701a"], flatSky: "#d9480f", ground: { fill: "#ffa21f", rock: [30, 90, 50] }, maxR: 0.3, orbitR: 0.22 }
   ];
   // Courses through the bodies: outward from Earth, or inward toward the Sun
   var ROUTES = { outer: ["earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"], inner: ["earth", "venus", "mercury", "sun"] };
@@ -773,19 +693,8 @@
   // The same 2% noise as a fixed overlay above the canvas: the compositor
   // blends it, instead of a full-screen pattern fill on every frame
   var ditherEl = null, ditherDpr = 0;
-  function dither() {
-    if (!noiseCanvas) noiseCanvas = makeNoise(255);
-    if (!ditherEl) {
-      ditherEl = document.createElement("div");
-      ditherEl.style.cssText = "position:absolute;inset:0;pointer-events:none;opacity:0.02;image-rendering:pixelated;background-image:url(" + noiseCanvas.toDataURL() + ")";
-      stage.style.position = "relative";
-      stage.appendChild(ditherEl);
-    }
-    var dd = window.devicePixelRatio || 1;
-    if (ditherDpr !== dd) { ditherDpr = dd; ditherEl.style.backgroundSize = 128 / dd + "px " + 128 / dd + "px"; }
-  }
-  // The same noise for CSS gradients (gauges)
-  try { document.documentElement.style.setProperty("--noise", "url(" + makeNoise(6).toDataURL() + ")"); } catch (e) {}
+  // Flat colors throughout: no dithering overlay
+  function dither() {}
   /* The backing store always matches the displayed size in device pixels, so
      text and lines stay sharp at any browser zoom or screen density. DPR is the
      world-to-backing scale (letterbox factor times the device pixel ratio). */
@@ -1294,9 +1203,10 @@
       // small rocket on the pad, faceted like the player's ship
       var rx = p0 + m.w * 0.62, rb = y - 4 * k, s = k * 0.9, xs2 = [-10, -4, 2, 6, 10];
       frect(g, gx1, rb - 40 * s, rx - 10 * s - gx1, 2 * k, lit(P.hull, 0, -1, -6));
-      var rgr = g.createLinearGradient(rx + xs2[0] * s, 0, rx + xs2[4] * s, 0);
-      rgr.addColorStop(0, BODY_STOPS[0]); rgr.addColorStop(0.3, BODY_STOPS[1]); rgr.addColorStop(0.6, BODY_STOPS[2]); rgr.addColorStop(1, BODY_STOPS[3]);
-      fpoly(g, [[rx - 10 * s, rb], [rx - 10 * s, rb - 40 * s], [rx, rb - 60 * s], [rx + 10 * s, rb - 40 * s], [rx + 10 * s, rb]], rgr);
+      fpoly(g, [[rx - 10 * s, rb], [rx - 10 * s, rb - 40 * s], [rx, rb - 40 * s], [rx, rb]], SHIP.hull);
+      fpoly(g, [[rx, rb], [rx, rb - 40 * s], [rx + 10 * s, rb - 40 * s], [rx + 10 * s, rb]], SHIP.hullDk);
+      fpoly(g, [[rx - 10 * s, rb - 40 * s], [rx, rb - 60 * s], [rx, rb - 40 * s]], SHIP.nose);
+      fpoly(g, [[rx, rb - 60 * s], [rx + 10 * s, rb - 40 * s], [rx, rb - 40 * s]], SHIP.noseDk);
     } else if (m.type === "saucer") {
       var sw = m.w, top2 = y - m.ph;
       frect(g, x - sw * 0.14, top2, sw * 0.14, m.ph, lit(P.hull, -1, 0));
@@ -1665,14 +1575,6 @@
       for (var e = 0; e <= N; e++) ring.push([cx + Math.cos(Math.PI + e / N * Math.PI) * rxo, cy + Math.sin(Math.PI + e / N * Math.PI) * ryo]);
       for (e = N; e >= 0; e--) ring.push([cx + Math.cos(Math.PI + e / N * Math.PI) * rxi, cy + Math.sin(Math.PI + e / N * Math.PI) * ryi]);
       fpoly(bg, ring, b[2]);
-      for (var i = 0; i < N; i++) {
-        var a0 = Math.PI + i / N * Math.PI, a1 = Math.PI + (i + 1) / N * Math.PI;
-        var pts = [[cx + Math.cos(a0) * rxi, cy + Math.sin(a0) * ryi], [cx + Math.cos(a1) * rxi, cy + Math.sin(a1) * ryi],
-          [cx + Math.cos(a1) * rxo, cy + Math.sin(a1) * ryo], [cx + Math.cos(a0) * rxo, cy + Math.sin(a0) * ryo]];
-        // Lit from the upper left: facets on the left of the arc a touch brighter
-        var lit = (i < N / 2 ? 1 : -1) * (0.5 - Math.abs(i / N - 0.5)) * 0.08;
-        if (lit) fpoly(bg, pts, lit > 0 ? "rgba(255,255,255," + lit + ")" : "rgba(0,0,0," + (-lit) + ")");
-      }
       g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = b[3] * 0.75; g.drawImage(bl.c, 0, 0); g.restore();
     });
     ringSky = { img: lay.c, W: W, H: H };
@@ -1695,16 +1597,16 @@
   function drawVenusAir(y) {
     var cam = venusCam(y), y0 = H + cam, y1 = -VENUS_TOP * H + cam;
     if (y1 >= H) return;  // the whole atmosphere is below the screen
-    var g = ctx.createLinearGradient(0, y0, 0, y1);
-    // world heights as fractions of the ground-to-top span
-    var span = (1 + VENUS_TOP) * H, at = function (wy) { return (H - wy) / span; };
-    g.addColorStop(0, "hsl(42, 82%, 80%)");
-    g.addColorStop(at(0), "hsl(39, 74%, 67%)");
-    g.addColorStop(at(-H), "hsl(34, 68%, 54%)");
-    g.addColorStop(at(-2.2 * H), "hsla(31, 62%, 42%, 0.8)");
-    g.addColorStop(1, "hsla(28, 60%, 26%, 0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
+    // Flat bands of air, each one solid color, thinning into space at the top
+    var BANDS = [[0, "#f2c879"], [-H * 0.9, "#e6ad5c"], [-H * 1.9, "#d08f45"], [-H * 2.7, "rgba(170, 110, 52, 0.55)"]];
+    var top = -VENUS_TOP * H;
+    BANDS.forEach(function (bd, i) {
+      var lo = i ? bd[0] : H * 2, hi = i < BANDS.length - 1 ? BANDS[i + 1][0] : top;
+      var y0s = Math.min(H, lo + cam), y1s = Math.max(0, hi + cam);
+      if (y0s <= y1s) return;
+      ctx.fillStyle = bd[1];
+      ctx.fillRect(0, y1s, W, y0s - y1s);
+    });
   }
   // A cloud bank: overlapping wide soft blobs (radial gradients) in a strip,
   // feathered top and bottom, painted once per size and reused
@@ -1716,9 +1618,8 @@
       for (var x = -W * 0.1; x < W * 1.1; x += W * R.r(0.08, 0.14)) {
         var cy = bh * R.r(0.4, 0.6), rx = W * R.r(0.12, 0.22), ry = bh * R.r(0.28, 0.42);
         g.save(); g.translate(x, cy); g.scale(1, ry / rx);
-        var rg = g.createRadialGradient(0, 0, 0, 0, 0, rx);
-        rg.addColorStop(0, "rgba(255, 238, 196, 0.5)"); rg.addColorStop(0.6, "rgba(255, 228, 176, 0.22)"); rg.addColorStop(1, "rgba(255, 220, 160, 0)");
-        g.fillStyle = rg; g.fillRect(-rx, -rx, rx * 2, rx * 2);
+        g.fillStyle = "rgba(255, 240, 205, 0.32)";
+        g.beginPath(); g.arc(0, 0, rx * 0.8, 0, Math.PI * 2); g.fill();
         g.restore();
       }
       return { img: lay.c, h: bh };
@@ -1767,18 +1668,18 @@
   }
   var bigSun = null;
   function buildSun() {
+    // Mercury's sky: a big, smooth Sun with a soft hazy halo (no facets, no rings)
     var lay = makeLayer(W, H), g = lay.g, m = Math.min(W, H), cx = W * 0.7, cy = H * 0.5, r = m * 0.3;
-    var glow = g.createRadialGradient(cx, cy, r * 0.8, cx, cy, r * 2.4);
-    glow.addColorStop(0, "rgba(255, 226, 150, 0.55)"); glow.addColorStop(0.35, "rgba(255, 200, 110, 0.18)"); glow.addColorStop(1, "rgba(255, 190, 100, 0)");
-    g.fillStyle = glow; g.fillRect(0, 0, W, H);
-    var N = 18, ring = [];
-    for (var i = 0; i < N; i++) { var an = i / N * Math.PI * 2; ring.push([cx + Math.cos(an) * r, cy + Math.sin(an) * r]); }
-    var inner = ring.map(function (q) { return [cx + (q[0] - cx) * 0.62 - r * 0.06, cy + (q[1] - cy) * 0.62 - r * 0.06]; });
-    for (i = 0; i < N; i++) {
-      var j = (i + 1) % N, an2 = (i + 0.5) / N * Math.PI * 2, lt = (-Math.cos(an2) - Math.sin(an2)) / Math.SQRT2;
-      fpolySeal(g, [ring[i], ring[j], inner[j], inner[i]], hsl(42 + lt * 4, 100, 72 + lt * 7));
-      fpolySeal(g, [inner[i], inner[j], [cx - r * 0.08, cy - r * 0.08]], hsl(48, 100, 86 + lt * 4));
-    }
+    var halo = g.createRadialGradient(cx, cy, r * 0.7, cx, cy, r * 2.6);
+    halo.addColorStop(0, "rgba(255, 236, 170, 0.5)"); halo.addColorStop(0.3, "rgba(255, 222, 150, 0.22)");
+    halo.addColorStop(0.65, "rgba(255, 210, 140, 0.07)"); halo.addColorStop(1, "rgba(255, 200, 130, 0)");
+    g.fillStyle = halo; g.fillRect(0, 0, W, H);
+    g.save();
+    g.filter = "blur(" + Math.max(2, Math.round(r * 0.05)) + "px)";
+    var disc = g.createRadialGradient(cx - r * 0.12, cy - r * 0.12, 0, cx, cy, r);
+    disc.addColorStop(0, "#fffdf2"); disc.addColorStop(0.6, "#fff4c8"); disc.addColorStop(1, "#ffe08a");
+    g.fillStyle = disc; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+    g.restore();
     bigSun = { img: lay.c, W: W, H: H };
   }
   function drawSun(drop, y) {
@@ -1844,7 +1745,13 @@
     if (ground.tower) drawTower(ground.tower);
   }
   function paintGround() {
-    ctx.save(); ctx.fillStyle = ground.color; ctx.fill(ground.fillPath);
+    var gfill = ground.color;
+    if (BODIES[sceneIdx].id === "sun" && mode === "game") {
+      // The Sun's surface: a bright gradient, white-hot at the top fading to deep orange
+      gfill = ctx.createLinearGradient(0, ground.top, 0, H);
+      gfill.addColorStop(0, "#fffbe6"); gfill.addColorStop(0.18, "#fff0a0"); gfill.addColorStop(0.5, "#ffc800"); gfill.addColorStop(1, "#ff9600");
+    }
+    ctx.save(); ctx.fillStyle = gfill; ctx.fill(ground.fillPath);
     // Ground is one flat color; texture comes only from objects on it
     ctx.restore();
     // Surface band (Venus): a strip hanging under the surface line, shaded per segment
@@ -2102,6 +2009,7 @@
     return null;
   }
   // Facets for a disc (or a lumpy potato for small moons), colored and smoothed
+  var STRIPED = { jupiter: true, saturn: true, uranus: true, neptune: true, venus: true };
   function buildFacets(id, lumpy, small) {
     var rings = small
       ? (id === "earth" ? [[{ x: 0, y: 0, ang: 0 }], ringPoints(7, 0.45, 0.1), ringPoints(13, 0.8, 0.08), ringPoints(16, 1, 0.05)]
@@ -2121,21 +2029,36 @@
     var tris = [];
     for (var i = 0; i < rings.length - 1; i++) zip(rings[i], rings[i + 1], tris);
     var look = LOOKS[id];
-    var facets = tris.map(function (t) {
-      var mx = (t[0].x + t[1].x + t[2].x) / 3, my = (t[0].y + t[1].y + t[2].y) / 3;
-      return { t: t, mx: mx, my: my, col: look(mx, my, mx * -0.6 + my * -0.8) };
-    });
-    // Smoothing: neighbors share an edge (two vertices)
-    var key = function (q) { return q.x.toFixed(3) + "," + q.y.toFixed(3); };
-    facets.forEach(function (f) { f.keys = f.t.map(key); });
-    var next = facets.map(function (f) {
-      var nb = facets.filter(function (g) { return g !== f && g.keys.filter(function (k) { return f.keys.indexOf(k) >= 0; }).length >= 2; });
-      if (!nb.length) return f.col;
-      var avg = [0, 1, 2].map(function (c) { return nb.reduce(function (t, g) { return t + g.col[c]; }, 0) / nb.length; });
-      var w = id === "earth" ? 0.08 : Math.abs(f.col[2] - avg[2]) > 7 ? 0.45 : 0.2;
-      return [mix(f.col[0], avg[0], w), mix(f.col[1], avg[1], w), mix(f.col[2], avg[2], w)];
-    });
+    // Flat style: no per-facet lighting or jitter (looks get light 0 and a
+    // fixed random), then colors snap to a few flat tones so features read
+    // as solid patches; the shadow side is one darker crescent at paint time
+    var keepRnd = Math.random;
+    Math.random = function () { return 0.5; };
+    var facets;
+    try {
+      facets = tris.map(function (t) {
+        var mx = (t[0].x + t[1].x + t[2].x) / 3, my = (t[0].y + t[1].y + t[2].y) / 3;
+        return { t: t, mx: mx, my: my, col: look(mx, my, 0) };
+      });
+    } finally { Math.random = keepRnd; }
+    var next = facets.map(function (f) { return [Math.round(f.col[0] / 4) * 4, Math.round(f.col[1] / 6) * 6, Math.round(f.col[2] / 6) * 6]; });
     facets.forEach(function (f, k) { f.c = hsl(next[k][0], next[k][1], next[k][2]); });
+    facets.round = !lumpy; facets.shade = id !== "sun";
+    // Banded worlds are painted as flat horizontal stripes (plus Jupiter's spot)
+    if (!lumpy && STRIPED[id]) {
+      var rows = 22, stripes = [];
+      Math.random = function () { return 0.5; };
+      try {
+        for (var rI = 0; rI < rows; rI++) {
+          var yA = -1 + rI * 2 / rows, yB = yA + 2 / rows, cc = look(0, (yA + yB) / 2, 0);
+          var c2 = hsl(Math.round(cc[0] / 4) * 4, Math.round(cc[1] / 6) * 6, Math.round(cc[2] / 5) * 5);
+          if (stripes.length && stripes[stripes.length - 1].c === c2) stripes[stripes.length - 1].y1 = yB;
+          else stripes.push({ y0: yA, y1: yB, c: c2 });
+        }
+      } finally { Math.random = keepRnd; }
+      facets.stripes = stripes;
+      if (id === "jupiter") facets.spots = [{ x: 0.3, y: 0.36, rx: 0.24, ry: 0.12, c: hsl(16, 50, 52) }];
+    }
     var avg = [0, 1, 2].map(function (c) { return next.reduce(function (t, v) { return t + v[c]; }, 0) / next.length; });
     facets.base = hsl(avg[0], avg[1], avg[2] - 4);
     facets.outline = rings[rings.length - 1].slice().sort(function (p, q) { return Math.atan2(p.y, p.x) - Math.atan2(q.y, q.x); });
@@ -2156,9 +2079,10 @@
   function buildPlanet(body) {
     body.facets = buildFacets(body.id, false);
     if (body.rings) {
-      body.ringShades = body.rings.bands.map(function () {
+      body.ringShades = body.rings.bands.map(function (_, bi) {
         var out = [];
-        for (var j = 0; j < 48; j++) out.push(hsl(body.rings.hsl[0] + rnd(-2, 2), body.rings.hsl[1], body.rings.hsl[2] + (j % 2 ? -3 : 0) + rnd(-2, 2)));
+        var flat = hsl(body.rings.hsl[0], body.rings.hsl[1], body.rings.hsl[2] - 6 * bi);
+        for (var j = 0; j < 48; j++) out.push(flat);
         return out;
       });
     }
@@ -2276,7 +2200,7 @@
       if (sp.y < -m.r * 2 || sp.y > H + m.r * 2) return;
       paintFacets(m.facets, sp.x, sp.y, m.r);
       ctx.save();
-      ctx.font = "400 11px " + FONT; ctx.letterSpacing = "1px"; ctx.textAlign = "center";
+      ctx.font = "700 11px " + FONT; ctx.letterSpacing = "1px"; ctx.textAlign = "center";
       ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
       ctx.fillText(m.id.toUpperCase(), sp.x, sp.y + m.r + 16);
       ctx.restore();
@@ -2314,10 +2238,7 @@
     if (!f) return;
     if (r >= 3.5) { paintFacets(f, x, y, r); return; }
     ctx.fillStyle = f.base;
-    ctx.beginPath(); for (var k = 0; k < 6; k++) { var a = k / 6 * Math.PI * 2; ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } ctx.closePath(); ctx.fill();
-    ctx.fillStyle = f[0].c;
-    ctx.beginPath(); ctx.moveTo(x + Math.cos(Math.PI * 0.75) * r, y - Math.sin(Math.PI * 0.75) * r);
-    ctx.lineTo(x - r, y); ctx.lineTo(x, y - r); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
   }
   // One background body with Saturn's ring and its moons on a faint tilted
   // ellipse, passing behind it on the far side. Drawn opaque inside the
@@ -2398,13 +2319,10 @@
     }
     bodies.forEach(function (bd) { if (bd.back) planet(bd); });
     // The Sun stays smooth with a soft glow and hides what passes behind it
-    var glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr * 5);
-    glow.addColorStop(0, "rgba(255, 236, 180, 0.35)"); glow.addColorStop(1, "rgba(255, 236, 180, 0)");
-    ctx.fillStyle = glow;
-    ctx.beginPath(); ctx.arc(sx, sy, sr * 5, 0, Math.PI * 2); ctx.fill();
-    var sg = ctx.createRadialGradient(sx - sr * 0.35, sy - sr * 0.35, sr * 0.1, sx, sy, sr);
-    sg.addColorStop(0, "#fffbe8"); sg.addColorStop(1, "#ffd27a");
-    ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(255, 200, 0, 0.16)";
+    ctx.beginPath(); ctx.arc(sx, sy, sr * 1.7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#ffc800"; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#ffe066"; ctx.beginPath(); ctx.arc(sx - sr * 0.12, sy - sr * 0.12, sr * 0.78, 0, Math.PI * 2); ctx.fill();
     bodies.forEach(function (bd) { if (!bd.back) planet(bd); });
     // The body just left, larger and low on the screen (from the Moon, the
     // pair shown is Earth with the Moon circling it)
@@ -2449,23 +2367,35 @@
   }
   // Facets with a base silhouette underneath and a hairline stroke in each
   // facet's own color, so no background shows between triangles.
+  // Flat planets: a round silhouette (lumpy moons keep their outline), the
+  // color patches inside it, and one darker crescent on the far side
   function paintFacets(facets, cx, cy, R) {
     ctx.save();
     ctx.lineJoin = "round"; ctx.lineWidth = 0.9;
-    if (facets.outline) {
-      ctx.fillStyle = facets.base;
-      ctx.beginPath();
-      facets.outline.forEach(function (q, i) { if (i) ctx.lineTo(cx + q.x * R, cy + q.y * R); else ctx.moveTo(cx + q.x * R, cy + q.y * R); });
-      ctx.closePath(); ctx.fill();
-    }
-    facets.forEach(function (f) {
+    ctx.beginPath();
+    if (facets.round || !facets.outline) ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    else facets.outline.forEach(function (q, i) { if (i) ctx.lineTo(cx + q.x * R, cy + q.y * R); else ctx.moveTo(cx + q.x * R, cy + q.y * R); });
+    ctx.closePath();
+    ctx.fillStyle = facets.base; ctx.fill();
+    ctx.clip();
+    var k = facets.round ? R * 1.08 : R;
+    if (facets.stripes) {
+      facets.stripes.forEach(function (st) { ctx.fillStyle = st.c; ctx.fillRect(cx - R - 1, cy + st.y0 * R - 0.5, R * 2 + 2, (st.y1 - st.y0) * R + 1); });
+      (facets.spots || []).forEach(function (sp) { ctx.fillStyle = sp.c; ctx.beginPath(); ctx.ellipse(cx + sp.x * R, cy + sp.y * R, sp.rx * R, sp.ry * R, 0, 0, Math.PI * 2); ctx.fill(); });
+    } else facets.forEach(function (f) {
       ctx.fillStyle = f.c; ctx.strokeStyle = f.c;
       ctx.beginPath();
-      ctx.moveTo(cx + f.t[0].x * R, cy + f.t[0].y * R);
-      ctx.lineTo(cx + f.t[1].x * R, cy + f.t[1].y * R);
-      ctx.lineTo(cx + f.t[2].x * R, cy + f.t[2].y * R);
+      ctx.moveTo(cx + f.t[0].x * k, cy + f.t[0].y * k);
+      ctx.lineTo(cx + f.t[1].x * k, cy + f.t[1].y * k);
+      ctx.lineTo(cx + f.t[2].x * k, cy + f.t[2].y * k);
       ctx.closePath(); ctx.fill(); ctx.stroke();
     });
+    if (facets.shade) {
+      ctx.beginPath();
+      ctx.rect(cx - R * 2, cy - R * 2, R * 4, R * 4);
+      ctx.arc(cx - R * 0.24, cy - R * 0.24, R * 1.1, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(10, 20, 40, 0.2)"; ctx.fill("evenodd");
+    }
     ctx.restore();
   }
   function drawBody(body, cx, cy, R, alpha, ship) {
@@ -2980,9 +2910,9 @@
     ctx.globalAlpha = inOut(0.5, 1, 0, 400, life, t, sine, sine);
     var sc = inOut(0.98, 1, 1, 600, life, t, backOut, sine);
     ctx.scale(sc, sc);
-    ctx.font = "800 24px/1.5 " + FONT; ctx.textAlign = "center";
+    ctx.font = "700 26px/1.5 " + DFONT; ctx.textAlign = "center";
     ctx.fillText(bonus.label === "Satellite shield" ? "Satellite shield" : bonus.label + " +" + bonus.last, 0, -12);
-    ctx.font = "400 16px/1.5 " + FONT; ctx.letterSpacing = "1px";
+    ctx.font = "700 16px/1.5 " + FONT; ctx.letterSpacing = "1px";
     if (bonus.label !== "Satellite shield") ctx.fillText(bonus.total + " TOTAL BONUS", 0, 12);
     else ctx.fillText("5 SECOND FORCE FIELD", 0, 12);
     ctx.restore();
@@ -3154,9 +3084,7 @@
     off.width = off.height = size;
     var c = off.getContext("2d"), mid = size / 2, sc = size / (2 * pad);
     c.translate(mid, mid); c.scale(sc / RC, sc / RC);
-    var body = c.createRadialGradient(0, 0, 0, 0, 0, RC);
-    body.addColorStop(0, "rgba(40, 130, 255, 0.2)"); body.addColorStop(0.75, "rgba(60, 165, 255, 0.28)"); body.addColorStop(1, "rgba(100, 215, 255, 0.48)");
-    c.fillStyle = body; c.beginPath(); c.arc(0, 0, RC, 0, Math.PI * 2); c.fill();
+    c.fillStyle = "rgba(28, 176, 246, 0.22)"; c.beginPath(); c.arc(0, 0, RC, 0, Math.PI * 2); c.fill();
     var map = function (x, y) {
       var r = Math.hypot(x, y); if (r < 1e-6) return [0, 0];
       var k = Math.sin(Math.min(1, r) * Math.PI / 2) / r;
@@ -3179,10 +3107,7 @@
       c.strokeStyle = "rgba(150, 225, 255, " + (0.22 + 0.45 * f).toFixed(3) + ")"; c.lineWidth = 1.1; c.stroke();
     });
     c.restore();
-    var halo = c.createRadialGradient(0, 0, RC * 0.9, 0, 0, RC * 1.22);
-    halo.addColorStop(0, "rgba(120, 230, 255, 0)"); halo.addColorStop(0.35, "rgba(120, 230, 255, 0.55)"); halo.addColorStop(1, "rgba(120, 230, 255, 0)");
-    c.fillStyle = halo; c.beginPath(); c.arc(0, 0, RC * 1.22, 0, Math.PI * 2); c.fill();
-    c.strokeStyle = "rgba(190, 245, 255, 0.8)"; c.lineWidth = 1.4; c.beginPath(); c.arc(0, 0, RC, 0, Math.PI * 2); c.stroke();
+    c.strokeStyle = "#84d8ff"; c.lineWidth = 3; c.beginPath(); c.arc(0, 0, RC, 0, Math.PI * 2); c.stroke();
     barrier = { canvas: off, RC: RC, pad: pad, cells: cells };
   }
   function drawBarrier(R, alpha) {
@@ -3206,8 +3131,8 @@
   // Drawn in a 16 x 19 unit box at scale k.
   var SHIELD_OUT = [[0, 2.2], [8, 0], [16, 2.2], [15.4, 9.4], [8, 19], [0.6, 9.4]];
   var SHIELD_PAL = {
-    plain: ["#f4f8ff", "#cddcf0", "#dfe9f8", "#7f97bd", "#a9bddb", "#5d7499"],
-    temp: ["#f2fdff", "#a8ecfb", "#cbf5ff", "#2c9cc2", "#62c8e4", "#1d7899"]
+    plain: ["#ffffff", "#ffffff", "#ffffff", "#d3dde3", "#ffffff", "#d3dde3"],
+    temp: ["#84d8ff", "#84d8ff", "#84d8ff", "#1cb0f6", "#84d8ff", "#1cb0f6"]
   };
   function shieldIcon(x, y, k, temp) {
     var C = [7.6, 8.2], O = SHIELD_OUT, pal = SHIELD_PAL[temp ? "temp" : "plain"];
@@ -3219,9 +3144,7 @@
     ctx.lineJoin = "round";
     // Dark rim and a faint drop shadow behind the silhouette
     path(O);
-    ctx.shadowColor = "rgba(0, 0, 0, 0.55)"; ctx.shadowBlur = 3 * k; ctx.shadowOffsetY = 0.6 * k;
-    ctx.strokeStyle = "rgba(4, 10, 24, 0.7)"; ctx.lineWidth = 2.4 * k; ctx.stroke();
-    ctx.shadowColor = "transparent";
+    ctx.strokeStyle = "rgba(4, 10, 24, 0.55)"; ctx.lineWidth = 2.4 * k; ctx.stroke();
     // Facets: top left, top right, left, right, bottom left, bottom right
     var F = [[O[0], O[1], C], [O[1], O[2], C], [O[0], C, O[5]], [O[2], O[3], C], [O[5], C, O[4]], [C, O[3], O[4]]];
     var col = [pal[0], pal[2], pal[1], pal[3], pal[4], pal[5]];
@@ -3255,15 +3178,17 @@
     var id = BODIES[sceneIdx].id, isHeat = id === "sun", isCold = !!COLD_MS[id];
     if (scene !== "surface" || (!isHeat && !isCold)) return;
     var v = Math.min(1, isHeat ? heat : cold);
-    var w = Math.round(Math.min(240, W * 0.36)), h = 10, x = Math.round((W - w) / 2), y = Math.round(hudMargin() + 20);
+    // Narrow screens: top left under the shield row, clear of the top-right text
+    var narrow = W < 600, w = narrow ? Math.round(Math.min(150, W * 0.38)) : Math.round(Math.min(240, W * 0.36)), h = 10;
+    var x = narrow ? Math.round(hudMargin()) + 2 : Math.round((W - w) / 2), y = Math.round(narrow ? shieldRowY() + 48 : hudMargin() + 20);
     ctx.save();
-    ctx.font = "700 12px " + FONT; ctx.letterSpacing = "3px"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    ctx.font = "800 12px " + FONT; ctx.letterSpacing = "2px"; ctx.textAlign = narrow ? "left" : "center"; ctx.textBaseline = "alphabetic";
     var warn = v > 0.75 && Math.floor(elapsed / 250) % 2;
-    ctx.fillStyle = warn ? (isHeat ? "#ff5a46" : "#8fdcff") : "#fff";
-    ctx.fillText((isHeat ? "HEAT " : "COLD ") + Math.floor(v * 100) + "%", W / 2, y - 6);
-    ctx.fillStyle = "rgba(4, 10, 24, 0.6)"; ctx.fillRect(x - 2, y, w + 4, h + 4);
-    ctx.fillStyle = isHeat ? hsl(mix(50, 0, v), 100, 52) : hsl(mix(190, 210, v), 90, mix(72, 58, v));
-    if (v > 0) ctx.fillRect(x, y + 2, Math.max(1, Math.round(w * v)), h);
+    ctx.fillStyle = warn ? (isHeat ? "#ff4b4b" : "#84d8ff") : "#fff";
+    ctx.fillText((isHeat ? "HEAT " : "COLD ") + Math.floor(v * 100) + "%", narrow ? x : W / 2, y - 6);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.25)"; ctx.beginPath(); ctx.roundRect(x - 2, y, w + 4, h + 4, (h + 4) / 2); ctx.fill();
+    ctx.fillStyle = isHeat ? (v > 0.75 ? "#ff4b4b" : v > 0.45 ? "#ff9600" : "#ffc800") : (v > 0.75 ? "#1899d6" : "#84d8ff");
+    if (v > 0) { ctx.beginPath(); ctx.roundRect(x, y + 2, Math.max(h, Math.round(w * v)), h, h / 2); ctx.fill(); }
     ctx.restore();
   }
   function drawShieldHud() {
@@ -3284,8 +3209,8 @@
     }
     function bar(frac) {
       var w = 26, h = 4, by = mid - h / 2;
-      ctx.fillStyle = "rgba(4, 10, 24, 0.6)"; ctx.fillRect(x - 1, by - 1, w + 2, h + 2);
-      ctx.fillStyle = "#7fe6ff"; ctx.fillRect(x, by, Math.max(1, Math.round(w * Math.max(0, Math.min(1, frac)))), h);
+      ctx.fillStyle = "rgba(4, 10, 24, 0.5)"; ctx.fillRect(x - 1, by - 1, w + 2, h + 2);
+      ctx.fillStyle = "#84d8ff"; ctx.fillRect(x, by, Math.max(1, Math.round(w * Math.max(0, Math.min(1, frac)))), h);
       x += w + SH_GAP;
     }
     if (perm) { glyph(true); label("∞"); }
@@ -3427,38 +3352,33 @@
   // hologram panel in the top-left corner; elsewhere as plain text by the ship.
   function drawSideHud() {
     var L = lander, safeS = speedOf(L.vel) <= MAX_SAFE_SPEED, safeA = tiltDeg(L.angle) <= MAX_SAFE_ANGLE;
-    var sc = safeS ? "#62ffa4" : "#ff5a4c", ac = safeA ? "#62ffa4" : "#ff5a4c";
+    var sc = safeS ? "#89e219" : "#ff4b4b", ac = safeA ? "#89e219" : "#ff4b4b";
     var t1 = mph(L.vel) + " MPH", t2 = tiltDegSigned(L.angle).toFixed(1) + "\u00B0", t3 = feetText(L.pos.y, groundLevel) + " FT";
     ctx.save();
     var x, y, lh, holo = sceneIdx === 0;
     if (holo) {
       // Compact hologram plate with the same slanted right side as the
       // home-screen panels (the slant adds space past the text)
-      ctx.font = "600 13px " + FONT; ctx.letterSpacing = "1px";
+      ctx.font = "800 13px " + FONT; ctx.letterSpacing = "0.5px";
       // below the shield row whenever it has been shown this flight, so the panel does not jump
       var mx = Math.round(hudMargin()), py = L.shieldRow || shieldHudShown() ? shieldRowY() + SH_PLATE + 8 : mx - 10, lh = 16, ph = lh * 3 + 8, cut = 14;
       var tw2 = Math.max(ctx.measureText(t1).width, ctx.measureText(t2).width, ctx.measureText(t3).width);
       var pw = 20 + tw2 + 8 + cut;
-      var flick = (Math.floor(elapsed / 90) % 37 === 0) ? 0.7 : 1;
-      ctx.globalAlpha = flick;
-      ctx.save();
-      ctx.beginPath(); ctx.moveTo(mx, py); ctx.lineTo(mx + pw, py); ctx.lineTo(mx + pw - cut, py + ph); ctx.lineTo(mx, py + ph); ctx.closePath();
-      ctx.fillStyle = "rgba(14, 72, 104, 0.62)"; ctx.fill(); ctx.clip();
-      ctx.fillStyle = "rgba(127, 230, 255, 0.08)";
-      for (var sl = py + 1; sl < py + ph; sl += 3) ctx.fillRect(mx, sl, pw, 1);
-      ctx.restore();
-      ctx.fillStyle = "#7fe6ff";
-      ctx.fillRect(mx, py, 9, 2); ctx.fillRect(mx, py, 2, 9);
+      // White card with a 2px line and a 4px bottom edge
+      pw -= cut - 6;
+      ctx.fillStyle = "#e5e5e5"; ctx.beginPath(); ctx.roundRect(mx, py, pw, ph + 4, 12); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.roundRect(mx + 2, py + 2, pw - 4, ph - 2, 10); ctx.fill();
+      sc = safeS ? "#58a700" : "#ea2b2b"; ac = safeA ? "#58a700" : "#ea2b2b";
       x = mx + 20; y = py + 4 + lh + 12; 
     } else {
-      ctx.font = "400 10px " + FONT;
+      ctx.font = "700 10px " + FONT;
       var tw = ctx.measureText("100.0 MPH").width + 2;
       x = Math.abs(L.vel.x) > 6 ? W / 2 - tw / 2 : Math.min(L.pos.x + LW * 2, W - tw);
       y = Math.max(L.pos.y, SPACE_Y); lh = 14;
     }
     ctx.fillStyle = sc; ctx.fillText(t1, x, y - lh);
     ctx.fillStyle = ac; ctx.fillText(t2, x, y);
-    ctx.fillStyle = "#fff"; ctx.fillText(t3, x, y + lh);
+    ctx.fillStyle = holo ? "#4b4b4b" : "#fff"; ctx.fillText(t3, x, y + lh);
     var ah = 7, aw = 6, gap = 3, off = holo ? -4 : -3;
     ctx.strokeStyle = ac; ctx.lineWidth = holo ? 1.5 : 1;
     ctx.beginPath();
@@ -3478,14 +3398,14 @@
     // Large number and smaller unit on one shared baseline
     function readout(val, label, x, base) {
       var align = ctx.textAlign, gap = 6;
-      ctx.letterSpacing = "1px"; ctx.font = "400 16px/1.5 " + FONT;
+      ctx.letterSpacing = "1px"; ctx.font = "700 16px/1.5 " + FONT;
       var lw = ctx.measureText(label).width;
-      ctx.letterSpacing = "0px"; ctx.font = "800 24px/1.5 " + FONT;
+      ctx.letterSpacing = "0px"; ctx.font = "700 26px/1.5 " + DFONT;
       var nw = tabularWidth(val);
       var left = align === "right" ? x - lw - gap - nw : align === "center" ? x - (nw + gap + lw) / 2 : x;
       ctx.textAlign = "left";
       tabularText(val, left, base);
-      ctx.letterSpacing = "1px"; ctx.font = "400 16px/1.5 " + FONT;
+      ctx.letterSpacing = "1px"; ctx.font = "700 16px/1.5 " + FONT;
       ctx.fillText(label, left + nw + gap, base);
       ctx.textAlign = align;
     }
@@ -3497,7 +3417,7 @@
     ctx.textAlign = "center";
     // Narrow screens: the middle readout sits one line up, clear of the sides
     var cy = W < 600 ? H - pad - 34 : H - pad;
-    if (secs < 20) { ctx.fillStyle = "rgb(255, 0, 0)"; readout(fmt(secs), "SECONDS UNTIL TERRAIN", W / 2, cy); }
+    if (secs < 20) { ctx.fillStyle = "#ff4b4b"; readout(fmt(secs), "SECONDS UNTIL TERRAIN", W / 2, cy); }
     else if (!drawCourseNote(cy)) readout(fmtDuration(L.t), "DURATION", W / 2, cy);
     ctx.restore();
   }
@@ -3511,15 +3431,34 @@
     if (t < 0 || t > 3500) return false;
     ctx.save();
     ctx.globalAlpha *= Math.min(1, t / 250) * (1 - clamp01(3000, 3500, t));
-    ctx.fillStyle = "rgb(255, 0, 0)"; ctx.textAlign = "center";
-    ctx.letterSpacing = "1px"; ctx.font = "400 16px/1.5 " + FONT;
+    ctx.fillStyle = "#ff4b4b"; ctx.textAlign = "center";
+    ctx.letterSpacing = "1px"; ctx.font = "700 16px/1.5 " + FONT;
     ctx.fillText(hudNote.text, W / 2, cy === undefined ? noteSlotY() : cy);
     ctx.restore();
     return true;
   }
 
   // The ship itself: a box with a pointed nose, rotating about the box center.
-  var FLAME = ["#F3AFA3", "#ffc6a9", "#f39a80"];
+  var FLAME = ["#ffc800", "#ff9600", "#ffb020"];
+  // Flat ship art inside the unchanged outline: white hull with a shaded
+  // right half, red nose cone, blue porthole and a gray engine skirt.
+  // Expects the outline as the current path, centered on the hull.
+  var SHIP = { hull: "#ffffff", hullDk: "#d3dde3", nose: "#ff4b4b", noseDk: "#ea2b2b", win: "#1cb0f6", winDk: "#1899d6", skirt: "#8a9aa5", skirtDk: "#6f7f8a" };
+  function paintShipBody(g) {
+    g.save();
+    g.fillStyle = SHIP.hull; g.fill();
+    g.clip();
+    g.fillStyle = SHIP.hullDk; g.fillRect(0, -LH - 1, LW / 2 + 1, LH * 1.5 + 2);
+    g.beginPath(); g.moveTo(-LW / 2, -LH / 2); g.lineTo(0, -LH); g.lineTo(0, -LH / 2); g.closePath(); g.fillStyle = SHIP.nose; g.fill();
+    g.beginPath(); g.moveTo(0, -LH); g.lineTo(LW / 2, -LH / 2); g.lineTo(0, -LH / 2); g.closePath(); g.fillStyle = SHIP.noseDk; g.fill();
+    g.fillStyle = SHIP.skirt; g.fillRect(-LW / 2 - 1, LH / 2 - 6, LW / 2 + 1, 7);
+    g.fillStyle = SHIP.skirtDk; g.fillRect(0, LH / 2 - 6, LW / 2 + 1, 7);
+    var wr = LW * 0.26, wy = -LH * 0.2;
+    g.beginPath(); g.arc(0, wy, wr + 1.6, 0, Math.PI * 2); g.fillStyle = SHIP.skirt; g.fill();
+    g.beginPath(); g.arc(0, wy, wr, 0, Math.PI * 2); g.fillStyle = SHIP.win; g.fill();
+    g.beginPath(); g.arc(0, wy, wr, -Math.PI / 2, Math.PI / 2); g.fillStyle = SHIP.winDk; g.fill();
+    g.restore();
+  }
   function drawShipAt(x, y, angle, scale, jets) {
     var L = lander;
     ctx.save();
@@ -3529,7 +3468,7 @@
     ctx.beginPath();
     ctx.moveTo(-LW / 2, -LH / 2); ctx.lineTo(0, -LH); ctx.lineTo(LW / 2, -LH / 2);
     ctx.lineTo(LW / 2, LH / 2); ctx.lineTo(-LW / 2, LH / 2); ctx.closePath();
-    ctx.fillStyle = bodyGradient; ctx.fill();
+    paintShipBody(ctx);
 
     ctx.translate(-LW / 2, -LH / 2);
     var left = jets && L.left, right = jets && L.right;
@@ -4142,7 +4081,7 @@
     if (t > 3500) return;
     ctx.save();
     ctx.globalAlpha = Math.min(1, t / 400) * (1 - clamp01(2600, 3500, t));
-    ctx.font = "400 12px " + FONT; ctx.letterSpacing = "3px"; ctx.textAlign = "center"; ctx.fillStyle = "#e8f0ff";
+    ctx.font = "700 12px " + FONT; ctx.letterSpacing = "3px"; ctx.textAlign = "center"; ctx.fillStyle = "#e8f0ff";
     ctx.fillText(text, W / 2, hudMargin() + 6);
     ctx.restore();
   }
@@ -4156,7 +4095,7 @@
     var n = planetsReached(), planets = n + (n === 1 ? " PLANET" : " PLANETS");
     var mx = hudMargin(), y = mx + 6;
     ctx.save();
-    ctx.font = "400 12px " + FONT;
+    ctx.font = "700 12px " + FONT;
     ctx.letterSpacing = "1px";
     ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
     ctx.textAlign = "right";
@@ -4830,22 +4769,18 @@
 
   // ------------------------------------------------------------ home UI
   var isTouch = (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) || false;
-  var COIN_SVG = '<svg viewBox="0 0 20 20" aria-hidden="true"><polygon points="10,1 16.4,3.6 19,10 16.4,16.4 10,19 3.6,16.4 1,10 3.6,3.6" fill="#e59a00"/>' +
-    '<polygon points="10,1 3.6,3.6 1,10 10,10" fill="#ffe27a"/><polygon points="10,1 16.4,3.6 19,10 10,10" fill="#ffc928"/>' +
-    '<polygon points="1,10 3.6,16.4 10,19 10,10" fill="#f7b500"/><polygon points="10,4.5 14,10 10,15.5 6,10" fill="#ffd54a"/><polygon points="10,4.5 6,10 10,10" fill="#fff0b0"/></svg>';
-  var SHOP_SVG = '<svg viewBox="0 0 34 34" aria-hidden="true"><polygon points="4,14 17,7 30,14 30,29 4,29" fill="#59616c"/>' +
-    '<polygon points="4,14 17,7 17,11 4,17" fill="#7b8590"/><polygon points="17,7 30,14 30,17 17,11" fill="#4a515b"/>' +
-    '<polygon points="9,18 25,18 25,29 9,29" fill="#1d2126"/><polygon points="11,22 23,22 23,29 11,29" fill="#f6c400"/>' +
-    '<polygon points="11,22 13,22 11,24" fill="#1d2126"/><polygon points="15,22 17,22 13,26 11,26 11,26" fill="#1d2126"/>' +
-    '<polygon points="19,22 21,22 13,29 11,29 11,28" fill="#1d2126"/><polygon points="23,22 23,24 18,29 16,29" fill="#1d2126"/><polygon points="23,27 23,29 21,29" fill="#1d2126"/></svg>';
+  var COIN_SVG = '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="11" r="8.6" fill="#e5a400"/><circle cx="10" cy="9.6" r="8.4" fill="#ffc800"/>' +
+    '<circle cx="10" cy="9.6" r="5.2" fill="#ffde59"/><rect x="8.8" y="6.6" width="2.4" height="6" rx="1.2" fill="#e5a400"/></svg>';
+  var SHOP_SVG = '<svg viewBox="0 0 34 34" aria-hidden="true"><path d="M12 12V9a5 5 0 0 1 10 0v3" fill="none" stroke="#a560e8" stroke-width="3" stroke-linecap="round"/>' +
+    '<rect x="6" y="11" width="22" height="19" rx="4" fill="#ce82ff"/><path d="M17 11h7a4 4 0 0 1 4 4v11a4 4 0 0 1-4 4h-7z" fill="#b66df0"/>' +
+    '<circle cx="12.5" cy="16.5" r="1.7" fill="#fff"/><circle cx="21.5" cy="16.5" r="1.7" fill="#fff"/></svg>';
   var ICONS = {
-    engine: '<svg viewBox="0 0 58 58" aria-hidden="true"><polygon points="17,6 41,6 41,26 17,26" fill="#8a96a3"/><polygon points="17,6 29,6 29,26 17,26" fill="#b5c0cb"/>' +
-      '<polygon points="20,26 38,26 46,40 12,40" fill="#5b6672"/><polygon points="20,26 29,26 29,40 12,40" fill="#7e8a97"/>' +
-      '<polygon points="14,40 44,40 29,56" fill="#ff7a1a"/><polygon points="14,40 29,40 29,56" fill="#ffb43a"/><polygon points="21,40 37,40 29,50" fill="#ffd84a"/><polygon points="21,40 29,40 29,50" fill="#fff2a0"/>' +
-      '<polygon points="22,10 36,10 36,13 22,13" fill="#f6c400"/></svg>',
-    shield: '<svg viewBox="0 0 58 58" aria-hidden="true"><polygon points="8,8 50,8 50,29 29,53 8,29" fill="#8fb0d8"/><polygon points="8,8 29,8 29,53 8,29" fill="#cfe0f5"/>' +
-      '<polygon points="29,8 50,8 50,29 29,53" fill="#6d8cba"/><polygon points="29,17 39,26 29,43" fill="#a6c2e4"/><polygon points="8,8 50,8 47,13 11,13" fill="#eef5ff"/>' +
-      '<polygon points="42,36 54,36 54,48 42,48" fill="#f6c400"/><polygon points="46.5,38.5 49.5,38.5 49.5,40.5 51.5,40.5 51.5,43.5 49.5,43.5 49.5,45.5 46.5,45.5 46.5,43.5 44.5,43.5 44.5,40.5 46.5,40.5" fill="#1d2126"/></svg>'
+    engine: '<svg viewBox="0 0 58 58" aria-hidden="true"><rect x="18" y="5" width="22" height="22" rx="5" fill="#d3dde3"/><path d="M29 5h-6a5 5 0 0 0-5 5v12a5 5 0 0 0 5 5h6z" fill="#fff"/>' +
+      '<rect x="22" y="12" width="14" height="5" rx="2.5" fill="#1cb0f6"/><path d="M21 27h16l7 11H14z" fill="#8a9aa5"/><path d="M21 27h8v11H14z" fill="#a9b6bf"/>' +
+      '<path d="M15 38h28L29 56z" fill="#ff9600"/><path d="M21 38h16l-8 12z" fill="#ffc800"/></svg>',
+    shield: '<svg viewBox="0 0 58 58" aria-hidden="true"><path d="M29 5l20 6v16c0 12-9 21-20 26C18 48 9 39 9 27V11z" fill="#1cb0f6"/><path d="M29 5l20 6v16c0 12-9 21-20 26z" fill="#1899d6"/>' +
+      '<path d="M29 13l12 4v10c0 8-5 13-12 17-7-4-12-9-12-17V17z" fill="#84d8ff"/><circle cx="46" cy="45" r="9" fill="#ffc800"/>' +
+      '<rect x="44.4" y="39.5" width="3.2" height="11" rx="1.6" fill="#fff"/><rect x="40.5" y="43.4" width="11" height="3.2" rx="1.6" fill="#fff"/></svg>'
   };
   document.querySelectorAll(".coinIco").forEach(function (el) { el.innerHTML = COIN_SVG; el.style.display = "inline-flex"; });
   document.querySelector(".shopIco").innerHTML = SHOP_SVG;
@@ -4875,9 +4810,9 @@
     return '<i class="' + (t ? "f" : "") + '"></i><i class="' + (b ? "f2" : "") + '"></i>';
   }
   var NOTE_ICONS = {
-    warn: '<svg viewBox="0 0 22 22" aria-hidden="true"><polygon points="11,1 21,20 1,20" fill="#f6c400"/><polygon points="11,1 21,20 11,20" fill="#dba800"/><rect x="10" y="7" width="2.4" height="7" fill="#1b1d21"/><rect x="10" y="16" width="2.4" height="2.4" fill="#1b1d21"/></svg>',
-    lost: '<svg viewBox="0 0 22 22" aria-hidden="true"><polygon points="7,1 15,1 21,7 21,15 15,21 7,21 1,15 1,7" fill="#ff5a46"/><polygon points="11,1 15,1 21,7 21,15 15,21 11,21" fill="#d9412f"/><polygon points="6,8 8,6 11,9 14,6 16,8 13,11 16,14 14,16 11,13 8,16 6,14 9,11" fill="#fff"/></svg>',
-    good: '<svg viewBox="0 0 22 22" aria-hidden="true"><polygon points="2,6 10,6 15,11 10,16 2,16 7,11" fill="#3fd07a"/><polygon points="10,6 15,11 7,11 2,6" fill="#62e391"/></svg>'
+    warn: '<svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="10" fill="#ffc800"/><rect x="9.6" y="5" width="2.8" height="8" rx="1.4" fill="#fff"/><circle cx="11" cy="16.2" r="1.6" fill="#fff"/></svg>',
+    lost: '<svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="10" fill="#ff4b4b"/><path d="M7.5 7.5l7 7M14.5 7.5l-7 7" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/></svg>',
+    good: '<svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="10" fill="#58cc02"/><path d="M6.5 11.5l3 3 6-6.5" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   };
   // Each course starts from its newest base (Earth when it has none)
   function flightStartId() { return respawnId(); }
@@ -4908,12 +4843,12 @@
     UPGRADES.forEach(function (u) {
       var lv = upLevel(u.id), price = upPrice(u.id), pips = "";
       for (var i = 0; i < u.prices.length; i++) pips += '<i class="' + (i < lv ? "on" : "") + '"></i>';
-      var cls = price === null ? "btn buy max cutR" : progress.coins < price ? "btn buy off cutR" : "btn primary buy cutR";
+      var cls = price === null ? "btn buy max" : progress.coins < price ? "btn buy off" : "btn primary buy";
       var btn = price === null ? '<span class="bl">Level max</span><span class="bp">Maxed</span>'
         : '<span class="bl">' + (progress.coins < price ? "Need" : "Upgrade") + '</span><span class="bp">' + COIN_SVG + fmt(price) + "</span>";
-      html += '<div class="item cutR" data-id="' + u.id + '"><div class="ic">' + ICONS[u.icon] + '</div><div><div class="nm">' + u.name +
+      html += '<div class="item" data-id="' + u.id + '"><div class="ic">' + ICONS[u.icon] + '</div><div><div class="nm">' + u.name +
         '</div><div class="inf lbl">' + u.info + '</div><div class="pips">' + pips + '<span class="lbl">Lv '  + lv + " of " + u.prices.length + " &#160; " + u.effect(lv) +
-        '</span></div></div><div class="' + cls + '" role="button" tabindex="0" aria-disabled="' + (cls !== "btn primary buy cutR") + '">' + btn + "</div></div>";
+        '</span></div></div><div class="' + cls + '" role="button" tabindex="0" aria-disabled="' + (cls !== "btn primary buy") + '">' + btn + "</div></div>";
     });
     $("shopItems").innerHTML = html;
   }
@@ -4956,7 +4891,7 @@
   // Admin mode only: a permanent shield for testing, shown above Sound
   if (TEST_MODE) {
     var shBtn = document.createElement("div");
-    shBtn.className = "btn muteBtn cutL"; shBtn.id = "shieldBtn"; shBtn.setAttribute("role", "button"); shBtn.tabIndex = 0;
+    shBtn.className = "btn muteBtn"; shBtn.id = "shieldBtn"; shBtn.setAttribute("role", "button"); shBtn.tabIndex = 0;
     shBtn.innerHTML = '<span class="st">Shield off</span>';
     $("home").insertBefore(shBtn, $("muteBtn"));
     activate(shBtn, function () { adminShield = !adminShield; shBtn.querySelector(".st").textContent = adminShield ? "Shield on" : "Shield off"; });
@@ -6457,24 +6392,14 @@
     bigAt = elapsed + rnd(4000, 16000);
   }
 
-  function makeBodyGradient() {
-    var g = ctx.createLinearGradient(-LW / 2, 0, LW / 2, 0);
-    g.addColorStop(0, BODY_STOPS[0]); g.addColorStop(0.3, BODY_STOPS[1]);
-    g.addColorStop(0.6, BODY_STOPS[2]); g.addColorStop(1, BODY_STOPS[3]);
-    return g;
-  }
-  var skyGradient;
+  function makeBodyGradient() { return "#e6ecef"; }
+  var skyGradient, SPACE_BG = "#131f2e";
   function setupSize() {
     makeCanvas(window.innerWidth, window.innerHeight);
     bodyGradient = makeBodyGradient();
-    skyGradient = ctx.createLinearGradient(0, 0, 0, H);
-    skyGradient.addColorStop(0, "#000"); skyGradient.addColorStop(0.5, "#02071e");
-    BODIES.forEach(function (b) {
-      if (!b.sky) return;
-      var g = ctx.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0, b.sky[0]); g.addColorStop(0.55, b.sky[1]); g.addColorStop(1, b.sky[2]);
-      b.skyFill = g;
-    });
+    // Flat skies: deep space is one dark color, each body's air one flat color
+    skyGradient = SPACE_BG;
+    BODIES.forEach(function (b) { if (b.sky) b.skyFill = b.flatSky || b.sky[1]; });
   }
   function newRound() {
     document.body.classList.add("playing");
@@ -6569,7 +6494,6 @@
     if (here.id === "saturn" && air > 0) drawRingSky(dropFor(L.pos.y), air);
     if (here.id === "venus") drawVenusBanks(L.pos.y);
     if (here.id === "mercury") drawSun(dropFor(L.pos.y), L.pos.y);
-    if (here.id === "sun" && air > 0) drawSunSky(dropFor(L.pos.y), air);
     // The Sun's heat: the hull heats up fast near the surface and cools off
     // high above it. Uranus, Neptune and Pluto: the hull freezes unless the
     // main engine burns. Either one full melts or freezes the lander (shields
@@ -6707,7 +6631,15 @@
     place: function (ft) { lander.pos.y = groundLevel - ft * 3.5; lander.vel = { x: 0, y: -0.2 }; lander.angle = Math.PI * 2; lander.spinVel = 0; }
   };
 
+  var fontsWaited = false;
   function boot() {
+    if (!fontsWaited && document.fonts && document.fonts.load) {
+      fontsWaited = true;
+      var go = function () { widthCache = {}; digitWidth = {}; boot(); }, done = false;
+      Promise.all([document.fonts.load("800 16px Nunito"), document.fonts.load("700 26px Fredoka")]).then(function () { if (!done) { done = true; go(); } }, function () { if (!done) { done = true; go(); } });
+      setTimeout(function () { if (!done) { done = true; go(); } }, 1500);
+      return;
+    }
     if (window.innerWidth < 2 || window.innerHeight < 2) { setTimeout(boot, 50); return; }
     setupSize();
     showHome();

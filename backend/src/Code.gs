@@ -153,7 +153,8 @@ function unpack_(s) { return JSON.parse(Utilities.ungzip(Utilities.newBlob(Utili
 function loadUser_(name) {
   let d = null;
   const s = get_('data', name);
-  try { d = s ? unpack_(s) : null; } catch (e) { d = null; }
+  // a stored record that can't be read must never become an empty account (a save would overwrite it)
+  if (s) { try { d = unpack_(s); } catch (e) { throw new Error('account data unreadable'); } }
   d = withDefaults_(d);
   SX.keyCourses(d.settings.courses);
   return d;
@@ -416,7 +417,7 @@ function rpcRoom(op, args, k) {
 // st state seq, tc last refresh}, _p players [{id, name, at}], _t tokens {token: id}, _s seq, _e<n> one event each,
 // _st state snapshot, _a<id> when that player last polled. Rate counters: rl_*.
 // the games on the site (same ids as GAMES in index.html); saves are keyed by them too
-const ROOM_GAMES = ['lander', 'geohunter', 'chess', 'geodash', 'appel', 'metrica-wave'];
+const ROOM_GAMES = ['lander', 'geohunter', 'chess', 'geodash', 'appel', 'metrica-wave', 'krillion'];
 const ROOM_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const ROOM_TTL = 21600;          // seconds (6 h, the cache maximum)
 const ROOM_MAX_DATA = 92160;     // 90 KB per message or snapshot (UTF-8 bytes of the JSON)
@@ -731,7 +732,16 @@ function cleanSettings_(s) {
 function rpcSaveSettings(k, s) {
   const me = auth_(k); small_(s); const c = cleanSettings_(s);
   // imported assignments without a class get one once the classes they belong to exist
-  return mutate_(me, d => { d.settings = c; return { ok: true, rerouted: SX.rerouteIcal(d) }; });
+  return mutate_(me, d => {
+    // a page that saves before the account has loaded sends an empty class list: never let that wipe saved classes
+    const prev = d.settings || {};
+    if (!(c.courses || []).length && (prev.courses || []).length) {
+      c.courses = prev.courses;
+      ['colors', 'periods', 'lunch'].forEach(x => { if (prev[x] && !Object.keys(c[x] || {}).length) c[x] = prev[x]; });
+      ['advisoryCourse', 'ical'].forEach(x => { if (prev[x] && !c[x]) c[x] = prev[x]; });
+    }
+    d.settings = c; return { ok: true, rerouted: SX.rerouteIcal(d) };
+  });
 }
 function rpcSaveNote(k, n) { const me = auth_(k); small_(n); if (!n || !okId_(n.id)) throw new Error('id required'); return mutate_(me, d => { d.advisory[n.id] = n; }); }
 function rpcDeleteNote(k, id) { const me = auth_(k); return mutate_(me, d => { delete d.advisory[id]; }); }
