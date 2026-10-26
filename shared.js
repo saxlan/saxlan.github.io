@@ -1768,6 +1768,39 @@ function normalizeCourse(input){
   /* ---------- multiplayer: rooms of these games (the page's GAMES labeled Multiplayer) need a signed-in account ---------- */
   SX.MP_GAMES = ['chess', 'geodash', 'appel', 'metrica-wave'];
 
+  /* ---------- the daily meme: picked on the server from meme-api.com (r/wholesomememes) once a day ----------
+     Only safe posts: not nsfw, not a spoiler, a still image or gif (no video), and no title words that do not belong at
+     school. Best voted first; the image is downloaded on the server and handed to the page as a data URL. */
+  SX.MEME_API = 'https:' + '/' + '/meme-api.com/gimme/wholesomememes/10';
+  SX.MEME_MAX = 1500000;
+  SX.MEME_BAD = /\b(sex\w*|porn\w*|nude\w*|naked|nsfw|kill\w*|suicid\w*|die[ds]?|dying|death|dead|funeral|grave|cancer|drunk|beer|vodka|wine|alcohol|weed|drugs?|stoned|gun\w*|shoot\w*|blood\w*|depress\w*|abuse\w*|damn|hell|wtf|f\W?ck\w*|shit\w*|bitch\w*|ass|crap|boob\w*|horny|thicc|onlyfans|politic\w*|trump|biden|religio\w*|war|gf|bf|girlfriend|boyfriend|wife|husband|shower\w*|bed|kiss\w*|crush|dating|date|marri\w*|divorc\w*|pregnan\w*|baby mama|love\w*|lover|romanc\w*|romantic|valentine\w*|hot|sexy|babe)\b/i;
+  SX.memeTitle = function (t) { return String(t || '').replace(/\[[^\]]{0,12}\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140); };
+  SX.memePick = function (j) {
+    var posts = j && (Array.isArray(j.memes) ? j.memes : Array.isArray(j.posts) ? j.posts : j.url ? [j] : []);
+    var ok = posts.filter(function (p) {
+      return p && p.nsfw === false && p.spoiler === false && typeof p.url === 'string' && /^https:[^\s]+\.(jpe?g|png|gif|webp)(\?[^\s]*)?$/i.test(p.url) &&
+        !SX.MEME_BAD.test(String(p.title || '')) && SX.memeTitle(p.title).length > 0;
+    });
+    ok.sort(function (a, b) { return (Number(b.ups) || 0) - (Number(a.ups) || 0); });
+    return ok.map(function (p) {
+      /* a preview up to 960 wide is plenty for the card and much smaller, so it is tried before the full image */
+      var prev = (Array.isArray(p.preview) ? p.preview : []).filter(function (u) { return typeof u === 'string' && /^https:/.test(u); });
+      var small = prev.filter(function (u) { var m = /[?&]width=(\d+)/.exec(u); return m && Number(m[1]) <= 960; });
+      var urls = [small.length ? small[small.length - 1] : '', p.url].filter(Boolean);
+      return { urls: urls, title: SX.memeTitle(p.title), link: String(p.postLink || '') };
+    });
+  };
+  /* the image type from its first bytes (works with signed bytes from Apps Script too); '' when it is not an image */
+  SX.memeMime = function (b) {
+    var u = function (i) { return (Number(b[i]) + 256) % 256; };
+    if (!b || b.length < 12) return '';
+    if (u(0) === 0xff && u(1) === 0xd8) return 'image/jpeg';
+    if (u(0) === 0x89 && u(1) === 0x50 && u(2) === 0x4e && u(3) === 0x47) return 'image/png';
+    if (u(0) === 0x47 && u(1) === 0x49 && u(2) === 0x46) return 'image/gif';
+    if (u(0) === 0x52 && u(1) === 0x49 && u(2) === 0x46 && u(3) === 0x46 && u(8) === 0x57 && u(9) === 0x45 && u(10) === 0x42 && u(11) === 0x50) return 'image/webp';
+    return '';
+  };
+
   if (typeof module !== 'undefined' && module.exports) module.exports = SX;
   return SX;
 })();

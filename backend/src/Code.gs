@@ -303,6 +303,51 @@ function doPost(e) {
 }
 function rpcPing() { ensureStore_(); return { ok: true }; }
 
+// ---------- the meme of the day: one safe meme from r/wholesomememes (via meme-api.com), fetched once a day and kept in the
+// sheet so every visitor that day gets the same one. The image comes back as a data URL, so the visitor's browser never
+// loads reddit (school filters may block it). A failed fetch keeps the last good meme; with none at all the page uses its
+// bundled pictures. Retries after a failure at most every 30 minutes.
+function memeToday_() { return Utilities.formatDate(new Date(), 'America/New_York', 'yyyy-MM-dd'); }
+function memeLoad_() { try { return JSON.parse(get_('meta', 'meme') || 'null'); } catch (e) { return null; } }
+function memeFetch_() {
+  const r = UrlFetchApp.fetch(SX.MEME_API, { muteHttpExceptions: true, followRedirects: true, headers: { Accept: 'application/json' } });
+  if (r.getResponseCode() !== 200) throw new Error('meme api ' + r.getResponseCode());
+  const picks = SX.memePick(JSON.parse(r.getContentText()));
+  for (let i = 0; i < picks.length && i < 6; i++) {
+    const urls = picks[i].urls;
+    for (let j = 0; j < urls.length; j++) {
+      try {
+        const g = UrlFetchApp.fetch(urls[j], { muteHttpExceptions: true, followRedirects: true });
+        if (g.getResponseCode() !== 200) continue;
+        const b = g.getContent(), mime = SX.memeMime(b);
+        if (!mime || b.length > SX.MEME_MAX) continue;
+        return { title: picks[i].title, mime: mime, data: Utilities.base64Encode(b), link: picks[i].link };
+      } catch (e) { /* try the next one */ }
+    }
+  }
+  throw new Error('no meme');
+}
+function rpcDailyMeme() {
+  ensureStore_();
+  const day = memeToday_();
+  let m = memeLoad_();
+  const tried = Number(get_('meta', 'memeTry') || 0);
+  if ((!m || m.date !== day) && Date.now() - tried > 30 * 60000) {
+    m = withLock_(() => {
+      let cur = memeLoad_();
+      if (cur && cur.date === day) return cur;
+      if (Date.now() - Number(get_('meta', 'memeTry') || 0) < 30 * 60000) return cur;
+      try {
+        const f = memeFetch_();
+        cur = { date: day, title: f.title, mime: f.mime, data: f.data, link: f.link };
+        put_('meta', 'meme', JSON.stringify(cur));
+      } catch (e) { put_('meta', 'memeTry', String(Date.now())); console.error('meme', e && e.message); }
+      return cur;
+    });
+  }
+  if (!m || !m.data) return null;
+  return { date: m.date, title: m.title || '', link: m.link || '', dataUrl: 'data:' + m.mime + ';base64,' + m.data };
+}
 // ---------- game progress: a small JSON blob per game per account, size-capped and validated ----------
 function gameKey_(id, name) {
   if (ROOM_GAMES.indexOf(id) < 0) throw new Error('unknown game');
@@ -417,7 +462,7 @@ function rpcRoom(op, args, k) {
 // st state seq, tc last refresh}, _p players [{id, name, at}], _t tokens {token: id}, _s seq, _e<n> one event each,
 // _st state snapshot, _a<id> when that player last polled. Rate counters: rl_*.
 // the games on the site (same ids as GAMES in index.html); saves are keyed by them too
-const ROOM_GAMES = ['lander', 'geohunter', 'chess', 'geodash', 'appel', 'metrica-wave', 'krillion'];
+const ROOM_GAMES = ['pipworks', 'lander', 'geohunter', 'chess', 'geodash', 'appel', 'metrica-wave', 'krillion'];
 const ROOM_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const ROOM_TTL = 21600;          // seconds (6 h, the cache maximum)
 const ROOM_MAX_DATA = 92160;     // 90 KB per message or snapshot (UTF-8 bytes of the JSON)
@@ -1046,7 +1091,7 @@ function rpcSuggest(k, input) {
 
 // ---------- the functions the page may call (doPost runs nothing else) ----------
 const RPC_ = {
-  rpcPing: rpcPing,
+  rpcPing: rpcPing, rpcDailyMeme: rpcDailyMeme,
   rpcSignup: rpcSignup, rpcLogin: rpcLogin, rpcLogout: rpcLogout,
   rpcGetData: rpcGetData, rpcSaveTask: rpcSaveTask, rpcDeleteTask: rpcDeleteTask, rpcSaveSettings: rpcSaveSettings,
   rpcSaveNote: rpcSaveNote, rpcDeleteNote: rpcDeleteNote, rpcSaveEvent: rpcSaveEvent, rpcDeleteEvent: rpcDeleteEvent,
