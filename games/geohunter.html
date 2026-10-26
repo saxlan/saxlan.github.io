@@ -1,7 +1,27 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><!--sx-ob--><style>html,body{overscroll-behavior:none}*{overscroll-behavior-x:none}[data-ob]{overscroll-behavior-y:none!important}</style><script>/* no bounce and no scroll chaining: a box that really overflows stops dead at its ends */(function(){function ob(e){for(var el=e.target;el&&el.nodeType===1;el=el.parentElement){var o=getComputedStyle(el).overflowY;if(o!=="auto"&&o!=="scroll")continue;var on=el.scrollHeight>el.clientHeight+2;if(on!==el.hasAttribute("data-ob")){if(on)el.setAttribute("data-ob","");else el.removeAttribute("data-ob");}}}["pointerover","wheel","touchstart"].forEach(function(t){addEventListener(t,ob,{capture:true,passive:true});});})();</script>
+<meta charset="utf-8"><!--sx-ob--><style>html,body{overscroll-behavior:none}*{overscroll-behavior-x:none}[data-ob]{overscroll-behavior-y:none!important}</style><script>/* game-ready: the planner keeps its loading screen over this game until the saved data it asked for has arrived and been
+   applied. Each save request holds it (SXR.hold); once nothing is held after the page has parsed, the game posts game-ready */
+(function () {
+  if (window.SXR) return;
+  var n = 0, armed = false, sent = false, keys = {};
+  function go() { if (sent || !armed || n > 0) return; sent = true; try { if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'game-ready', game: 'geohunter' }, '*'); } catch (e) {} }
+  function hold(key) {
+    if (sent) return function () {};
+    n++; var done = false, t;
+    function rel() { if (done) return; done = true; clearTimeout(t); if (key != null && keys[key] === rel) delete keys[key]; n--; setTimeout(go, 0); }
+    if (key != null) keys[key] = rel;
+    t = setTimeout(rel, 16000);
+    return rel;
+  }
+  /* registered before the game's own listeners: the release runs after they have applied the reply */
+  window.addEventListener('message', function (e) { var m = e.data; if (m && m.type === 'game-load-res' && keys[m.reqId]) keys[m.reqId](); });
+  window.SXR = { hold: hold };
+  function arm() { setTimeout(function () { armed = true; go(); }, 0); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arm); else arm();
+})();
+</script><script>/* no bounce and no scroll chaining: a box that really overflows stops dead at its ends */(function(){function ob(e){for(var el=e.target;el&&el.nodeType===1;el=el.parentElement){var o=getComputedStyle(el).overflowY;if(o!=="auto"&&o!=="scroll")continue;var on=el.scrollHeight>el.clientHeight+2;if(on!==el.hasAttribute("data-ob")){if(on)el.setAttribute("data-ob","");else el.removeAttribute("data-ob");}}}["pointerover","wheel","touchstart"].forEach(function(t){addEventListener(t,ob,{capture:true,passive:true});});})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>geobowl</title>
 <link rel="icon" href="data:,">
@@ -966,8 +986,8 @@ var GameMusic = (function () {
       if (!touched && d.music && typeof d.music.muted === 'boolean') setMuted(d.music.muted, true);
     }
     window.addEventListener('message', onMsg);
-    try { parent.postMessage({ type: 'game-load', game: game, reqId: reqId }, '*'); } catch (e) {}
-    setTimeout(function () { window.removeEventListener('message', onMsg); }, 4000);
+    if (window.SXR) SXR.hold(reqId); try { parent.postMessage({ type: 'game-load', game: game, reqId: reqId }, '*'); } catch (e) {}
+    setTimeout(function () { window.removeEventListener('message', onMsg); }, 15000);
   }
   /* silent: apply a saved value without saving it again */
   function setMuted(m, silent) {
@@ -2146,8 +2166,8 @@ function loadRemote(done) {
     fin(sane(d) ? d : null);
   }
   window.addEventListener('message', onMsg);
-  try { if (parent && parent !== window) parent.postMessage({ type: 'game-load', game: 'geohunter', reqId: reqId }, '*'); else fin(null); } catch (e) { fin(null); }
-  setTimeout(function () { fin(null); }, 1500);
+  if (window.SXR) SXR.hold(reqId); try { if (parent && parent !== window) parent.postMessage({ type: 'game-load', game: 'geohunter', reqId: reqId }, '*'); else fin(null); } catch (e) { fin(null); }
+  setTimeout(function () { fin(null); }, 15000);
 }
 function mergeBest(a, b) { var o = {}; [a, b].forEach(function (x) { for (var k in x) if (typeof x[k] === 'number') o[k] = o[k] == null ? x[k] : Math.min(o[k], x[k]); }); return o; }
 

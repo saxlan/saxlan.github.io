@@ -1,7 +1,27 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><!--sx-ob--><style>html,body{overscroll-behavior:none}*{overscroll-behavior-x:none}[data-ob]{overscroll-behavior-y:none!important}</style><script>/* no bounce and no scroll chaining: a box that really overflows stops dead at its ends */(function(){function ob(e){for(var el=e.target;el&&el.nodeType===1;el=el.parentElement){var o=getComputedStyle(el).overflowY;if(o!=="auto"&&o!=="scroll")continue;var on=el.scrollHeight>el.clientHeight+2;if(on!==el.hasAttribute("data-ob")){if(on)el.setAttribute("data-ob","");else el.removeAttribute("data-ob");}}}["pointerover","wheel","touchstart"].forEach(function(t){addEventListener(t,ob,{capture:true,passive:true});});})();</script>
+<meta charset="utf-8"><!--sx-ob--><style>html,body{overscroll-behavior:none}*{overscroll-behavior-x:none}[data-ob]{overscroll-behavior-y:none!important}</style><script>/* game-ready: the planner keeps its loading screen over this game until the saved data it asked for has arrived and been
+   applied. Each save request holds it (SXR.hold); once nothing is held after the page has parsed, the game posts game-ready */
+(function () {
+  if (window.SXR) return;
+  var n = 0, armed = false, sent = false, keys = {};
+  function go() { if (sent || !armed || n > 0) return; sent = true; try { if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'game-ready', game: 'appel' }, '*'); } catch (e) {} }
+  function hold(key) {
+    if (sent) return function () {};
+    n++; var done = false, t;
+    function rel() { if (done) return; done = true; clearTimeout(t); if (key != null && keys[key] === rel) delete keys[key]; n--; setTimeout(go, 0); }
+    if (key != null) keys[key] = rel;
+    t = setTimeout(rel, 16000);
+    return rel;
+  }
+  /* registered before the game's own listeners: the release runs after they have applied the reply */
+  window.addEventListener('message', function (e) { var m = e.data; if (m && m.type === 'game-load-res' && keys[m.reqId]) keys[m.reqId](); });
+  window.SXR = { hold: hold };
+  function arm() { setTimeout(function () { armed = true; go(); }, 0); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arm); else arm();
+})();
+</script><script>/* no bounce and no scroll chaining: a box that really overflows stops dead at its ends */(function(){function ob(e){for(var el=e.target;el&&el.nodeType===1;el=el.parentElement){var o=getComputedStyle(el).overflowY;if(o!=="auto"&&o!=="scroll")continue;var on=el.scrollHeight>el.clientHeight+2;if(on!==el.hasAttribute("data-ob")){if(on)el.setAttribute("data-ob","");else el.removeAttribute("data-ob");}}}["pointerover","wheel","touchstart"].forEach(function(t){addEventListener(t,ob,{capture:true,passive:true});});})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>metrica: platformer</title>
 <link rel="icon" href="data:,">
@@ -1015,8 +1035,8 @@ var MX = (function () {
       cb(isObj(d) ? d : null, ok && (d === null || isObj(d)));
     }
     window.addEventListener('message', onMsg);
-    try { parent.postMessage({ type: 'game-load', game: game, reqId: reqId }, '*'); } catch (e) {}
-    setTimeout(function () { if (!done) { done = true; window.removeEventListener('message', onMsg); cb(null, false); } }, 3000);
+    if (window.SXR) SXR.hold(reqId); try { parent.postMessage({ type: 'game-load', game: game, reqId: reqId }, '*'); } catch (e) {}
+    setTimeout(function () { if (!done) { done = true; window.removeEventListener('message', onMsg); cb(null, false); } }, 15000);
   }
   function put(game, d) {
     var s = JSON.stringify(d); if (s.length > 150000) return;
@@ -1186,8 +1206,8 @@ var MX = (function () {
       applySave(d);
     }
     window.addEventListener('message', onMsg);
-    try { parent.postMessage({ type: 'game-load', game: GAME, reqId: reqId }, '*'); } catch (e) {}
-    setTimeout(function () { if (!got) { got = true; window.removeEventListener('message', onMsg); applySave(null); } }, 3000);
+    if (window.SXR) SXR.hold(reqId); try { parent.postMessage({ type: 'game-load', game: GAME, reqId: reqId }, '*'); } catch (e) {}
+    setTimeout(function () { if (!got) { got = true; window.removeEventListener('message', onMsg); applySave(null); } }, 15000);
   }
   function bestOf(key) { return SV.best[key] || null; }
   /* what the menus show; in testing mode every level reads as cleared with all gems */
