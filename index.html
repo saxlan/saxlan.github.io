@@ -2286,6 +2286,9 @@ button.ch-row.on{background:var(--blue-wash);box-shadow:inset 0 0 0 2px var(--bl
 .note .nd{flex:none;font-size:13px;font-weight:700;color:var(--fg2)}
 /* the login page writes the games in lowercase */
 #splash .sp-gm h2,#splash .sp-menu [data-spm="games"] span,#splash .sp-menu [data-spm="soundboard"] span{text-transform:uppercase!important}
+#dataload{position:fixed;inset:0;z-index:9000;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;overscroll-behavior:none}
+#dataload .res-run{margin:0}
+#dataload .dl-sub{font:700 13px/1.3 var(--font-ui);color:var(--fg2);margin-top:2px}
 </style>
 </head>
 <body>
@@ -5190,7 +5193,13 @@ document.addEventListener('click',e=>{
       .finally(()=>{if(!ok)return;ok.textContent='Copied';ok.classList.add('on');clearTimeout(ok._t);ok._t=setTimeout(()=>ok.classList.remove('on'),1400);});}
 });
 /* ---------- render root ---------- */
+/* signed in but the account's data hasn't arrived yet (a reload): show the loading screen, never empty pages */
+function dataWait(){const on=!!(state.user&&!settingsLoaded);let d=document.getElementById('dataload');
+  if(on&&!d){d=document.createElement('div');d.id='dataload';d.setAttribute('role','status');d.innerHTML=resRunHTML()+'<div class="dl-sub">loading data</div>';document.body.appendChild(d);
+    d._t=setTimeout(()=>{const s=d.querySelector('.dl-sub');if(s&&document.body.contains(d))s.textContent='still loading, check your connection';},20000);}
+  if(!on&&d){clearTimeout(d._t);d.remove();}}
 function render(){
+  dataWait();
   if(typeof chatShow==='function')chatShow();
   const saved={};let focusId=null,selS=0,selE=0;
   document.querySelectorAll('.view.on input[id],.view.on textarea[id],.view.on select[id]').forEach(el=>{
