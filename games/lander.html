@@ -19,9 +19,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style>
-  /* ---------- Duolingo look: Fredoka headings, Nunito body, flat colors,
+  /* ---------- flat look: Fredoka headings, Nunito body, flat colors, the ProfeGPT blue as the primary,
      white cards with a 2px line and a 4px bottom edge, chunky buttons ---------- */
-  :root { --bg: #131f24; --green: #58cc02; --green-dark: #58a700; --green-wash: #d7ffb8; --blue: #1cb0f6; --blue-dark: #1899d6;
+  :root { --bg: #131f24; --green: #58cc02; --green-dark: #58a700; --green-wash: #d7ffb8; --blue: #4b9af3; --blue-dark: #3c81db; --blue-hi: #63a8f6; --blue-wash: #e6f1ff; --blue-line: #a4ceff;
     --red: #ff4b4b; --red-dark: #ea2b2b; --gold: #ffc800; --gold-dark: #e5a400; --gold-wash: #fff5d3; --orange: #ff9600; --purple: #ce82ff;
     --text: #4b4b4b; --dim: #777; --faint: #afafaf; --line: #e5e5e5; --soft: #f7f7f7;
     --font: "Nunito", -apple-system, BlinkMacSystemFont, sans-serif; --display: "Fredoka", "Nunito", -apple-system, sans-serif; }
@@ -41,10 +41,10 @@
     border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 12px; background: #fff; color: var(--blue);
     cursor: pointer; outline: none; position: relative; white-space: nowrap;
     font: 800 15px/1 var(--font); letter-spacing: 0.04em; text-transform: uppercase; transition: background 0.1s, opacity 0.3s; }
-  .btn.primary { background: var(--green); border-color: var(--green-dark); color: #fff; }
+  .btn.primary { background: var(--blue); border-color: var(--blue-dark); color: #fff; }
   .btn.wait { opacity: 0.45; cursor: default; }
   @media (hover: hover) { .btn:not(.wait):not(.off):not(.max):hover { background: var(--soft); }
-    .btn.primary:not(.wait):not(.off):not(.max):hover { background: #61e002; } }
+    .btn.primary:not(.wait):not(.off):not(.max):hover { background: var(--blue-hi); } }
   .btn:not(.wait):not(.off):not(.max):active { transform: translateY(2px); border-bottom-width: 2px; margin-bottom: 2px; }
   .btn kbd, kbd.k { display: none; font: 800 11px/1 var(--font); padding: 4px 6px; border-radius: 6px; background: rgba(0,0,0,0.12); letter-spacing: 0.04em; }
   .btn:not(.primary) kbd { background: var(--soft); color: var(--faint); }
@@ -70,14 +70,14 @@
   .segs b { display: inline-flex; gap: 4px; }
   .segs b i, .lrow .bs i { width: 20px; height: 10px; border-radius: 5px; background: var(--line); }
   .segs b i.f, .lrow .bs i.f { background: var(--gold); }
-  .segs b i.f2, .lrow .bs i.f2 { background: var(--green); }
+  .segs b i.f2, .lrow .bs i.f2 { background: var(--blue); }
   .note { display: none; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 12px; font: 800 15px/1.3 var(--font); }
   .note.on { display: flex; }
   .note svg { width: 22px; height: 22px; flex: none; }
   .note small { display: block; font: 700 13px/1.4 var(--font); color: var(--dim); margin-top: 3px; }
   .note.warn { background: var(--gold-wash); color: #b07d00; }
   .note.lost { background: #ffdfe0; color: var(--red-dark); }
-  .note.good { background: var(--green-wash); color: var(--green-dark); }
+  .note.good { background: var(--blue-wash); color: var(--blue-dark); }
   .gauge { --mh: 14px; font: 800 12px/1.3 var(--font); text-transform: uppercase; letter-spacing: 0.04em; color: var(--dim); padding: 0 0 22px; }
   .gauge + .gauge { margin-top: -6px; }
   .gauge > div:first-child { margin-bottom: 6px; }
@@ -91,7 +91,7 @@
   .knob::before { content: ""; position: absolute; width: 6px; height: calc(var(--mh) + 8px); background: #fff; border: 2px solid var(--text); border-radius: 4px;
     box-sizing: border-box; left: -3px; top: calc(-4px - var(--mh)); }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px 12px; }
-  .row { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: var(--soft);
+  .row { display: flex; align-items: baseline; gap: 8px; padding: 10px 14px; border-radius: 12px; background: var(--soft);
     font: 800 13px/1.2 var(--font); letter-spacing: 0.04em; text-transform: uppercase; color: var(--dim); min-width: 0; }
   .row .lead { flex: 1; }
   .row .v { font: 700 17px/1 var(--display); color: var(--text); letter-spacing: 0; font-variant-numeric: tabular-nums; text-transform: none; white-space: nowrap; }
@@ -99,7 +99,7 @@
   .btns { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; margin-top: 4px; }
   .btns .btn { flex: 1 1 0; }
   .btns #again { flex: 1.4 1 0; }
-  .btns.solo #homeBtn { background: var(--green); border-color: var(--green-dark); color: #fff; }
+  .btns.solo #homeBtn { background: var(--blue); border-color: var(--blue-dark); color: #fff; }
   @media screen and (max-width: 560px) { #overCard { padding: 20px 16px 18px; } .btns #again { flex: 1 1 100%; } .btns .btn { font-size: 13px; padding: 0 12px; } .btns .btn kbd { display: none; } }
 
   /* ---------- home screen ---------- */
@@ -109,7 +109,7 @@
   body.launching #home > * { opacity: 0; transform: translateY(10px); pointer-events: none !important; }
   .hTop { position: absolute; top: 18px; left: 20px; display: flex; flex-direction: column; align-items: stretch; gap: 10px; width: 290px; }
   .brand { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 12px 10px 16px; }
-  .brand .title { font: 700 30px/1 var(--display); letter-spacing: -0.02em; color: var(--green); pointer-events: auto; cursor: pointer; }
+  .brand .title { font: 700 30px/1 var(--display); letter-spacing: -0.02em; color: var(--blue); pointer-events: auto; cursor: pointer; }
   .coins { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; background: var(--gold-wash); }
   .coins .num { font-size: 20px; color: var(--gold-dark); }
   .sxtest { align-self: flex-start; padding: 6px 10px; border-radius: 8px; background: var(--purple); color: #fff; font: 800 11px/1 var(--font); letter-spacing: 0.06em; }
@@ -138,11 +138,11 @@
   .route.on { display: flex; }
   .route .lbl { margin-right: auto; }
   .route .cap, .lb-tabs .cap { cursor: pointer; padding: 0 12px; height: 34px; }
-  .route .cap.on, .lb-tabs .cap.on { background: #ddf4ff; border-color: #84d8ff; color: var(--blue); transform: none; border-bottom-width: 4px; margin-bottom: 0; }
+  .route .cap.on, .lb-tabs .cap.on { background: var(--blue-wash); border-color: var(--blue-line); color: var(--blue); transform: none; border-bottom-width: 4px; margin-bottom: 0; }
   .hBottom { position: absolute; left: 0; right: 0; bottom: max(18px, 3.5vh); display: flex; justify-content: center; pointer-events: none; }
   .launch { pointer-events: auto; min-height: 62px; padding: 0 34px; gap: 16px; border-radius: 16px; border-bottom-width: 5px; }
   .btn.primary.launch { background: var(--blue); border-color: var(--blue-dark); }
-  @media (hover: hover) { .btn.primary.launch:not(.wait):hover { background: #2ec0ff; } }
+  @media (hover: hover) { .btn.primary.launch:not(.wait):hover { background: var(--blue-hi); } }
   .launch .lw { display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .launch .lt { font: 800 22px/1 var(--font); letter-spacing: 0.06em; }
   .launch .ld { font: 800 11px/1 var(--font); letter-spacing: 0.04em; opacity: 0.85; }
@@ -202,7 +202,7 @@
   .buy.off { background: var(--soft); color: var(--faint); cursor: default; }
   .buy.max { background: var(--gold-wash); border-color: #ffe48a; color: var(--gold-dark); cursor: default; }
   .item.flash { animation: flash 0.6s ease-out; }
-  @keyframes flash { from { background: var(--green-wash); } to { background: #fff; } }
+  @keyframes flash { from { background: var(--blue-wash); } to { background: #fff; } }
   @media screen and (max-width: 520px) {
     .sh-head { flex-wrap: wrap; padding: 14px 14px 4px; } .sh-items { padding: 10px 14px 16px; }
     .item { grid-template-columns: 56px minmax(0, 1fr); gap: 12px; } .item .ic { width: 56px; height: 56px; } .item .ic svg { width: 42px; height: 42px; }
@@ -217,7 +217,7 @@
   .lb-row .rk { font: 700 16px/1 var(--display); color: var(--faint); font-variant-numeric: tabular-nums; }
   .lb-row .nm { font: 800 14px/1.2 var(--font); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lb-row .v { font: 700 17px/1 var(--display); color: var(--blue); font-variant-numeric: tabular-nums; }
-  .lb-row.me { background: #ddf4ff; }
+  .lb-row.me { background: var(--blue-wash); }
   .lb-row.me .rk { color: var(--blue); }
   .lb-msg { padding: 22px 14px; text-align: center; }
   #fin .sh-panel { max-width: 600px; }
@@ -279,7 +279,7 @@
 </div>
 <div id="home">
   <div class="hTop">
-    <div class="brand card"><div class="title">lander</div><div class="coins"><span class="coinIco"></span><span class="num" id="hCoins">0</span></div></div>
+    <div class="brand card"><div class="title">Lander</div><div class="coins"><span class="coinIco"></span><span class="num" id="hCoins">0</span></div></div>
     <div class="tut card" id="tut"></div>
     <script>if (window.SX_TEST) document.write('<span class="sxtest">TEST</span>');</script>
   </div>
@@ -4333,7 +4333,7 @@
     $("oCoins").innerHTML = COIN_SVG + "<span>+" + fmt(earned) + " " + (earned === 1 ? "coin" : "coins") + "</span>";
     $("oCoins").classList.toggle("on", earned > 0);
     $("oDesc").textContent = line;
-    var nt = $("oNote"), bn = r.baseNote, bname = BODIES[sceneIdx].name.toUpperCase();
+    var nt = $("oNote"), bn = r.baseNote, bname = BODIES[sceneIdx].name;
     nt.className = "note"; nt.textContent = "";
     function bodyName(id) { var b = BODIES.find(function (q) { return q.id === id; }); return b ? b.name : id; }
     bankrupt = !!(bn && bn.lost);
@@ -4504,15 +4504,26 @@
   }
   activate(againBtn, function () { if (!againBtn.classList.contains("wait")) playAgain(); });
   activate(homeBtn, function () { if (!homeBtn.classList.contains("wait")) goHome(); });
+  // the planner's game frame does not allow the Clipboard API, so a hidden textarea and execCommand stand in
+  function copyFallback(text) {
+    var ta = document.createElement("textarea"), ok = false;
+    ta.value = text; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
+    document.body.appendChild(ta); ta.select();
+    try { ok = document.execCommand("copy"); } catch (e) {}
+    ta.remove(); grabFocus();
+    return ok;
+  }
+  function copied() {
+    $("copyLabel").textContent = "Copied";
+    setTimeout(function () { $("copyLabel").textContent = "Copy Stats"; }, 2000);
+  }
   activate(copyBtn, function () {
-    try {
-      navigator.clipboard.writeText(shareText).then(function () {
-        $("copyLabel").textContent = "Copied";
-        setTimeout(function () { $("copyLabel").textContent = "Copy Stats"; }, 2000);
-      }).catch(function () {});
-    } catch (e) {}
+    var p = null;
+    var pol = document.permissionsPolicy || document.featurePolicy, allowed = !(pol && pol.allowsFeature && !pol.allowsFeature("clipboard-write"));
+    try { if (allowed && navigator.clipboard && navigator.clipboard.writeText) p = navigator.clipboard.writeText(shareText); } catch (e) {}
+    if (p) p.then(copied, function () { if (copyFallback(shareText)) copied(); });
+    else if (copyFallback(shareText)) copied();
   });
-  if (!(navigator.clipboard && navigator.clipboard.writeText)) copyBtn.remove();
   activate($("launchBtn"), function () { launch(); });
   activate($("shopBtn"), function () { openShop(); });
   activate($("muteBtn"), function () { Snd.unlock(); Snd.toggle(); });
@@ -4812,7 +4823,7 @@
   var NOTE_ICONS = {
     warn: '<svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="10" fill="#ffc800"/><rect x="9.6" y="5" width="2.8" height="8" rx="1.4" fill="#fff"/><circle cx="11" cy="16.2" r="1.6" fill="#fff"/></svg>',
     lost: '<svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="10" fill="#ff4b4b"/><path d="M7.5 7.5l7 7M14.5 7.5l-7 7" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/></svg>',
-    good: '<svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="10" fill="#58cc02"/><path d="M6.5 11.5l3 3 6-6.5" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    good: '<svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="10" fill="#4b9af3"/><path d="M6.5 11.5l3 3 6-6.5" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   };
   // Each course starts from its newest base (Earth when it has none)
   function flightStartId() { return respawnId(); }
