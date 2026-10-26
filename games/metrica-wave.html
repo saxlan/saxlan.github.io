@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="utf-8"><!--sx-ob--><style>html,body{overscroll-behavior:none}*{overscroll-behavior-x:none}[data-ob]{overscroll-behavior-y:none!important}</style><script>/* no bounce and no scroll chaining: a box that really overflows stops dead at its ends */(function(){function ob(e){for(var el=e.target;el&&el.nodeType===1;el=el.parentElement){var o=getComputedStyle(el).overflowY;if(o!=="auto"&&o!=="scroll")continue;var on=el.scrollHeight>el.clientHeight+2;if(on!==el.hasAttribute("data-ob")){if(on)el.setAttribute("data-ob","");else el.removeAttribute("data-ob");}}}["pointerover","wheel","touchstart"].forEach(function(t){addEventListener(t,ob,{capture:true,passive:true});});})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Metrica: Wave</title>
+<title>metrica: wave</title>
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -247,7 +247,7 @@
 <body>
 <div id="app">
   <header id="bar">
-    <div class="brand" id="brand">Metrica: Wave</div>
+    <div class="brand" id="brand">metrica: wave</div>
     <div id="crumb" class="lbl" hidden></div>
     <div class="sp"></div>
     <div id="hud" hidden>
@@ -1264,6 +1264,12 @@ var UI = {
     });
     $('bTheme').addEventListener('click', function () { Theme.toggle(); });
     $('bSound').addEventListener('click', function () { S.muted = !S.muted; if (!S.muted) Snd.ensure(); Store.save(); UI.refreshBar(); });
+    /* a press anywhere outside the skin card closes it (capture, so nothing can stop it) */
+    DOC.addEventListener('pointerdown', function (e) {
+      var t = e.target;
+      if (!UI.modal || !UI.modal.skin || (t && t.closest && (t.closest('.card.skin') || t.closest('.mskin')))) return;
+      UI.closeModal();
+    }, true);
     UI.sel = UI.defaultSel();
     UI.menu();
   },
@@ -1403,7 +1409,7 @@ var UI = {
   skin: function () {
     var o = $('ovl'), acts = [['Done', '', UI.closeModal]];
     o.innerHTML = '<div class="card skin"><div class="lbl">Character</div><div class="big">Skin</div><div id="skBody"></div><div class="col"><button class="btn wide" data-a="done">Done</button></div></div>';
-    o.hidden = false; UI.modal = { acts: acts };
+    o.hidden = false; UI.modal = { acts: acts, skin: true };
     MX.picker($('skBody'), function () { return S.cube; }, GD, TEST, function (cb) { S.cube = cb; S.cubeT = Date.now(); Store.save(true); MX.share(GAME, cb, S.cubeT); });
     o.querySelector('[data-a=done]').addEventListener('click', function (ev) { ev.stopPropagation(); UI.closeModal(); });
     o.onpointerdown = function (ev) { ev.stopPropagation(); };

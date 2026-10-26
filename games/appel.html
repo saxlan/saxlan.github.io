@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="utf-8"><!--sx-ob--><style>html,body{overscroll-behavior:none}*{overscroll-behavior-x:none}[data-ob]{overscroll-behavior-y:none!important}</style><script>/* no bounce and no scroll chaining: a box that really overflows stops dead at its ends */(function(){function ob(e){for(var el=e.target;el&&el.nodeType===1;el=el.parentElement){var o=getComputedStyle(el).overflowY;if(o!=="auto"&&o!=="scroll")continue;var on=el.scrollHeight>el.clientHeight+2;if(on!==el.hasAttribute("data-ob")){if(on)el.setAttribute("data-ob","");else el.removeAttribute("data-ob");}}}["pointerover","wheel","touchstart"].forEach(function(t){addEventListener(t,ob,{capture:true,passive:true});});})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Metrica: Platformer</title>
+<title>metrica: platformer</title>
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -258,7 +258,7 @@
 </head>
 <body>
 <header class="top">
-  <div class="tl"><div class="brand" id="brand">Metrica: Platformer</div><div class="crumb" id="crumb"></div><span class="tag" id="testTag" hidden>Test</span></div>
+  <div class="tl"><div class="brand" id="brand">metrica: platformer</div><div class="crumb" id="crumb"></div><span class="tag" id="testTag" hidden>Test</span></div>
   <div class="tr">
     <button class="ico" id="bAudio" aria-label="Sound"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="on" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="off" d="M16.5 9.5l5 5M21.5 9.5l-5 5"/></svg></button>
     <button class="ico" id="bTheme" aria-label="Theme"><svg class="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><svg class="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg></button>
@@ -269,7 +269,7 @@
     <div class="wrap">
       <div class="hero">
         <div class="side">
-          <h1 class="h1">Metrica<span>Platformer</span></h1>
+          <h1 class="h1">metrica<span>platformer</span></h1>
           <div class="stats">
             <div class="stat"><div class="lbl">Cleared</div><div class="v" id="stClear">0</div></div>
             <div class="stat"><div class="lbl">Gems</div><div class="v" id="stGems">0</div></div>
@@ -1597,6 +1597,12 @@ var MX = (function () {
   $('bSkin').addEventListener('click', skinOpen);
   $('unOk').addEventListener('click', function () { $('ovUnlock').classList.remove('on'); });
   $('skDone').addEventListener('click', function () { $('ovSkin').classList.remove('on'); });
+  /* a press anywhere outside the skin panel closes it (capture, so nothing can stop it) */
+  document.addEventListener('pointerdown', function (e) {
+    var ov = $('ovSkin'), t = e.target;
+    if (!ov.classList.contains('on') || (t && t.closest && (t.closest('#ovSkin .panel') || t.closest('#bSkin')))) return;
+    ov.classList.remove('on');
+  }, true);
 
   /* ---------- level select ---------- */
   function pips(n, got) { var s = '<div class="pips">'; for (var i = 0; i < n; i++) s += '<i' + (i < got ? ' class="on"' : '') + '></i>'; return s + '</div>'; }

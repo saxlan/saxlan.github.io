@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="utf-8"><!--sx-ob--><style>html,body{overscroll-behavior:none}*{overscroll-behavior-x:none}[data-ob]{overscroll-behavior-y:none!important}</style><script>/* no bounce and no scroll chaining: a box that really overflows stops dead at its ends */(function(){function ob(e){for(var el=e.target;el&&el.nodeType===1;el=el.parentElement){var o=getComputedStyle(el).overflowY;if(o!=="auto"&&o!=="scroll")continue;var on=el.scrollHeight>el.clientHeight+2;if(on!==el.hasAttribute("data-ob")){if(on)el.setAttribute("data-ob","");else el.removeAttribute("data-ob");}}}["pointerover","wheel","touchstart"].forEach(function(t){addEventListener(t,ob,{capture:true,passive:true});});})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Krillion</title>
+<title>krillion</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <script>(function(){var R=document.documentElement;function s(){var t=null;try{t=parent.document.documentElement.getAttribute('data-theme')}catch(e){}
@@ -271,7 +271,7 @@ s();try{new MutationObserver(s).observe(parent.document.documentElement,{attribu
 </style>
 </head>
 <body>
-<div class="top"><div class="title" id="title" title="Games" role="button" tabindex="0">Krillion</div><div class="tright"><button class="btn sm ghost" id="bHome" type="button" hidden>Home</button><button class="btn sm ghost sq" id="bSound" type="button" aria-label="Sound"></button><button class="btn sm ghost sq" id="bHelp" type="button" aria-label="How to play">?</button></div></div>
+<div class="top"><div class="title" id="title" title="Games" role="button" tabindex="0">krillion</div><div class="tright"><button class="btn sm ghost" id="bHome" type="button" hidden>Home</button><button class="btn sm ghost sq" id="bSound" type="button" aria-label="Sound"></button><button class="btn sm ghost sq" id="bHelp" type="button" aria-label="How to play">?</button></div></div>
 <div id="app"></div>
 <div class="modal" id="help" hidden><div class="box card" role="dialog" aria-modal="true" aria-labelledby="helpT">
   <h3 id="helpT">How to play</h3>
@@ -2791,7 +2791,7 @@ function finishDive() {
 /* ---------- end ---------- */
 function shareText(r) {
   var m = r.score * 10;
-  return 'Krillion ' + modeLabel(r) + '\n' + r.ans.map(function (a) { return TIERS[a.t].e; }).join('') + '\n' + fmt(m) + ' m, ' + zoneName(m) + ' (' + r.score + ' points)';
+  return 'krillion ' + modeLabel(r) + '\n' + r.ans.map(function (a) { return TIERS[a.t].e; }).join('') + '\n' + fmt(m) + ' m, ' + zoneName(m) + ' (' + r.score + ' points)';
 }
 function copy(text, btn) {
   function ok() { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Share'; }, 1600); }
@@ -2903,7 +2903,7 @@ function freeEnd() {
     '<span class="more">All ' + fmt(r.P.all.length) + ' answers</span></button></div>';
   run = null;
   show(h);
-  document.getElementById('bShare').onclick = function () { copy('Krillion Free Dive\n' + r.P.show + '\n' + r.got.length + ' answers, ' + fmt(r.score) + ' points\n' + r.got.map(function (e) { return TIERS[e.t].e; }).join(''), this); };
+  document.getElementById('bShare').onclick = function () { copy('krillion Free Dive\n' + r.P.show + '\n' + r.got.length + ' answers, ' + fmt(r.score) + ' points\n' + r.got.map(function (e) { return TIERS[e.t].e; }).join(''), this); };
   document.getElementById('bAgain').onclick = startFree;
   document.getElementById('bBack').onclick = home;
   document.getElementById('bList').onclick = function () { openAnswers(r.P, null, r.got); };

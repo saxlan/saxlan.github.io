@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="utf-8"><!--sx-ob--><style>html,body{overscroll-behavior:none}*{overscroll-behavior-x:none}[data-ob]{overscroll-behavior-y:none!important}</style><script>/* no bounce and no scroll chaining: a box that really overflows stops dead at its ends */(function(){function ob(e){for(var el=e.target;el&&el.nodeType===1;el=el.parentElement){var o=getComputedStyle(el).overflowY;if(o!=="auto"&&o!=="scroll")continue;var on=el.scrollHeight>el.clientHeight+2;if(on!==el.hasAttribute("data-ob")){if(on)el.setAttribute("data-ob","");else el.removeAttribute("data-ob");}}}["pointerover","wheel","touchstart"].forEach(function(t){addEventListener(t,ob,{capture:true,passive:true});});})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Metrica: Classic</title>
+<title>metrica: classic</title>
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -309,7 +309,7 @@
 <body>
 <div id="app">
   <header id="bar">
-    <div class="brand" id="brand">Metrica: Classic</div>
+    <div class="brand" id="brand">metrica: classic</div>
     <span class="ttag" id="ttag" hidden>Test</span>
     <div id="crumb" class="lbl" hidden></div>
     <input id="edName" class="inp" maxlength="28" spellcheck="false" autocomplete="off" hidden>
@@ -2375,7 +2375,7 @@ var Icons = {
 var UI = {
   screen: 'menu', tab: 'main', sel: 0, selUser: null, modal: null,
   init: function () {
-    if (MIXED) { $('brand').textContent = 'Metrica: Mixed'; DOC.title = 'Metrica: Mixed'; }
+    if (MIXED) { $('brand').textContent = 'metrica: mixed'; DOC.title = 'metrica: mixed'; }
     $('brand').addEventListener('click', function () {
       if (framed) { try { parent.postMessage({ type: 'games-menu' }, '*'); } catch (e) {} }
       else UI.toMenu();

@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="utf-8"><!--sx-ob--><style>html,body{overscroll-behavior:none}*{overscroll-behavior-x:none}[data-ob]{overscroll-behavior-y:none!important}</style><script>/* no bounce and no scroll chaining: a box that really overflows stops dead at its ends */(function(){function ob(e){for(var el=e.target;el&&el.nodeType===1;el=el.parentElement){var o=getComputedStyle(el).overflowY;if(o!=="auto"&&o!=="scroll")continue;var on=el.scrollHeight>el.clientHeight+2;if(on!==el.hasAttribute("data-ob")){if(on)el.setAttribute("data-ob","");else el.removeAttribute("data-ob");}}}["pointerover","wheel","touchstart"].forEach(function(t){addEventListener(t,ob,{capture:true,passive:true});});})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Chess</title>
+<title>chess</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <script>(function(){var R=document.documentElement;function s(){var t=null;try{t=parent.document.documentElement.getAttribute('data-theme')}catch(e){}
@@ -204,7 +204,7 @@ s();try{new MutationObserver(s).observe(parent.document.documentElement,{attribu
 </style>
 </head>
 <body>
-<div id="bar"><div id="brand" title="Games">Chess</div><script>if (window.SX_TEST) document.write('<span class="sxtest">Test</span>');</script><div class="sp"></div><div id="barinfo"></div><button class="btn icon" id="bMusic" type="button" title="Music on" aria-label="Music on"></button><button class="btn icon" id="bLook" title="Appearance" aria-label="Appearance"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7.2"/><path d="M12 1.8v2.8M12 19.4v2.8M1.8 12h2.8M19.4 12h2.8M4.8 4.8l2 2M17.2 17.2l2 2M4.8 19.2l2-2M17.2 6.8l2-2"/></svg></button></div>
+<div id="bar"><div id="brand" title="Games">chess</div><script>if (window.SX_TEST) document.write('<span class="sxtest">Test</span>');</script><div class="sp"></div><div id="barinfo"></div><button class="btn icon" id="bMusic" type="button" title="Music on" aria-label="Music on"></button><button class="btn icon" id="bLook" title="Appearance" aria-label="Appearance"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7.2"/><path d="M12 1.8v2.8M12 19.4v2.8M1.8 12h2.8M19.4 12h2.8M4.8 4.8l2 2M17.2 17.2l2 2M4.8 19.2l2-2M17.2 6.8l2-2"/></svg></button></div>
 
 <div id="setup">
   <div class="card">
@@ -1202,8 +1202,20 @@ var lookTouched = false;
   var panel = $('look');
   $('bLook').onclick = function () { renderLook(); panel.hidden = false; };
   $('lkDone').onclick = function () { panel.hidden = true; };
+  // any press outside the card closes it (capture, so nothing can stop it)
+  var eatClick = 0;
+  document.addEventListener('pointerdown', function (e) {
+    eatClick = 0;
+    if (panel.hidden || panel.firstElementChild.contains(e.target) || $('bLook').contains(e.target)) return;
+    panel.hidden = true;
+    // a tap can land its click on whatever was under the backdrop, so drop that one click
+    if (e.target === panel) eatClick = Date.now() + 700;
+  }, true);
+  document.addEventListener('click', function (e) {
+    if (eatClick && Date.now() < eatClick) { eatClick = 0; e.stopPropagation(); e.preventDefault(); }
+    eatClick = 0;
+  }, true);
   panel.addEventListener('click', function (e) {
-    if (e.target === panel) { panel.hidden = true; return; }
     var b = e.target.closest('button'); if (!b) return;
     if (b.dataset.b) { lookTouched = true; setLook('board', b.dataset.b); }
     if (b.dataset.p) { lookTouched = true; setLook('pieces', b.dataset.p); }
