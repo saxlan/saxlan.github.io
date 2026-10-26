@@ -104,7 +104,7 @@ s();try{new MutationObserver(s).observe(parent.document.documentElement,{attribu
   #end .pwrap .pwrap { width: 100%; }
   #title { overflow-y: auto; overflow-x: clip; overscroll-behavior: none; }
   #title .wrap { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 16px 32px; gap: 18px; }
-  .logo { font: 700 clamp(54px, 13vw, 104px)/1 var(--display); letter-spacing: -0.03em; color: var(--blue); text-align: center; }
+  .logo { font: 700 clamp(54px, 13vw, 104px)/1.12 var(--display); letter-spacing: -0.03em; color: var(--blue); text-align: center; }
   .fan { position: relative; width: 300px; height: 150px; }
   .tbtns { display: flex; flex-direction: column; gap: 10px; width: min(320px, 100%); }
   .tbtns .btn { width: 100%; }
@@ -125,7 +125,10 @@ s();try{new MutationObserver(s).observe(parent.document.documentElement,{attribu
   .rcard .rn i { flex: none; width: 14px; height: 14px; border-radius: 50%; background: var(--blue); }
   .rcard.boss .rn i { background: var(--red); }
   .rcard .rt { font: 700 12.5px/1.3 var(--sans); color: var(--text-dim); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .rcard .rg { display: flex; align-items: baseline; gap: 8px; }
+  .rcard .rg { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+  .rcard .rg b { min-width: 0; white-space: nowrap; overflow: hidden; line-height: 1.2 !important; }
+  .scbox b { white-space: nowrap; overflow: hidden; min-width: 0; line-height: 1.2 !important; }
+  .cnt b { white-space: nowrap; }
   .k { font: 800 11px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--text-faint); }
   .rcard .rg b { font: 700 26px/1 var(--display); color: var(--red); }
   .rcard .rg .rw { margin-left: auto; font: 700 15px/1 var(--display); color: var(--gold-dark); }
@@ -166,7 +169,7 @@ s();try{new MutationObserver(s).observe(parent.document.documentElement,{attribu
   #ctrl .btn { min-width: 0; }
   #ctrl .sortg { display: flex; gap: 6px; }
   #bPlay, #bDisc { flex: 0 1 180px; }
-  #game.mode-panel #ctrl { visibility: hidden; }
+  #game.mode-panel #ctrl { display: none; }
 
   /* ---------- playing cards ---------- */
   .pcard { position: absolute; left: 0; top: 0; width: var(--cw); height: var(--ch); border-radius: calc(var(--cw) * .12);
@@ -273,7 +276,17 @@ s();try{new MutationObserver(s).observe(parent.document.documentElement,{attribu
     border: 2px solid rgba(0,0,0,.08); border-bottom: 4px solid rgba(0,0,0,.2); }
   .pack svg { width: 100%; height: 100%; }
   .ptray { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-  .chooser { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .chooser { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; }
+  .chooser .cname { width: 100%; text-align: center; font: 800 var(--nf, 12px)/1.15 var(--sans); color: var(--text); overflow-wrap: normal; word-break: normal; hyphens: none;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: calc(var(--nf, 12px) * 2.3); }
+  .phead { width: min(760px, 100%); display: flex; align-items: center; gap: 12px; }
+  .phead .pht { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .phead .ptitle { text-align: left; font-size: 22px; }
+  .phead .psub { text-align: left; }
+  .phead .btn { flex: none; }
+  #panel.pk .pwrap { justify-content: flex-start; gap: 10px; }
+  #panel.pk:not(.top) .pwrap { justify-content: center; }
+  .ptray.tiny .rb, .shop.tiny .rb { font-size: 0; }
   .chooser .pcard { position: relative; transition: none; }
 
   /* ---------- modal ---------- */
@@ -299,11 +312,13 @@ s();try{new MutationObserver(s).observe(parent.document.documentElement,{attribu
   .htab .c { color: var(--blue); font-family: var(--display); } .htab .m { color: var(--red); font-family: var(--display); }
   .stat { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
   .stat .box { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
-  .stat .box b { font: 700 20px/1.1 var(--display); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stat .box { min-width: 0; }
+  .stat .box b { font: 700 20px/1.2 var(--display); color: var(--text); white-space: nowrap; overflow: hidden; }
   .grid { display: flex; flex-wrap: wrap; gap: 8px; }
   .grid .ccard.unseen .art { filter: grayscale(1) brightness(.4); opacity: .35; }
   .detail { display: flex; gap: 14px; align-items: flex-start; }
-  .detail .ccard, .detail .pcard { position: relative; flex: none; transition: none; }
+  .detail { --jw: 92px; --jh: 125px; --cw: 88px; --ch: 123px; --ow: 92px; --oh: 125px; }
+  .detail .ccard, .detail .pcard, .detail .pack { position: relative; flex: none; transition: none; }
   .detail .dt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
   .detail .dn { font: 700 21px/1.1 var(--display); color: var(--text); }
   .detail .dk { font: 800 11px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; }
@@ -312,15 +327,17 @@ s();try{new MutationObserver(s).observe(parent.document.documentElement,{attribu
   .detail .dx strong { color: var(--red); }
   .detail .dx u { text-decoration: none; color: var(--gold-dark); }
   .dacts { display: flex; gap: 8px; flex-wrap: wrap; }
-  .dacts .btn { flex: 1; }
-  .decks { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .dacts .btn { flex: 1; min-width: 0; white-space: normal; line-height: 1.15; text-align: center; }
+  .mbody > .dacts:last-child { position: sticky; bottom: -16px; z-index: 3; background: var(--panel); padding: 10px 0 16px; margin-bottom: -16px; }
+  .pwrap > .btn.big:last-child { position: sticky; bottom: 0; z-index: 3; }
+  .decks { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
   .deckopt { padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; text-align: center; }
   .deckopt.on { border-color: var(--blue); border-bottom-color: var(--blue-dark); background: var(--blue-wash); }
   .deckopt.lock { cursor: default; opacity: .5; }
   .deckopt .pcard { position: relative; transition: none; }
   .deckopt b { font: 600 16px/1.1 var(--display); color: var(--text); }
   .deckopt span { font: 700 12.5px/1.3 var(--sans); color: var(--text-dim); }
-  .endbig { font: 700 clamp(40px, 9vw, 64px)/1 var(--display); text-align: center; }
+  .endbig { font: 700 clamp(40px, 9vw, 64px)/1.15 var(--display); text-align: center; }
 
   /* tooltip */
   #tip { position: absolute; z-index: 90; display: none; pointer-events: none; max-width: 240px; padding: 10px 12px; border-radius: 12px; background: var(--panel);
@@ -336,7 +353,8 @@ s();try{new MutationObserver(s).observe(parent.document.documentElement,{attribu
   @media (max-width: 759px) {
     #game.on { flex-direction: column; }
     #game { gap: 6px; padding: 6px 8px 8px; }
-    #side { width: auto; display: grid; grid-template-columns: 1.25fr 1fr; gap: 6px; }
+    #side { width: auto; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 6px; }
+    #side > * { min-width: 0; }
     .rcard { padding: 6px 9px; gap: 2px; }
     .rcard .rn { font-size: 15px; }
     .rcard .rt { display: none; }
@@ -345,7 +363,7 @@ s();try{new MutationObserver(s).observe(parent.document.documentElement,{attribu
     .scbox { padding: 6px 9px; flex-direction: column; align-items: flex-start; gap: 4px; justify-content: center; }
     .scbox b { margin-left: 0; font-size: 22px; }
     .hbox { padding: 6px 9px; gap: 4px; }
-    .hbox .hn { font-size: 14px; min-height: 15px; }
+    .hbox .hn { font-size: 14px; line-height: 1.25; min-height: 18px; }
     .hbox .hn small { font-size: 11px; }
     .cm .cv, .cm .mv { height: 32px; font-size: 18px; border-radius: 9px; border-bottom-width: 3px; }
     .counts { grid-template-columns: 1fr 1fr; gap: 4px; }
@@ -373,6 +391,12 @@ s();try{new MutationObserver(s).observe(parent.document.documentElement,{attribu
     #panel { padding: 10px 8px; }
     .detail { flex-direction: column; align-items: center; text-align: center; }
     .pl { font-size: 15px; padding: 3px 7px; }
+  }
+  @media (max-width: 440px) {
+    .cnt { flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; padding: 3px 7px; }
+    .cnt .k { font-size: 9.5px; letter-spacing: .04em; }
+    .cnt b { font-size: 15px; }
+    .phead .ptitle { font-size: 18px; }
   }
 </style>
 </head>
@@ -884,7 +908,7 @@ var CON = {}; CONS.forEach(function (d) { CON[d.id] = d; });
 /* ---------- bosses (own twists) ---------- */
 function bossIco(bg, s) { return '<svg viewBox="0 0 60 60">' + C(30, 30, 29, bg) + s + '</svg>'; }
 var BOSSES = [
-  { id: 'moth', n: 'Moth Queen', t: function (bd) { return (bd && bd.suit ? SUIT_NAME[bd.suit] : 'One suit') + ' are muted'; }, init: function (run, bd) { bd.suit = 'HDSC'[Math.floor(rnd(run) * 4)]; },
+  { id: 'moth', n: 'Moth Queen', t: function (bd) { return bd && bd.suit ? SUIT_NAME[bd.suit] + ' are muted' : 'One suit is muted'; }, init: function (run, bd) { bd.suit = 'HDSC'[Math.floor(rnd(run) * 4)]; },
     a: bossIco('#ce82ff', E(18, 28, 12, 15, '#fff') + E(42, 28, 12, 15, '#fff') + E(30, 32, 4, 15, K.ink) + St('M28 18l-5-8M32 18l5-8', K.ink, 2)) },
   { id: 'crow', n: 'Pickpocket Crow', t: function () { return 'Lose $1 for each card you play'; },
     a: bossIco('#ffc800', E(28, 34, 15, 11, K.ink) + C(38, 24, 8, K.ink) + Pa('M44 22l9 3-9 3z', K.orange) + C(40, 22, 1.8, '#fff') + Pa('M14 34l-9 6 12-1z', K.ink)) },
@@ -1702,6 +1726,16 @@ async function flyOff(ids) {
   ids.forEach(killEl);
 }
 
+/* ---------- fit text: shrink a one-line value until it fits its box ---------- */
+function fitText(el, min) {
+  if (!el) return;
+  el.style.fontSize = '';
+  if (!el.clientWidth || el.scrollWidth <= el.clientWidth) return;
+  var fs = parseFloat(getComputedStyle(el).fontSize), n = 0;
+  while (el.scrollWidth > el.clientWidth && fs > (min || 10) && n++ < 30) { fs -= 1; el.style.fontSize = fs + 'px'; }
+}
+function fitAll(root, sel, min) { Array.prototype.forEach.call((root || document).querySelectorAll(sel), function (el) { fitText(el, min); }); }
+
 /* ---------- pops ---------- */
 function relRect(el) { var a = $('app').getBoundingClientRect(), r = el.getBoundingClientRect(); return { x: r.left - a.left, y: r.top - a.top, w: r.width, h: r.height }; }
 function popAt(el, text, cls) {
@@ -1716,7 +1750,7 @@ function jig(el) { if (!el || instant) return; el.classList.remove('jig'); void 
 function bump(el) { if (instant) return; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
 function charmEl(i) { return $('ctray').querySelector('[data-ci="' + i + '"]'); }
 function srcEl(src) { if (src.card != null) return els[src.card]; if (src.charm != null) return charmEl(src.charm); return $('total'); }
-function setCM(c, m, b) { $('vC').textContent = fmt(c); $('vM').textContent = fmtM(m); if (b === 'c') bump($('vC')); if (b === 'm') bump($('vM')); }
+function setCM(c, m, b) { $('vC').textContent = fmt(c); $('vM').textContent = fmtM(m); fitText($('vC'), 11); fitText($('vM'), 11); if (b === 'c') bump($('vC')); if (b === 'm') bump($('vM')); }
 async function animScore(res) {
   var run = S.run, H = HAND[res.type], L = run.levels[res.type];
   $('hName').innerHTML = esc(H.n) + '<small>lv ' + L.lv + '</small>';
@@ -1740,13 +1774,13 @@ async function animScore(res) {
 }
 async function countScore(a, b) {
   var el = $('rScore');
-  if (instant) { el.textContent = fmt(b); $('total').classList.remove('on'); return; }
+  if (instant) { el.textContent = fmt(b); fitText(el, 12); $('total').classList.remove('on'); return; }
   var t0 = performance.now(), dur = 520 / spd();
   await new Promise(function (res) {
     function f(now) { var k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = fmt(a + (b - a) * e); if (k < 1) requestAnimationFrame(f); else res(); }
     requestAnimationFrame(f);
   });
-  bump(el); $('total').classList.remove('on');
+  fitText(el, 12); bump(el); $('total').classList.remove('on');
   await wait(160);
 }
 
@@ -1780,7 +1814,7 @@ function renderCounts() {
   var r = run.phase === 'play' || run.phase === 'cash' ? run.round : null, f = runFlags(run);
   $('nP').textContent = r ? r.plays : PLAYS;
   $('nD').textContent = r ? r.discards : DISCARDS + f.disc + (run.deck === 'spare' ? 1 : 0) - (run.deck === 'wide' ? 1 : 0);
-  $('nM').textContent = (run.money < 0 ? '-$' : '$') + Math.abs(run.money);
+  $('nM').textContent = (run.money < 0 ? '-$' : '$') + Math.abs(run.money); fitText($('nM'), 10);
   $('nF').innerHTML = run.floor + (run.floor <= WIN_FLOOR ? '<small>/' + WIN_FLOOR + '</small>' : '');
 }
 function renderSide() {
@@ -1799,8 +1833,8 @@ function renderSide() {
     rew = REWARD[ni.ri]; rc.classList.toggle('boss', ni.ri === 2);
   }
   $('rName').textContent = name; $('rTwist').textContent = twist;
-  $('rGoal').textContent = goal ? fmt(goal) : '?'; $('rRew').textContent = '$' + rew;
-  if (!busy) $('rScore').textContent = fmt(run.phase === 'play' || run.phase === 'cash' ? run.round.score : 0);
+  $('rGoal').textContent = goal ? fmt(goal) : '?'; $('rRew').textContent = '$' + rew; fitText($('rGoal'), 12);
+  if (!busy) { $('rScore').textContent = fmt(run.phase === 'play' || run.phase === 'cash' ? run.round.score : 0); fitText($('rScore'), 12); }
   if (!busy) renderHandBox();
   renderCounts();
 }
@@ -1863,20 +1897,30 @@ function renderPanel() {
     });
     h += '</div></div></div>';
   } else if (ph === 'pack') {
-    var pk = run.pack, P = PACKS[pk.k];
-    if (pk.hand.length) p.classList.add('top');
-    var left = pk.items.filter(function (x) { return !x.taken; }).length, pw = Math.max(40, Math.min(geo.ow, (geo.W - 28 - (left - 1) * 8) / left));
-    h += '<div class="pwrap"><div class="ptitle">' + (pk.big ? 'Big ' : '') + P.n + '</div><div class="psub">Pick ' + pk.picks + '</div><div class="ptray" style="--ow:' + pw.toFixed(1) + 'px;--oh:' + (pw * 1.36).toFixed(1) + 'px">';
+    var pk = run.pack, P = PACKS[pk.k], top = pk.hand.length > 0;
+    p.classList.add('pk'); if (top) p.classList.add('top');
+    var left = pk.items.filter(function (x) { return !x.taken; }), n = left.length || 1;
+    var availH = (top ? geo.H - (geo.ch * 1.25 + 24) : geo.H) - 24, nf = geo.narrow ? 11 : 12.5;
+    var byH = (availH - 52 - nf * 2.6 - 22) / 1.4;
+    var pw = Math.max(36, Math.min(geo.ow, (geo.W - 24 - (n - 1) * 10) / n - 6, byH));
+    var colW = Math.max(pw + 6, Math.min(pw + 34, (geo.W - 24 - (n - 1) * 6) / n));
+    nf = Math.max(9.5, Math.min(nf, colW / 5.2));
+    h += '<div class="pwrap"><div class="phead"><div class="pht"><div class="ptitle">' + (pk.big ? 'Big ' : '') + P.n + '</div><div class="psub">Pick ' + pk.picks + '</div></div>' +
+      '<button class="btn" data-act="skip" type="button">Skip</button></div>' +
+      '<div class="ptray' + (pw < 58 ? ' tiny' : '') + '" style="--ow:' + pw.toFixed(1) + 'px;--oh:' + (pw * 1.36).toFixed(1) + 'px;--nf:' + nf.toFixed(1) + 'px;gap:6px">';
     pk.items.forEach(function (it, i) {
       if (it.taken) return;
-      var inner = it.t === 'card' ? cardStatic(it.card, '', deckCol()) : ccardHTML(it.t === 'charm' ? CH[it.id] : CON[it.id], { ed: it.ed });
-      h += '<div class="chooser" data-pi="' + i + '">' + inner + '</div>';
+      var inner, nm;
+      if (it.t === 'card') { inner = cardStatic(it.card, '', deckCol()); nm = cardName(it.card); }
+      else { var dd = it.t === 'charm' ? CH[it.id] : CON[it.id]; inner = ccardHTML(dd, { ed: it.ed }); nm = dd.n; }
+      h += '<div class="chooser" data-pi="' + i + '" style="width:' + colW.toFixed(1) + 'px">' + inner + '<div class="cname">' + esc(nm) + '</div></div>';
     });
-    h += '</div><button class="btn big" data-act="skip" type="button">Skip</button></div>';
+    h += '</div></div>';
   } else if (ph === 'won' || ph === 'over') {
     p.className = ''; p.innerHTML = ''; renderEnd(); return;
   }
   p.innerHTML = h;
+  fitAll(p, '.cname', 8);
 }
 function renderEnd() {
   var run = S.run, ph = run ? run.phase : 'over', h = '';
@@ -1891,6 +1935,7 @@ function renderEnd() {
   }
   $('endw').innerHTML = h;
   if (!$('end').classList.contains('on')) { ['title', 'game'].forEach(function (s) { $(s).classList.remove('on'); }); $('end').classList.add('on'); $('end').scrollTop = 0; }
+  fitAll($('endw'), '.stat b', 12);
 }
 function runStatsHTML(run) {
   var st = run.stats, bt = st.bestType ? HAND[st.bestType].n : 'None';
@@ -1928,6 +1973,7 @@ function openModal(title, body, small) {
   var m = $('modal');
   m.innerHTML = '<div class="mbox' + (small ? ' sm' : '') + '"><div class="mhead"><h2>' + title + '</h2><button class="btn sq" data-act="close" type="button" title="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="mbody">' + body + '</div></div>';
   m.classList.add('on'); hideTip();
+  fitAll(m, '.stat b', 12);
 }
 function closeModal() { $('modal').classList.remove('on'); $('modal').innerHTML = ''; modalCtx = null; }
 var modalCtx = null;
@@ -1951,7 +1997,7 @@ function showCharm(i) {
 function showCons(i) {
   var run = S.run, it = run.cons[i]; if (!it) return;
   var d = CON[it.id]; modalCtx = { k: 'cons', i: i };
-  openModal(KIND[d.k], detailHTML(ccardHTML(d), d.n, KIND[d.k], KCOL[d.k], consText(d)) + '<div class="dacts"><button class="btn acc" data-act="usek" type="button"' + (canUseCons(run, it.id) ? '' : ' disabled') + '>Use</button>' +
+  openModal(KIND[d.k], detailHTML(ccardHTML(d), d.n, KIND[d.k], KCOL[d.k], consText(d)) + '<div class="dacts"><button class="btn acc" data-act="usek" type="button"' + (canUseCons(run, it.id) ? '' : ' disabled') + '>' + (needLabel(run, it.id) || 'Use') + '</button>' +
     '<button class="btn red" data-act="sellk" type="button"' + (busy ? ' disabled' : '') + '>Sell $1</button></div>', true);
 }
 function showOffer(i) {
@@ -1980,8 +2026,14 @@ function showPick(i) {
   if (it.t === 'charm') body = charmDetail(it);
   else if (it.t === 'card') body = detailHTML(cardStatic(it.card, '', deckCol()), cardName(it.card), 'Playing card', 'var(--green-dark)', cardLines(it.card).join('<br>'));
   else { var d = CON[it.id]; body = detailHTML(ccardHTML(d), d.n, KIND[d.k], KCOL[d.k], consText(d)); }
-  var lab = it.t === 'cons' && CON[it.id].k !== 'chart' ? 'Use' : 'Take';
+  var lab = it.t === 'cons' && CON[it.id].k !== 'chart' ? (needLabel(run, it.id, run.pack.hand) || 'Use') : 'Take';
   openModal(PACKS[run.pack.k].n, body + '<div class="dacts"><button class="btn acc" data-act="pick" type="button"' + (canPick(run, i) ? '' : ' disabled') + '>' + lab + '</button></div>', true);
+}
+function needLabel(run, id, from) {
+  var d = CON[id]; if (!d || !d.sel) return '';
+  var h = from || handFor(run); if (!h) return '';
+  var n = selCards(run, h).length; if (n >= d.sel[0] && n <= d.sel[1]) return '';
+  return d.sel[0] === d.sel[1] ? 'Select ' + d.sel[0] + (d.sel[0] === 1 ? ' card' : ' cards') : 'Select ' + d.sel[0] + ' to ' + d.sel[1] + ' cards';
 }
 function cardName(c) { return c.en === 'slate' ? 'Slate card' : RANK_NAME[c.r] + ' of ' + SUIT_NAME[c.s]; }
 function cardLines(c) {
@@ -2070,7 +2122,8 @@ function showTip(el) {
   var t = $('tip'); t.innerHTML = h; t.style.display = 'block';
   var r = relRect(el), a = $('app').getBoundingClientRect(), tw = t.offsetWidth, th = t.offsetHeight;
   var x = Math.max(8, Math.min(a.width - tw - 8, r.x + r.w / 2 - tw / 2)), y = r.y - th - 10;
-  if (y < 6) y = Math.min(a.height - th - 6, r.y + r.h + 10);
+  if (y < 6) y = r.y + r.h + 10;
+  y = Math.max(6, Math.min(a.height - th - 6, y));
   t.style.left = x + 'px'; t.style.top = y + 'px'; tipEl = el;
 }
 function hideTip() { $('tip').style.display = 'none'; tipEl = null; }
@@ -2259,7 +2312,7 @@ window.__pw = {
   detect: function (cards) { FL = runFlags(S.run); var r = detect(cards); return { type: r.type, n: r.scoring.length, has: Object.keys(r.has) }; },
   canUse: function (i) { var it = S.run.cons[i]; return !!it && canUseCons(S.run, it.id); }, canPick: function (i) { return canPick(S.run, i); },
   busy: function () { return busy; }, saveNow: function () { save(true); }, defs: function () { return { charms: CHARMS.length, cons: CONS.length, charts: CONS.filter(function (d) { return d.k === 'chart'; }).length, spells: CONS.filter(function (d) { return d.k === 'spell'; }).length, omens: CONS.filter(function (d) { return d.k === 'omen'; }).length, bosses: BOSSES.length + 1, decks: DECKS.length, ids: CHARMS.map(function (d) { return d.id; }), consIds: CONS.map(function (d) { return d.id; }) }; },
-  setSpeed: function (i) { S.opt.spd = i; }, showScreen: showScreen
+  setSpeed: function (i) { S.opt.spd = i; }, setCM: setCM, showScreen: showScreen
 };
 window.PipworksBoot = load;
 </script>
