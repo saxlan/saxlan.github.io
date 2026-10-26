@@ -236,6 +236,7 @@ s();try{new MutationObserver(s).observe(parent.document.documentElement,{attribu
     <div id="localBox">
       <div class="split"></div>
       <button class="btn acc big" id="bPlay">Play</button>
+      <button class="btn big" id="bResume" hidden style="margin-top:10px">Continue game</button>
     </div>
     <div id="netBox" hidden>
       <div class="lbl" style="margin-top:20px">Your name</div>
@@ -614,14 +615,23 @@ function applyLook() {
   renderLook();
 }
 function setLook(k, v) {
-  look[k] = v; applyLook();
-  var txt = JSON.stringify(look);
+  look[k] = v; applyLook(); saveChess();
+}
+/* the save: the look, plus a one computer game in progress (its moves and clocks), so it can be continued on any computer */
+var savedLocal = null;
+function saveChess() {
+  var o = { board: look.board, pieces: look.pieces };
+  if (mode === 'local' && G && !G.result && G.moves.length) o.local = { moves: G.moves.slice(), clock: clockOpt, w: clk ? clockLeft('w') : 0, b: clk ? clockLeft('b') : 0 };
+  savedLocal = o.local || null; renderResume();
+  var txt = JSON.stringify(o);
   store.set('look', txt);
   if (!window.SX_TEST) try { if (parent !== window) parent.postMessage({ type: 'game-save', game: 'chess', data: txt }, '*'); } catch (e) {}
 }
 function takeLook(txt) {
-  try { var o = JSON.parse(txt); if (o && typeof o === 'object') { if (SET[o.pieces]) look.pieces = o.pieces; if (BOARDS.some(function (b) { return b[0] === o.board; })) look.board = o.board; } } catch (e) {}
+  try { var o = JSON.parse(txt); if (o && typeof o === 'object') { if (SET[o.pieces]) look.pieces = o.pieces; if (BOARDS.some(function (b) { return b[0] === o.board; })) look.board = o.board;
+    savedLocal = o.local && Array.isArray(o.local.moves) && o.local.moves.length ? o.local : null; renderResume(); } } catch (e) {}
 }
+function renderResume() { var b = document.getElementById('bResume'); if (b) b.hidden = !savedLocal; }
 function renderLook() {
   var el = document.getElementById('lkBoard'); if (!el) return;
   el.innerHTML = BOARDS.map(function (b) {
@@ -807,7 +817,7 @@ function doMove(m, anim) {
   var mover = G.cur().turn;
   if (mode === 'net') { netMove(m, anim); return; }
   G.play(m); clockMove(mover); lastMv = m; sel = -1;
-  renderBoard(anim); renderAll();
+  renderBoard(anim); renderAll(); saveChess();
   if (!G.result) setTimeout(function () { if (mode === 'local' && G.cur().turn !== orient) setOrient(G.cur().turn, true); }, anim ? 230 : 60);
 }
 
@@ -900,8 +910,8 @@ $('acts').addEventListener('click', function (e) {
   var b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
   var a = b.dataset.a;
   if (mode === 'local') {
-    if (a === 'undo') { if (G.undo()) { lastMv = null; sel = -1; if (clk) clk.run = G.moves.length > 0, clk.last = Date.now(); renderBoard(false); renderAll(); setOrient(G.cur().turn, true); } }
-    if (a === 'resign') { G.end(Chess.opp(G.cur().turn), 'resignation'); renderBoard(false); renderAll(); }
+    if (a === 'undo') { if (G.undo()) { lastMv = null; sel = -1; if (clk) clk.run = G.moves.length > 0, clk.last = Date.now(); renderBoard(false); renderAll(); setOrient(G.cur().turn, true); saveChess(); } }
+    if (a === 'resign') { G.end(Chess.opp(G.cur().turn), 'resignation'); renderBoard(false); renderAll(); saveChess(); }
     if (a === 'new') showSetup();
     return;
   }
@@ -920,7 +930,7 @@ setInterval(function () {
   document.querySelectorAll('.clk[data-c]').forEach(function (el) { var c = el.dataset.c, v = clockLeft(c); el.textContent = fmt(v); el.classList.toggle('low', v < 20000); });
   if (!G.result && clk.run && clockLeft(G.cur().turn) <= 0) {
     var t = G.cur().turn;
-    if (mode === 'local') { timeout(t); renderBoard(false); renderAll(); }
+    if (mode === 'local') { timeout(t); renderBoard(false); renderAll(); saveChess(); }
     else if (net && net.host) hostTimeout();
   }
 }, 100);
@@ -952,6 +962,15 @@ $('bPlay').onclick = function () {
   mode = 'local'; G = Chess.Game(); clk = newClock(parseClock(clockOpt)); lastMv = null; sel = -1;
   orient = 'w'; board.classList.add('still'); board.classList.remove('flip'); void board.offsetWidth; board.classList.remove('still');
   showGame(); startFx('White moves first');
+};
+$('bResume').onclick = function () {
+  var s = savedLocal; if (!s) return;
+  mode = 'local'; G = Chess.Game(); lastMv = null; sel = -1;
+  for (var i = 0; i < s.moves.length; i++) { var m = G.play(String(s.moves[i])); if (!m) break; lastMv = m; }
+  clockOpt = typeof s.clock === 'string' ? s.clock : '0'; clk = newClock(parseClock(clockOpt));
+  if (clk) { clk.w = Math.max(0, +s.w || 0); clk.b = Math.max(0, +s.b || 0); clk.run = G.moves.length > 0; clk.last = Date.now(); }
+  orient = G.cur().turn; board.classList.add('still'); board.classList.toggle('flip', orient === 'b'); void board.offsetWidth; board.classList.remove('still');
+  showGame();
 };
 /* ---------- game start: a brief flat banner and a short chime ---------- */
 var fxCtx = null, fxTimer = null;
