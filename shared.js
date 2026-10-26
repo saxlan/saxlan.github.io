@@ -1030,7 +1030,9 @@ function normalizeCourse(input){
        social  account -> {f friends, i incoming requests, o outgoing requests,
                            c {conversation id: {l last message time, r read time, p preview, t title}}}
        chat    conversation id -> {m [[from, time, text], ...] oldest first, g {name, members, owner} for a group}
-     A direct conversation's id is "d:" + the two names sorted and joined with "|"; a group's is "g" + random. */
+     A direct conversation's id is "d:" + the two names sorted and joined with "|"; a group's is "g" + random.
+     Each account also has an inbox (conversation id "inbox", chat key "x:" + name): messages from the site itself,
+     sent by administrators or automatically (a suggestion marked done), read only. */
   SX.CHAT_KEEP = 3000;         /* messages kept per conversation */
   SX.CHAT_PAGE = 60;           /* messages per load */
   SX.CHAT_LEN = 1000;          /* characters per message */
@@ -1048,6 +1050,8 @@ function normalizeCourse(input){
   var clip = function (t, n) { return typeof t === 'string' ? t.replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').trim().slice(0, n) : ''; };
   /* who is in a conversation (null: no such conversation, or not allowed) */
   var members = function (io, me, id, a) {
+    if (id === SX.INBOX) { var ib = jget(io, 'chat', 'x:' + me) || { m: [] }; if (!Array.isArray(ib.m)) ib.m = [];
+      return a.c[id] ? { list: [me], system: true, ch: ib } : null; }
     var m = /^d:([a-z0-9_.-]{3,24})\|([a-z0-9_.-]{3,24})$/.exec(id);
     if (m) { if (m[1] !== me && m[2] !== me) return null; var other = m[1] === me ? m[2] : m[1];
       return a.f.indexOf(other) >= 0 || a.c[id] ? { list: [me, other], other: other, ch: jget(io, 'chat', id) || { m: [] } } : null; }
@@ -1060,9 +1064,33 @@ function normalizeCourse(input){
   SX.socialState = function (io, me) {
     var o = soc(io, me);
     var convs = Object.keys(o.c).map(function (id) { var c = o.c[id];
-      return { id: id, title: c.t || '', group: id.charAt(0) === 'g', last: c.l || 0, unread: (c.l || 0) > (c.r || 0), preview: c.p || '' }; })
+      return { id: id, title: c.t || '', group: id.charAt(0) === 'g', system: id === SX.INBOX, last: c.l || 0, unread: (c.l || 0) > (c.r || 0), preview: c.p || '' }; })
       .sort(function (x, y) { return y.last - x.last; });
     return { friends: o.f.slice().sort(), incoming: o.i.slice(), outgoing: o.o.slice(), convs: convs };
+  };
+  /* a message from the site into one account's inbox (false: no such account, or nothing to say) */
+  SX.INBOX = 'inbox';
+  SX.INBOX_KEEP = 200;
+  SX.inboxAdd = function (io, to, text, site) {
+    to = String(to || '').trim().toLowerCase(); text = clip(text, SX.CHAT_LEN);
+    if (!okName(to) || !text || !io.exists(to)) return false;
+    var key = 'x:' + to, ch = jget(io, 'chat', key) || { m: [] }, now = io.now();
+    if (!Array.isArray(ch.m)) ch.m = [];
+    if (ch.m.length && ch.m[ch.m.length - 1][1] >= now) now = ch.m[ch.m.length - 1][1] + 1;
+    ch.m.push(['system', now, text]); ch.m = ch.m.slice(-SX.INBOX_KEEP);
+    io.put('chat', key, JSON.stringify(ch));
+    var o = soc(io, to), e = o.c[SX.INBOX] || { r: 0 };
+    e.l = now; e.p = text.slice(0, 80); e.t = site || e.t || 'Inbox'; o.c[SX.INBOX] = e; socPut(io, to, o);
+    return true;
+  };
+  /* what a suggestion's sender is told when it is marked done */
+  SX.suggDoneText = function (s) {
+    var t = clip(s && s.text, 2000).replace(/\s+/g, ' '), q = t.length > 80 ? t.slice(0, 77).replace(/\s+\S*$/, '') + '...' : t;
+    return (s && s.kind === 'bug' ? 'Your bug report "' + q + '" was fixed' : 'Your suggestion "' + q + '" was accepted');
+  };
+  SX.suggDoneNotify = function (io, s, site) {
+    if (!s || !s.user || s.user === 'guest') return false;
+    return SX.inboxAdd(io, s.user, SX.suggDoneText(s), site);
   };
   var linkFriends = function (io, me, a, name, b) { drop(a.i, name); drop(a.o, name); drop(b.i, me); drop(b.o, me);
     if (a.f.indexOf(name) < 0) a.f.push(name); if (b.f.indexOf(me) < 0) b.f.push(me); };
@@ -1096,6 +1124,16 @@ function normalizeCourse(input){
       socPut(io, me, a); socPut(io, name, c);
       return SX.socialState(io, me);
     }
+    /* administrators: a message from the site to one account's inbox, or to everyone's ("*") */
+    if (op === 'sysSend') {
+      if (!io.isAdmin || !io.isAdmin(me)) socErr('notallowed');
+      var stxt = clip(args.text, SX.CHAT_LEN), to = String(args.to || '').trim().toLowerCase();
+      if (!stxt) socErr('empty');
+      var tos = to === '*' ? (io.users ? io.users() : []) : [to];
+      if (to !== '*' && (!okName(to) || !io.exists(to))) socErr('nouser');
+      var sent = 0; tos.forEach(function (u) { if (SX.inboxAdd(io, u, stxt, io.site)) sent++; });
+      return { ok: true, sent: sent };
+    }
     if (op === 'group') {
       var title = clip(args.title, 60), list = [me];
       (Array.isArray(args.members) ? args.members : []).forEach(function (n) { n = String(n || '').trim().toLowerCase(); if (a.f.indexOf(n) >= 0 && list.indexOf(n) < 0) list.push(n); });
@@ -1109,7 +1147,8 @@ function normalizeCourse(input){
     }
     var cv = members(io, me, id, a);
     if (!cv) socErr('noconv');
-    var info = function () { return { id: id, group: !!cv.group, members: cv.list, title: cv.group ? (cv.ch.g.name || '') : cv.other, owner: cv.group ? cv.ch.g.owner : '' }; };
+    var info = function () { return { id: id, group: !!cv.group, system: !!cv.system, members: cv.list,
+      title: cv.system ? ((a.c[id] && a.c[id].t) || 'Inbox') : cv.group ? (cv.ch.g.name || '') : cv.other, owner: cv.group ? cv.ch.g.owner : '' }; };
     if (op === 'messages') {
       /* since: newer than this time (polling); before: one page older than this time (scrolling up); neither: the latest page */
       var all = cv.ch.m, since = Number(args.since) || 0, before = Number(args.before) || 0, out;
@@ -1121,6 +1160,7 @@ function normalizeCourse(input){
         messages: out.map(function (x) { return { from: x[0], time: x[1], text: x[2] }; }) };
     }
     if (op === 'send') {
+      if (cv.system) socErr('readonly');
       if (!cv.group && a.f.indexOf(cv.other) < 0) socErr('notfriend');
       var text = clip(args.text, SX.CHAT_LEN), now = io.now();
       if (!text) socErr('empty');

@@ -965,7 +965,7 @@ function rpcRoles(k, o) {
       return { ok: true, suggestions: Object.keys(sg).map(x => { try { const s = JSON.parse(sg[x]); s.user = s.user || 'guest'; return s; } catch (e) { return null; } })
         .filter(Boolean).sort((a, b) => (b.created || 0) - (a.created || 0)) }; };
     if (o.op === 'suggDone') return withLock_(() => {
-      (Array.isArray(o.ids) ? o.ids : []).forEach(id => { if (get_('sugg', String(id))) del_('sugg', String(id)); });
+      (Array.isArray(o.ids) ? o.ids : []).forEach(id => { if (get_('sugg', String(id))) { if (!o.silent) suggDoneNotify_(id); del_('sugg', String(id)); } });
       return list();
     });
     return list();
@@ -1014,7 +1014,13 @@ const socIO_ = () => ({
     return v;
   },
   put: (kind, key, v) => { put_(kind, key, v); const c = CacheService.getScriptCache(), ck = socCacheKey_(kind, key); if (v.length < 90000) c.put(ck, v, SOC_TTL_); else c.remove(ck); },
-  exists: n => !!get_('users', n), now: () => Date.now(), rand: n => Utilities.getUuid().replace(/-/g, '').slice(0, n) });
+  exists: n => !!get_('users', n), now: () => Date.now(), rand: n => Utilities.getUuid().replace(/-/g, '').slice(0, n),
+  isAdmin: n => isAdmin_(n), users: () => Object.keys(all_('users')), site: SITE_NAME_ });
+// the name the inbox shows as the sender of the site's own messages
+const SITE_NAME_ = 'Saxlan';
+// a suggestion marked done: its sender gets a message in their inbox
+const suggDoneNotify_ = id => { const v = get_('sugg', String(id)); if (!v) return;
+  try { SX.suggDoneNotify(socIO_(), JSON.parse(v), SITE_NAME_); } catch (e) {} };
 function rpcSocial(k, op, args) {
   const me = auth_(k);
   op = String(op || '');

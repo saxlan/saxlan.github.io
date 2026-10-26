@@ -120,7 +120,7 @@
   .card .body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
   .card .row1 { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .card .n { width: 30px; height: 30px; flex: none; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--pri); color: #fff;
-    font: 700 14px/1 var(--display); font-variant-numeric: tabular-nums; box-shadow: inset 0 -3px 0 var(--pri-dark); }
+    font: 700 14px/1 var(--display); font-variant-numeric: tabular-nums; box-shadow: inset 0 -3px 0 var(--pri-dark); box-sizing: border-box; padding: 0 0 4px; }
   .card .nm { font: 700 16px/1.2 var(--display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .card .row2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .card .t { font: 800 13px/1 var(--sans); font-variant-numeric: tabular-nums; color: var(--dim); }
@@ -138,8 +138,8 @@
   .card.new { align-items: center; justify-content: center; min-height: 180px; border-style: dashed; border-bottom-width: 2px; }
   .card.new .plus { width: 44px; height: 44px; position: relative; border-radius: 50%; background: var(--pri); box-shadow: inset 0 -4px 0 var(--pri-dark); }
   .card.new .plus::before, .card.new .plus::after { content: ''; position: absolute; background: #fff; border-radius: 2px; }
-  .card.new .plus::before { left: 20px; top: 11px; width: 4px; height: 20px; }
-  .card.new .plus::after { top: 19px; left: 12px; height: 4px; width: 20px; }
+  .card.new .plus::before { left: 20px; top: 10px; width: 4px; height: 20px; }
+  .card.new .plus::after { top: 18px; left: 12px; height: 4px; width: 20px; }
   .card.new .lbl { margin-top: 12px; color: var(--text); }
 
   /* play */
@@ -148,7 +148,7 @@
   .hud .lv, .hud .st div { background: var(--bg); border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 14px; }
   .hud .lv { display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; }
   .hud .lv .n { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--pri); color: #fff;
-    font: 700 15px/1 var(--display); font-variant-numeric: tabular-nums; box-shadow: inset 0 -3px 0 var(--pri-dark); }
+    font: 700 15px/1 var(--display); font-variant-numeric: tabular-nums; box-shadow: inset 0 -3px 0 var(--pri-dark); box-sizing: border-box; padding: 0 0 4px; }
   .hud .lv .nm { font: 700 17px/1 var(--display); color: var(--text); }
   .hud .hl { display: flex; gap: 8px; align-items: flex-start; }
   .hpz { pointer-events: auto; width: 54px; height: 54px; display: inline-flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; color: var(--text);
