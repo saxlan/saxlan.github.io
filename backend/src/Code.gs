@@ -410,6 +410,46 @@ const userOut_ = name => ({ name: name, owner: isOwner_(name), roles: roles_(nam
 // ---------- multiplayer rooms (games reach this only through the page's room bridge) ----------
 // Rooms live in the script cache. Only the seq increment (with the event or room change it carries) takes the lock;
 // polls take none. Polls with args.wait are long polls (roomLongPoll_).
+// shared levels (Metrica editors): a level is stored once under a 6 letter code anyone can load
+const LVL_GAMES_ = ['geodash', 'appel'];
+const LVL_ABC_ = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const LVL_MAX_ = 120000;
+const LVL_RATE_ = 40; // shares per hour per account or guest
+function lvlCode_(v) { const c = String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (!/^[A-Z0-9]{6}$/.test(c)) throw new Error('bad code'); return c; }
+function rpcLevelShare(k, g, game, data) {
+  if (LVL_GAMES_.indexOf(game) < 0) throw new Error('unknown game');
+  if (typeof data !== 'string' || data.length > LVL_MAX_) throw new Error('too big');
+  const o = JSON.parse(data);
+  if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('bad level');
+  let by = 'Guest';
+  if (k) by = auth_(k);
+  else { g = String(g || '').trim().toLowerCase(); if (!GUEST_RE_.test(g)) throw new Error('auth'); }
+  ensureStore_();
+  const h = hex_(sha_(bytes_(game + '\n' + data))).slice(0, 32);
+  const known = get_('games', 'lvlh_' + h);
+  if (known) return { ok: true, code: known };
+  const cache = CacheService.getScriptCache(), rk = 'lvlr_' + (k ? 'u_' + by : 'g_' + g), n = Number(cache.get(rk) || 0);
+  if (n >= LVL_RATE_) throw new Error('slow down');
+  cache.put(rk, String(n + 1), 3600);
+  return withLock_(() => {
+    let code = '';
+    for (let i = 0; i < 30; i++) {
+      code = ''; for (let j = 0; j < 6; j++) code += LVL_ABC_.charAt(Math.floor(Math.random() * LVL_ABC_.length));
+      if (!get_('games', 'lvl_' + code)) break;
+    }
+    put_('games', 'lvl_' + code, JSON.stringify({ g: game, d: data, by: by, t: Date.now() }));
+    put_('games', 'lvlh_' + h, code);
+    return { ok: true, code: code };
+  });
+}
+function rpcLevelGet(code) {
+  code = lvlCode_(code);
+  ensureStore_();
+  const v = get_('games', 'lvl_' + code);
+  if (!v) return { ok: false, error: 'not found' };
+  const o = JSON.parse(v);
+  return { ok: true, code: code, game: o.g, data: o.d, by: o.by || '' };
+}
 function roomIO_() {
   const cache = CacheService.getScriptCache();
   return {
@@ -1104,6 +1144,7 @@ function rpcSuggest(k, input) {
 // ---------- the functions the page may call (doPost runs nothing else) ----------
 const RPC_ = {
   rpcPing: rpcPing, rpcDailyMeme: rpcDailyMeme,
+  rpcLevelShare: rpcLevelShare, rpcLevelGet: rpcLevelGet,
   rpcSignup: rpcSignup, rpcLogin: rpcLogin, rpcLogout: rpcLogout,
   rpcGetData: rpcGetData, rpcSaveTask: rpcSaveTask, rpcDeleteTask: rpcDeleteTask, rpcSaveSettings: rpcSaveSettings,
   rpcSaveNote: rpcSaveNote, rpcDeleteNote: rpcDeleteNote, rpcSaveEvent: rpcSaveEvent, rpcDeleteEvent: rpcDeleteEvent,

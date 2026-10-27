@@ -146,6 +146,9 @@
   .meter i::after { content: ""; position: absolute; left: 8px; right: 8px; top: 3px; height: 3px; border-radius: 99px; background: rgba(255,255,255,0.35); }
   .meter.p i { background: var(--blue); }
   .lnew { margin-top: 12px; }
+  .lnew + .lnew { margin-top: 8px; }
+  .card .codein { width: 100%; height: 52px; margin: 4px 0 16px; text-align: center; font-size: 24px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; }
+  .card .codeerr { min-height: 18px; margin: -8px 0 10px; text-align: center; color: #ea2b2b; font-size: 13px; font-weight: 700; }
   .empty { padding: 26px 16px; border: 2px dashed var(--line); border-radius: 16px; color: var(--dim); font: 800 13px/1.3 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; text-align: center; }
   .pips { display: inline-flex; gap: 4px; vertical-align: middle; }
   .pips i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
@@ -167,7 +170,8 @@
   .bars .meter { height: 16px; }
   .dacts { display: flex; gap: 10px; flex-wrap: wrap; }
   .dacts .btn { min-width: 136px; }
-  .dacts .sp { flex: 1; }
+  .dacts .sp { flex-basis: 100%; height: 0; }
+  .dacts .sp ~ .btn { min-width: 0; flex: 1; }
 
   /* overlays */
   .ovl { position: absolute; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; padding: 20px; background: var(--scrim); }
@@ -635,6 +639,24 @@ var GAME = 'geodash', LSKEY = 'geodash.save', SAVE_CAP = 150000;
    Both keep their levels in this one save; a level made in Mixed (or holding a mode portal) belongs to Mixed. */
 var MIXED = (function () { var e = window.MX_ENTRY; try { if (!e && /mixed/.test(location.hash + location.search)) e = 'metrica-mixed'; } catch (x) {} return e === 'metrica-mixed'; })();
 var framed = false; try { framed = !!(window.parent && window.parent !== window); } catch (e) { framed = true; }
+/* shared levels go through the planner page: level-share {game, data} gives a 6 letter code, level-get {code} gives the level back */
+var Net = { n: 0, cb: {},
+  ask: function (type, payload, done) {
+    if (!framed) { done({ ok: false, error: 'offline' }); return; }
+    var id = 'lv' + (++Net.n); Net.cb[id] = done; payload.type = type; payload.reqId = id;
+    try { parent.postMessage(payload, '*'); } catch (e) { delete Net.cb[id]; done({ ok: false, error: 'conn' }); return; }
+    setTimeout(function () { if (Net.cb[id]) { delete Net.cb[id]; done({ ok: false, error: 'timeout' }); } }, 25000);
+  },
+  error: function (e) {
+    e = String(e || '');
+    return e === 'offline' ? 'Open Metrica from the planner to share levels' : e === 'not found' ? 'No level has that code' : e === 'bad code' ? 'Codes are 6 letters and numbers' :
+      e === 'slow down' ? 'Too many shares, try again later' : e === 'too big' ? 'This level is too big to share' : 'Couldn\'t connect, try again';
+  }
+};
+window.addEventListener('message', function (e) {
+  var m = e.data; if (!m || typeof m !== 'object' || (m.type !== 'level-share-res' && m.type !== 'level-get-res')) return;
+  var f = Net.cb[m.reqId]; if (f) { delete Net.cb[m.reqId]; f(m.res && typeof m.res === 'object' ? m.res : { ok: false }); }
+});
 /* testing mode: the planner sets window.SX_TEST for admins. Everything is open, progress shows as 100%, nothing is saved. */
 var TEST = !!window.SX_TEST;
 var S = { v: 2, prog: {}, user: [], scenes: [], mxShown: false, muted: false, theme: 'auto', att: 0, jumps: 0, nid: 1, cube: { c1: 0, c2: 2, p: 0 }, cubeT: 0 };
@@ -1475,16 +1497,18 @@ var Render = {
       var c = x1 - x0, k;
       if (t === 'brick') {
         ctx.fillStyle = C.brick2; var m = Math.max(1, Math.round(c * 0.06));
-        ctx.fillRect(x0, y0 + Math.round(c / 2) - m / 2, c, m);
-        ctx.fillRect(x0 + Math.round(c * (gy % 2 ? 0.25 : 0.5)), y0, m, Math.round(c / 2));
-        ctx.fillRect(x0 + Math.round(c * (gy % 2 ? 0.75 : 0.25)), y0 + Math.round(c / 2), m, Math.round(c / 2));
-        if (gy % 2) ctx.fillRect(x0 + Math.round(c * 0.25), y0 + Math.round(c / 2), m, Math.round(c / 2));
+        /* two courses per cell in a running bond: mortar along each course's top edge, joints at the cell edge and the middle in
+           turn, so neighbouring bricks line up (lines on an open edge are hidden under the outline) */
+        var hb = Math.round(c / 2);
+        ctx.fillRect(x0, y0, c, m); ctx.fillRect(x0, y0 + hb, c, m);
+        ctx.fillRect(x0 + hb, y0, m, hb); ctx.fillRect(x0, y0 + hb, m, c - hb);
       } else if (t === 'stone') {
         ctx.fillStyle = C.stone2;
         for (k = 0; k < 2; k++) { var r = hash(Render.vari(t, gx, gy) + k * 5); RR(ctx, x0 + c * (0.12 + k * 0.42 + r * 0.08), y0 + c * (0.18 + (k ? 0.38 : 0) + r * 0.06), c * 0.36, c * 0.24, c * 0.12); ctx.fill(); }
       } else if (t === 'wood') {
         ctx.fillStyle = C.wood2; var w = Math.max(1, Math.round(c * 0.05));
-        ctx.fillRect(x0, y0 + Math.round(c * 0.33), c, w); ctx.fillRect(x0, y0 + Math.round(c * 0.66), c, w);
+        /* three even planks per cell, so stacked cells keep the same spacing */
+        ctx.fillRect(x0, y0, c, w); ctx.fillRect(x0, y0 + Math.round(c / 3), c, w); ctx.fillRect(x0, y0 + Math.round(c * 2 / 3), c, w);
         ctx.beginPath(); ctx.arc(x0 + c * 0.2, y0 + c * 0.17, c * 0.04, 0, Math.PI * 2); ctx.arc(x0 + c * 0.8, y0 + c * 0.5, c * 0.04, 0, Math.PI * 2); ctx.fill();
       } else if (t === 'grass') {
         ctx.fillStyle = C.soil2;
@@ -2509,7 +2533,7 @@ var UI = {
     } else rows = UI.cubeOptions();
     var tb = function (k, label) { return '<button data-tab="' + k + '" class="' + (tab === k ? 'on' : '') + '">' + label + '</button>'; };
     m.innerHTML = '<div class="mwrap"><div class="mcol"><div class="seg">' + tb('main', 'Levels') + tb('user', 'Created') + tb('cube', 'Skin') + '</div>' +
-      (tab === 'cube' ? rows : '<div class="list">' + rows + '</div>') + (tab === 'user' && list.length ? '<button class="btn ghost lnew" data-a="new">New level</button>' : '') + '</div>' +
+      (tab === 'cube' ? rows : '<div class="list">' + rows + '</div>') + (tab === 'user' ? (list.length ? '<button class="btn ghost lnew" data-a="new">New level</button>' : '') + '<button class="btn ghost lnew" data-a="code">Add by code</button>' : '') + '</div>' +
       '<div class="detail" id="det"></div></div>';
     m.querySelectorAll('[data-tab]').forEach(function (b) { b.addEventListener('click', function () { UI.tab = b.getAttribute('data-tab'); UI.menu(); }); });
     m.querySelectorAll('[data-i]').forEach(function (b) { b.addEventListener('click', function () { UI.sel = +b.getAttribute('data-i'); UI.menu(); }); });
@@ -2520,6 +2544,7 @@ var UI = {
       S.cube[k] = n; S.cubeT = Date.now(); Store.save(true); UI.menu();
     }); });
     var nb = m.querySelector('[data-a=new]'); if (nb) nb.addEventListener('click', UI.newLevel);
+    var cbn = m.querySelector('[data-a=code]'); if (cbn) cbn.addEventListener('click', UI.addCode);
     if (tab === 'cube') UI.cubeDetail(); else UI.detail();
     Icons.redraw();
   },
@@ -2578,7 +2603,7 @@ var UI = {
   },
   detail: function () {
     var det = $('det'), cur = UI.current();
-    if (!cur) { det.innerHTML = '<div class="pvwrap"><canvas id="pv"></canvas></div><div class="dbody"><div class="dname">Create</div>' + (MIXED ? '<div class="dhead"><span class="lbl">Modes</span></div>' + UI.modesRow() : '') + '<div class="dacts"><button class="btn" data-a="new">New level</button></div></div>'; det.querySelector('[data-a=new]').addEventListener('click', UI.newLevel); Preview.set(null, null); return; }
+    if (!cur) { det.innerHTML = '<div class="pvwrap"><canvas id="pv"></canvas></div><div class="dbody"><div class="dname">Create</div>' + (MIXED ? '<div class="dhead"><span class="lbl">Modes</span></div>' + UI.modesRow() : '') + '<div class="dacts"><button class="btn" data-a="new">New level</button><button class="btn ghost" data-a="code">Add by code</button></div></div>'; det.querySelector('[data-a=new]').addEventListener('click', UI.newLevel); det.querySelector('[data-a=code]').addEventListener('click', UI.addCode); Preview.set(null, null); return; }
     var p = shown(cur.id), d = cur.def, main = cur.src === 'main', open = !main || Unlock.level(cur.index);
     var pips = '';
     if (main) { pips = '<span class="pips">'; for (var i = 1; i <= 5; i++) pips += '<i class="' + (i <= d.difficulty ? 'f' : '') + '"></i>'; pips += '</span>'; }
@@ -2592,14 +2617,77 @@ var UI = {
       '<div><div class="lbl"><span>Practice</span><b>' + (p.prac | 0) + '%</b></div><div class="meter p"><i style="width:' + (p.prac | 0) + '%"></i></div></div></div>' +
       (MIXED && !main ? '<div class="dhead"><span class="lbl">Modes</span></div>' + UI.modesRow() : '') +
       '<div class="dacts"><button class="btn" data-a="play"' + (open ? '' : ' disabled') + '>' + ICON.play + 'Play</button><button class="btn ghost" data-a="prac"' + (open ? '' : ' disabled') + '>Practice</button>' +
-      (main ? '' : '<div class="sp"></div><button class="btn ghost" data-a="edit">Edit</button><button class="btn danger" data-a="del">Delete</button>') + '</div></div>';
+      (main ? '' : '<div class="sp"></div><button class="btn ghost" data-a="share">Share</button><button class="btn ghost" data-a="edit">Edit</button><button class="btn danger" data-a="del">Delete</button>') + '</div></div>';
     det.querySelector('[data-a=play]').addEventListener('click', function () { UI.play(cur, {}); });
     det.querySelector('[data-a=prac]').addEventListener('click', function () { UI.play(cur, { practice: true }); });
     var eb = det.querySelector('[data-a=edit]'); if (eb) eb.addEventListener('click', function () { UI.editor(false, cur.rec); });
+    var sb = det.querySelector('[data-a=share]'); if (sb) sb.addEventListener('click', function () { UI.share(cur); });
     var db = det.querySelector('[data-a=del]'); if (db) db.addEventListener('click', function () {
       UI.confirm('Delete level', d.name, [['Delete', 'danger', function () { S.user = S.user.filter(function (q) { return q.id !== cur.id; }); delete S.prog[cur.id]; UI.selUser = null; Store.save(); UI.closeModal(); UI.menu(); }], ['Cancel', 'ghost', UI.closeModal]]);
     });
     Preview.set(W, main ? DEMOS[cur.id] : null);
+  },
+  /* share a created level: the planner stores it and hands back a code anyone can add with Add by code */
+  share: function (cur) {
+    var name = cur.def.name, data;
+    try { var o = JSON.parse(cur.rec.data); o.name = name; o.world = MIXED ? 'mixed' : 'classic'; data = JSON.stringify(o); } catch (e) { UI.toast('Couldn\'t read this level'); return; }
+    var tok = {}; UI.shareTok = tok;
+    UI.card('Sharing', name, null, [['Cancel', 'ghost', UI.closeModal]]);
+    Net.ask('level-share', { game: GAME, data: data }, function (r) {
+      if (UI.shareTok !== tok || !UI.modal) return;
+      if (!r.ok || !r.code) { UI.card('Couldn\'t share', name, null, [['Close', 'ghost', UI.closeModal]], Net.error(r.error)); return; }
+      UI.card(r.code, 'Share code for ' + name, null, [['Copy code', '', function () { UI.copy(r.code); }], ['Done', 'ghost', UI.closeModal]], 'Anyone can add it with Add by code under Created');
+    });
+  },
+  copy: function (text) {
+    var ok = function () { UI.toast('Copied'); }, old = function () {
+      var t = DOC.createElement('textarea'); t.value = text; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0'; DOC.body.appendChild(t); t.select();
+      try { DOC.execCommand('copy'); ok(); } catch (e) { UI.toast(text); } t.remove();
+    };
+    try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, old); else old(); } catch (e) { old(); }
+  },
+  /* add someone's shared level by its code; it lands in Created (Mixed levels in the Mixed world) */
+  addCode: function () {
+    var o = $('ovl');
+    o.innerHTML = '<div class="card"><div class="lbl">Created</div><div class="big">Add by code</div>' +
+      '<input class="inp codein" id="lvCode" maxlength="8" spellcheck="false" autocomplete="off" autocapitalize="characters" placeholder="ABC123" aria-label="Level code">' +
+      '<div class="codeerr" id="lvErr"></div><div class="col"><button class="btn wide" data-k="0">Add level</button><button class="btn wide ghost" data-k="1">Cancel</button></div></div>';
+    o.hidden = false;
+    var inp = $('lvCode'), err = $('lvErr'), busy = false;
+    var go = function () {
+      if (busy) return;
+      var code = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (code.length !== 6) { err.textContent = Net.error('bad code'); return; }
+      busy = true; err.textContent = ''; o.querySelector('[data-k="0"]').textContent = 'Adding';
+      Net.ask('level-get', { code: code }, function (r) {
+        busy = false; var b = o.querySelector('[data-k="0"]'); if (b) b.textContent = 'Add level';
+        if (!UI.modal || !$('lvCode')) return;
+        if (!r.ok) { err.textContent = Net.error(r.error); return; }
+        if (r.game !== GAME) { err.textContent = 'That code is for the Platformer world'; return; }
+        UI.addShared(r);
+      });
+    };
+    UI.modal = { acts: [['Add level', '', go], ['Cancel', 'ghost', UI.closeModal]] };
+    o.querySelectorAll('[data-k]').forEach(function (b) { b.addEventListener('click', function (ev) { ev.stopPropagation(); UI.modal.acts[+b.getAttribute('data-k')][2](); }); });
+    o.onpointerdown = function (ev) { ev.stopPropagation(); };
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } else if (e.key === 'Escape') { e.preventDefault(); UI.closeModal(); } });
+    setTimeout(function () { try { inp.focus(); } catch (e) {} }, 30);
+  },
+  addShared: function (r) {
+    var o; try { o = JSON.parse(r.data); } catch (e) { o = null; }
+    var mixed = !!o && (o.world === 'mixed' || isMixedRec({ data: r.data }));
+    if (o) delete o.world;
+    var def = o && Level.parse(JSON.stringify(o));
+    if (!def) { $('lvErr').textContent = 'That level couldn\'t be read'; return; }
+    var data = Level.serialize(def);
+    if (Store.size() + data.length + 120 > SAVE_CAP) { $('lvErr').textContent = 'Save is full'; return; }
+    var name = (def.name || 'Shared level').slice(0, 28), base = name, n = 2;
+    while (S.user.some(function (q) { return q.name === name; })) name = (base.slice(0, 24) + ' ' + n++);
+    var rec = { id: 'u' + (S.nid++), name: name, data: data, n: def.objects.length, ct: Date.now(), ut: Date.now(), by: String(r.by || '').slice(0, 24), code: r.code };
+    if (mixed) rec.w = 'mixed';
+    S.user.push(rec); Store.save(true); UI.closeModal();
+    if (mixed === !!MIXED) { UI.tab = 'user'; UI.selUser = rec.id; UI.menu(); UI.toast('Level added'); }
+    else UI.toast('Added to ' + (mixed ? 'Mixed' : 'Classic') + ' under Created');
   },
   newLevel: function () {
     var n = 1, name; do { name = 'Level ' + n++; } while (S.user.some(function (q) { return q.name === name; }));

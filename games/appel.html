@@ -192,6 +192,12 @@
   .panel .rows b { font: 700 17px/1 var(--display); font-variant-numeric: tabular-nums; color: var(--text); }
   .panel .rows b.new { color: var(--pri-text); }
   .panel .acts { display: flex; flex-direction: column; gap: 10px; }
+  .panel .codebig { font: 700 48px/1 var(--display); letter-spacing: 0.06em; margin: 8px 0 6px; color: var(--text); }
+  .panel .codein { width: 100%; height: 56px; margin: 14px 0 6px; padding: 0 14px; border: 2px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--text);
+    font: 800 26px/1 var(--sans); letter-spacing: 0.18em; text-align: center; text-transform: uppercase; outline: none; }
+  .panel .codein:focus { border-color: var(--pri); }
+  .panel .codeerr { min-height: 20px; margin-bottom: 12px; text-align: center; color: var(--red); font: 700 13px/1.4 var(--sans); }
+  .panel .codenote { margin: 4px 0 18px; color: var(--dim); font: 600 14px/1.4 var(--sans); }
   .panel .acts .r2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .panel .acts .r2.one { grid-template-columns: 1fr; }
   .panel .head { display: flex; justify-content: space-between; align-items: center; }
@@ -307,6 +313,7 @@
     </div>
   </section>
 
+  <div class="ov" id="ovShare"><div class="panel" id="shBody"></div></div>
   <div class="ov" id="ovSkin"><div class="panel">
     <div class="head"><div class="h2">Skin</div><button class="btn sm" id="skDone">Done</button></div>
     <div id="skBody"></div>
@@ -1648,9 +1655,10 @@ var MX = (function () {
       var b = shownBest('u' + it.id, it.level), W = Core.build(it.level);
       mh += '<div class="card" data-i="' + i + '"><div class="thumb"><canvas></canvas></div><div class="body"><div class="row1"><span class="nm">' + esc(it.level.name) + '</span></div>' +
         '<div class="row2"><span class="t' + (b ? ' ok' : '') + '">' + (b ? fmtTime(b.t) : it.level.w + ' x ' + it.level.h) + '</span>' + pips(W.gems.length, b ? b.g : 0) + '</div>' +
-        '<div class="acts"><button class="btn sm acc" data-a="play"' + (W.ok ? '' : ' disabled') + '>Play</button><button class="btn sm" data-a="edit">Edit</button><button class="btn sm ghost" data-a="del">Delete</button></div></div></div>';
+        '<div class="acts"><button class="btn sm acc" data-a="play"' + (W.ok ? '' : ' disabled') + '>Play</button><button class="btn sm" data-a="share">Share</button><button class="btn sm" data-a="edit">Edit</button><button class="btn sm ghost" data-a="del">Delete</button></div></div></div>';
     });
     mh += '<button class="card new" id="cardNew"><div class="plus"></div><div class="lbl">New level</div></button>';
+    mh += '<button class="card new" id="cardCode"><div class="plus"></div><div class="lbl">Add by code</div></button>';
     m.innerHTML = mh;
     $('myCount').textContent = SV.mine.length ? String(SV.mine.length) : '';
     Array.prototype.forEach.call(m.querySelectorAll('.card[data-i]'), function (el) {
@@ -1660,6 +1668,7 @@ var MX = (function () {
         var a = e.target.closest('[data-a]'); a = a ? a.getAttribute('data-a') : 'edit';
         if (a === 'play') { if (Core.build(it.level).ok) playLevel(it.level, 'u' + it.id, { mine: true }); }
         else if (a === 'edit') Ed.open(it.id);
+        else if (a === 'share') shareLevel(it);
         else if (a === 'del') {
           var btn = e.target.closest('[data-a]');
           if (btn.getAttribute('data-c')) { SV.mine.splice(i, 1); delete SV.best['u' + it.id]; saveSoon(); buildLevels(); }
@@ -1668,6 +1677,78 @@ var MX = (function () {
       });
     });
     $('cardNew').addEventListener('click', function () { Ed.open(null); });
+    $('cardCode').addEventListener('click', addByCode);
+  }
+  /* shared levels go through the planner page: level-share {game, data} gives a 6 letter code, level-get {code} gives the level back */
+  var netN = 0, netCb = {};
+  function netAsk(type, payload, done) {
+    if (!framed) { done({ ok: false, error: 'offline' }); return; }
+    var id = 'lv' + (++netN); netCb[id] = done; payload.type = type; payload.reqId = id;
+    try { parent.postMessage(payload, '*'); } catch (e) { delete netCb[id]; done({ ok: false, error: 'conn' }); return; }
+    setTimeout(function () { if (netCb[id]) { delete netCb[id]; done({ ok: false, error: 'timeout' }); } }, 25000);
+  }
+  window.addEventListener('message', function (e) {
+    var m = e.data; if (!m || typeof m !== 'object' || (m.type !== 'level-share-res' && m.type !== 'level-get-res')) return;
+    var f = netCb[m.reqId]; if (f) { delete netCb[m.reqId]; f(m.res && typeof m.res === 'object' ? m.res : { ok: false }); }
+  });
+  function netError(e) {
+    e = String(e || '');
+    return e === 'offline' ? 'Open Metrica from the planner to share levels' : e === 'not found' ? 'No level has that code' : e === 'bad code' ? 'Codes are 6 letters and numbers' :
+      e === 'slow down' ? 'Too many shares, try again later' : e === 'too big' ? 'This level is too big to share' : 'Couldn\'t connect, try again';
+  }
+  var shareTok = null;
+  function sharePanel(h, wire) { $('shBody').innerHTML = h; $('ovShare').classList.add('on'); if (wire) wire($('shBody')); }
+  function shareClose() { shareTok = null; $('ovShare').classList.remove('on'); $('shBody').innerHTML = ''; }
+  $('ovShare').addEventListener('pointerdown', function (e) { if (e.target === $('ovShare')) shareClose(); });
+  function copyText(text, btn) {
+    var ok = function () { if (btn) btn.textContent = 'Copied'; }, old = function () {
+      var t = document.createElement('textarea'); t.value = text; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0'; document.body.appendChild(t); t.select();
+      try { document.execCommand('copy'); ok(); } catch (e) {} t.remove();
+    };
+    try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, old); else old(); } catch (e) { old(); }
+  }
+  function shareLevel(it) {
+    var tok = {}, name = it.level.name || 'Level'; shareTok = tok;
+    sharePanel('<div class="lbl">' + esc(name) + '</div><div class="codebig">Sharing</div><div class="acts" style="margin-top:18px"><button class="btn wide" data-x="close"><span>Cancel</span></button></div>',
+      function (b) { b.querySelector('[data-x=close]').addEventListener('click', shareClose); });
+    netAsk('level-share', { game: GAME, data: JSON.stringify(it.level) }, function (r) {
+      if (shareTok !== tok) return;
+      if (!r.ok || !r.code) {
+        sharePanel('<div class="lbl">' + esc(name) + '</div><div class="codebig" style="font-size:32px">Couldn\'t share</div><div class="codenote">' + esc(netError(r.error)) + '</div><div class="acts"><button class="btn wide" data-x="close"><span>Close</span></button></div>',
+          function (b) { b.querySelector('[data-x=close]').addEventListener('click', shareClose); });
+        return;
+      }
+      sharePanel('<div class="lbl">Share code for ' + esc(name) + '</div><div class="codebig">' + esc(r.code) + '</div><div class="codenote">Anyone can add it with Add by code under My Levels</div>' +
+        '<div class="acts"><button class="btn wide acc" data-x="copy"><span>Copy code</span></button><button class="btn wide" data-x="close"><span>Done</span></button></div>',
+        function (b) { b.querySelector('[data-x=copy]').addEventListener('click', function () { copyText(r.code, this.querySelector('span')); }); b.querySelector('[data-x=close]').addEventListener('click', shareClose); });
+    });
+  }
+  function addByCode() {
+    shareTok = {};
+    sharePanel('<div class="lbl">My Levels</div><div class="codebig" style="font-size:36px">Add by code</div>' +
+      '<input class="codein" id="lvCode" maxlength="8" spellcheck="false" autocomplete="off" autocapitalize="characters" placeholder="ABC123" aria-label="Level code"><div class="codeerr" id="lvErr"></div>' +
+      '<div class="acts"><button class="btn wide acc" data-x="add"><span>Add level</span></button><button class="btn wide" data-x="close"><span>Cancel</span></button></div>', function (b) {
+      var inp = $('lvCode'), err = $('lvErr'), addB = b.querySelector('[data-x=add] span'), busy = false;
+      var go = function () {
+        if (busy) return;
+        var code = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (code.length !== 6) { err.textContent = netError('bad code'); return; }
+        busy = true; err.textContent = ''; addB.textContent = 'Adding';
+        netAsk('level-get', { code: code }, function (r) {
+          busy = false; addB.textContent = 'Add level';
+          if (!$('lvCode')) return;
+          if (!r.ok) { err.textContent = netError(r.error); return; }
+          if (r.game !== GAME) { err.textContent = 'That code is for Classic or Mixed'; return; }
+          var lv; try { lv = Core.normalize(JSON.parse(r.data)); } catch (e) { lv = null; }
+          if (!lv) { err.textContent = 'That level couldn\'t be read'; return; }
+          SV.mine.push({ id: uid(), level: lv }); saveSoon(); buildLevels(); shareClose();
+        });
+      };
+      b.querySelector('[data-x=add]').addEventListener('click', go);
+      b.querySelector('[data-x=close]').addEventListener('click', shareClose);
+      inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } else if (e.key === 'Escape') { e.preventDefault(); shareClose(); } });
+      setTimeout(function () { try { inp.focus(); } catch (e) {} }, 30);
+    });
   }
 
   /* ================= play ================= */
