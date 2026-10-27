@@ -774,12 +774,24 @@ function cleanSettings_(s) {
   return { colors: colors, periods: periods, advisoryCourse: cleanStr_(s.advisoryCourse, 16), courses: courses, coursesSet: true, fullNames: !!s.fullNames, hideGames: !!s.hideGames, hideChat: !!s.hideChat, faqNew: !!s.faqNew, gamesIntro: !!s.gamesIntro, tutorialNew: !!s.tutorialNew, lunch: ['5', '6'].reduce((o, p) => { const v = s.lunch && s.lunch[p]; if (/^[ABCD]$/.test(v)) o[p] = v; return o; }, {}),
     ical: /^(https|webcal):\/\/[^\s"'<>]+$/i.test(ical) ? ical : '' };
 }
+// a class list that slid against its ids (a class keeps its id but now has the name of another saved class whose id
+// is gone): the page's rows got out of step with the classes, so the save is refused instead of renaming classes
+function classShift_(prev, next) {
+  const key = c => SX.courseKey(c && c.name || '');
+  const nextIds = {}; (next || []).forEach(c => { nextIds[c.id] = 1; });
+  return (next || []).some(c => {
+    const p = (prev || []).find(x => x.id === c.id), k = key(c);
+    if (!p || !k || key(p) === k) return false;
+    return (prev || []).some(q => q.id !== c.id && !nextIds[q.id] && key(q) === k);
+  });
+}
 function rpcSaveSettings(k, s) {
   const me = auth_(k); small_(s); const c = cleanSettings_(s);
   // imported assignments without a class get one once the classes they belong to exist
   return mutate_(me, d => {
     // a page that saves before the account has loaded sends an empty class list: never let that wipe saved classes
     const prev = d.settings || {};
+    if (classShift_(prev.courses, c.courses)) throw new Error('classes-shift');
     if (!(c.courses || []).length && (prev.courses || []).length) {
       c.courses = prev.courses;
       ['colors', 'periods', 'lunch'].forEach(x => { if (prev[x] && !Object.keys(c[x] || {}).length) c[x] = prev[x]; });

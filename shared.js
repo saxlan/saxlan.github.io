@@ -1146,6 +1146,8 @@ function normalizeCourse(input){
   SX.syncNote = function (ix, x) { var k = key3(x.course, x.date, x.title.trim()); ix.have[k] = 1; return k; };
   SX.importIcal = function (d, events, opts) {
     var clean = opts.clean || function (v, n) { return String(v || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n); };
+    /* details keep their line breaks (a description's lists and options stay on their own lines) */
+    var cleanLines = function (v, n) { return String(v || '').replace(/\r\n?/g, '\n').replace(/[\u0000-\u0009\u000b-\u001f]/g, ' ').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, n); };
     d.tasks = d.tasks || {}; d.events = d.events || {}; d.settings = d.settings || {}; d.settings.courses = d.settings.courses || [];
     var have = {}, created = 0, added = 0, evAdded = 0;
     /* imported tasks are matched on date+title whatever class they ended up in (routed, or picked by hand) */
@@ -1196,7 +1198,7 @@ function normalizeCourse(input){
       if (have[k] || have['dt|' + ev.date + '|' + title] || SX.removedMatch(d.removed, ev.date, title)) return;
       have[k] = 1; have['dt|' + ev.date + '|' + title] = 1;
       id = opts.newId();
-      d.tasks[id] = { id: id, course: course, date: ev.date, title: title, details: clean(SX.cleanDesc(ev.description), 2000), done: false,
+      d.tasks[id] = { id: id, course: course, date: ev.date, title: title, details: cleanLines(SX.cleanDesc(ev.description), 2000), done: false,
         exam: exam, kind: exam ? 'exam' : 'hw', source: 'ical', ikey: k, created: Date.now() };
       added++;
     });
