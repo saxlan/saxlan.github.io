@@ -232,9 +232,6 @@
   .skin .buy .bp { font-size: 16px; }
   .tog { display: inline-flex; align-items: center; min-height: 28px; margin-left: 8px; padding: 0 10px; border-radius: 10px; border: 2px solid var(--line); font: 800 11px/1 var(--font); letter-spacing: 0.04em; color: var(--faint); background: #fff; cursor: pointer; }
   .tog.on { border-color: var(--blue); color: var(--blue); background: var(--blue-wash); }
-  #boostBtn { display: none; position: fixed; z-index: 6; right: max(16px, env(safe-area-inset-right)); top: max(16px, env(safe-area-inset-top)); min-height: 48px; padding: 0 16px; gap: 8px; color: #1899d6; pointer-events: auto; }
-  body.boosting #boostBtn { display: inline-flex; }
-  #boostBtn .bn { font: 700 18px/1 var(--display); font-variant-numeric: tabular-nums; }
   @media screen and (max-width: 520px) { .sh-sub { padding: 4px 14px 0; } .skins { padding: 8px 14px 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @keyframes flash { from { background: var(--blue-wash); } to { background: #fff; } }
   @media screen and (max-width: 520px) {
@@ -324,7 +321,6 @@
   <div class="btn shopBtn" id="shopBtn" role="button" tabindex="0" aria-label="Shop"><span class="shopIco"></span><span class="st">Shop</span></div>
   <div class="hBottom"><div class="btn primary launch" id="launchBtn" role="button" tabindex="0"><div class="lw"><div class="lt">Launch</div><div class="ld" id="hDest">Earth</div></div><kbd>Space</kbd></div></div>
 </div>
-<div class="btn" id="boostBtn" role="button" tabindex="-1" aria-label="Boost"><span>Boost</span><span class="bn" id="boostN">0</span><kbd>S</kbd></div>
 <div id="shop" role="dialog" aria-label="Shop">
   <div class="sh-panel">
     <div class="sh-head">
@@ -470,7 +466,7 @@
   var SX_TEST = !!window.SX_TEST; // planner testing mode: maxed out, nothing saved
   function loadProgress() {
     var pr = { landings: {}, bases: {}, towers: {}, baseOrder: [], beltDeaths: 0, kuiperDeaths: 0, muted: false, coins: 0, upgrades: {}, crashStreak: 0, shieldBank: 0, route: "outer", innerUnlocked: false, savedAt: 0,
-      coinsEarned: 0, bestLanding: 0, flights: 0, sunAt: 0, oortDeaths: 0, shieldColors: {}, shieldColor: "blue", skins: {}, skin: "classic", correctorOff: false };
+      coinsEarned: 0, bestLanding: 0, flights: 0, sunAt: 0, oortDeaths: 0, shieldColors: {}, shieldColor: "blue", skins: {}, skin: "classic" };
     try {
       // v2: everything saved before this version is discarded
       try { sessionStorage.removeItem("lander.progress"); } catch (e2) {}
@@ -592,10 +588,10 @@
       prices: [10000, 35000, 75000, 150000], effect: function (lv) { return lv ? lv + (lv === 1 ? " extra shield" : " extra shields") : "No extra shields"; } },
     { id: "coins", name: "Coin multiplier", info: "+25% coins from every landing per level", icon: "coins",
       prices: [2500, 6000, 12000, 25000], effect: function (lv) { return "\u00d7" + (1 + 0.25 * lv) + " coins"; } },
-    { id: "boost", name: "Boosters", info: "A burst of speed in the direction the rocket points, refilled every flight", icon: "boost",
+    { id: "boost", name: "Boosters", info: "Tap S or \u2193 for a burst of speed in the direction the rocket points, refilled every flight", icon: "boost",
       prices: [1200, 3000, 6500], effect: function (lv) { return lv ? lv + (lv === 1 ? " boost" : " boosts") + " per flight" : "No boosters"; } },
-    { id: "corrector", name: "Course corrector", info: "When you aren't steering, slowly turns the rocket back to within 15\u00b0 of upright", icon: "corrector",
-      prices: [2000, 5000, 10000], effect: function (lv) { return ["Not installed", "Gentle", "Steady", "Quick"][lv]; } },
+    { id: "corrector", name: "Course corrector", info: "Hold S or \u2193 to turn the rocket back upright, refilled every flight", icon: "corrector",
+      prices: [2000, 5000, 10000], effect: function (lv) { return lv ? lv + (lv === 1 ? " use" : " uses") + " per flight" : "Not installed"; } },
     { id: "heatshield", name: "Heat shield", info: "Heat builds 15% slower per level near the Sun", icon: "heat",
       prices: [1500, 3500, 7000, 12000], effect: function (lv) { return lv ? lv * 15 + "% slower heating" : "Stock hull"; } },
     { id: "heater", name: "Portable heater", info: "Cold builds 15% slower per level on Uranus, Neptune and Pluto", icon: "heater",
@@ -3438,13 +3434,11 @@
     if (!touching && !below) {
       if (L.right) L.spinVel += k * 0.01;
       if (L.left) L.spinVel -= k * 0.01;
-      // Course corrector: with no steering, ease the rocket back to within 15 deg of upright
-      if (corrLv && !L.left && !L.right) {
-        var tlt = tiltDegSigned(L.angle), cap = 0.25 + 0.25 * corrLv, acc = k * 0.002 * (1 + corrLv);
-        if (Math.abs(tlt) > 15) {
-          var want = -Math.sign(tlt) * cap;
-          L.spinVel += Math.max(-acc, Math.min(acc, want - L.spinVel));
-        } else L.spinVel *= Math.pow(0.97, k);
+      // Course corrector (held down): turn back upright, easing in, then stop by itself
+      if (fixing) {
+        var tlt = tiltDegSigned(L.angle), want = -Math.sign(tlt) * Math.min(1.5, Math.abs(tlt) * 0.05);
+        L.spinVel += (want - L.spinVel) * Math.min(1, k * 0.15);
+        if (Math.abs(tlt) < 1.5 && Math.abs(L.spinVel) < 0.08) { L.spinVel = 0; fixing = false; syncBoost(); }
       }
       L.pos.x += k * L.vel.x;
       L.pos.x = ((L.pos.x % W) + W) % W;
@@ -3752,11 +3746,31 @@
   }
 
   // Boosters: each one burns BOOST_MS at BOOST_POWER times the engine's thrust
-  var BOOST_MS = 700, BOOST_POWER = 2.5, boostsLeft = 0, corrLv = 0;
-  function syncBoost() {
-    var on = mode === "game" && boostsLeft > 0 && !lander.result && !lander.doom;
-    document.body.classList.toggle("boosting", on);
-    $("boostN").textContent = boostsLeft;
+  // Course corrector: each use, held down, turns the rocket back upright. One down key does both:
+  // a tap (released within HOLD_MS) boosts, holding past HOLD_MS starts a correction instead
+  var BOOST_MS = 700, BOOST_POWER = 2.5, boostsLeft = 0, fixesLeft = 0, fixing = false, HOLD_MS = 250;
+  var downAt = null, downTimer = 0, downHeld = false;
+  function syncBoost() {}
+  function downStart() {
+    if (downAt !== null) return;
+    downAt = Date.now(); downHeld = false;
+    clearTimeout(downTimer);
+    downTimer = setTimeout(function () { if (downAt === null) return; downHeld = true; startFix(); }, HOLD_MS);
+  }
+  function downEnd() {
+    if (downAt === null) return;
+    clearTimeout(downTimer); downAt = null;
+    if (fixing) { fixing = false; syncBoost(); return; }
+    // a tap, or a hold with no correction to make: a boost
+    if (!downHeld || fixesLeft <= 0) useBoost();
+  }
+  function startFix() {
+    var L = lander;
+    if (mode !== "game" || !controlsLive || fixesLeft <= 0 || fixing || L.result || L.doom || L.parked) return;
+    // already upright and steady: nothing to correct, the use is kept
+    if (Math.abs(tiltDegSigned(L.angle)) < 1.5 && Math.abs(L.spinVel) < 0.08) return;
+    fixesLeft--; fixing = true;
+    syncBoost();
   }
   function useBoost() {
     var L = lander;
@@ -4343,6 +4357,7 @@
   function grab(z, who) { if (holders[z].has(who)) return; holders[z].add(who); if (holders[z].size === 1) zoneOn(z); }
   function release(z, who) { if (!holders[z].delete(who)) return; if (holders[z].size === 0) zoneOff(z); }
   function releaseAll() {
+    downEnd();
     heldKeys.forEach(function (z, c) { release(z, c); }); heldKeys.clear();
     heldTouches.forEach(function (z, id) { release(z, id); }); heldTouches.clear();
   }
@@ -4387,7 +4402,7 @@
       }
       return;
     }
-    if (controlsLive && !e.metaKey && !e.ctrlKey && (k === "s" || k === "arrowdown") && !e.repeat) { useBoost(); return; }
+    if (controlsLive && !e.metaKey && !e.ctrlKey && (k === "s" || k === "arrowdown")) { if (!e.repeat) downStart(); return; }
     if (controlsLive && !e.metaKey && !e.ctrlKey) {
       var z = KEY_ZONE[k];
       if (z && !heldKeys.has(e.code)) { heldKeys.set(e.code, z); grab(z, e.code); }
@@ -4398,6 +4413,22 @@
     }
     if (mode !== "game") return;
     if (k === "k") { killAndHome(); return; }
+    if (TEST_MODE && k === "j" && !lander.result && route === "outer" && scene !== "orbit" && !homebound()) {
+      // Stops between here and the next body, in order: the asteroid belt, the Kuiper belt, the Oort cloud
+      // and the edge of the solar system (the bodies, Viridian last, come from the course as before)
+      var nbz = nextBody(), dz = distNow(), stop = null;
+      [[BELT_FROM, "ASTEROID BELT"], [KUIPER_FROM, "KUIPER BELT"], [OORT_FROM, "OORT CLOUD"], [EXIT_FROM, "EDGE OF THE SOLAR SYSTEM"]].forEach(function (z) {
+        if (!stop && dz < z[0] - 200 && nbz && z[0] < nbz.orbit) stop = z;
+      });
+      if (stop) {
+        var LZ = lander;
+        LZ.pos.y = groundLevel - (stop[0] + 300 - sceneBase) * 3.5;
+        LZ.vel = { x: 0, y: -1.5 }; LZ.angle = Math.PI * 2; LZ.spinVel = 0; LZ.parked = false;
+        spaceRocks = []; bigRocks = [];
+        flashNote(stop[1]);
+        return;
+      }
+    }
     if (TEST_MODE && k === "j" && !lander.result) {
       var nb = nextBody(), to = scene === "orbit" ? orbit.idx : homebound() ? 0 : nb ? idxOf(nb.id) : -1;
       if (to >= 0) enterSurface(to);
@@ -4414,6 +4445,8 @@
     if (k === "b" && spaceArmed) goHome();
   });
   document.addEventListener("keyup", function (e) {
+    var ku = (e.key || "").toLowerCase();
+    if (ku === "s" || ku === "arrowdown") downEnd();
     var z = heldKeys.get(e.code);
     if (z !== undefined) { heldKeys.delete(e.code); release(z, e.code); }
     if (e.key === "Meta") { heldKeys.forEach(function (zz, c) { release(zz, c); }); heldKeys.clear(); }
@@ -4551,6 +4584,7 @@
     // BASE_COINS for every base owned
     var nBases = Object.keys(BASE_BODIES).filter(baseBuilt).length, baseCoins = r.landed ? nBases * baseCoinsEach() : 0;
     if (r.landed && total > (progress.bestLanding || 0)) progress.bestLanding = Math.round(total * 10) / 10;
+    fixing = false;
     var mult = coinMult();
     var earned = r.landed ? addCoins(Math.round((Math.max(0, Math.round(total)) + baseCoins) * mult)) : 0;
     $("rMult").style.display = r.landed && mult > 1 ? "" : "none";
@@ -5108,7 +5142,6 @@
         : '<span class="bl">' + (progress.coins < price ? "Need" : "Upgrade") + '</span><span class="bp">' + COIN_SVG + fmt(price) + "</span>";
       html += '<div class="item" data-id="' + u.id + '"><div class="ic">' + ICONS[u.icon] + '</div><div><div class="nm">' + u.name +
         '</div><div class="inf lbl">' + u.info + '</div><div class="pips">' + pips + '<span class="lbl">Lv '  + lv + " of " + u.prices.length + " &#160; " + u.effect(lv) +
-        (u.id === "corrector" && lv ? '<span class="tog' + (progress.correctorOff ? "" : " on") + '" role="button" tabindex="0" data-tog="corrector">' + (progress.correctorOff ? "Off" : "On") + "</span>" : "") +
         '</span></div></div><div class="' + cls + '" role="button" tabindex="0" aria-disabled="' + (cls !== "btn primary buy") + '">' + btn + "</div></div>";
     });
     html += '<div class="sh-sub lbl">Rocket skins</div><div class="skins">';
@@ -5137,8 +5170,6 @@
     $("shopItems").innerHTML = html;
   }
   $("shopItems").addEventListener("click", function (e) {
-    var tg = e.target.closest("[data-tog]");
-    if (tg) { progress.correctorOff = !progress.correctorOff; saveProgress(); renderShop(); var t2 = $("shopItems").querySelector("[data-tog]"); if (t2) t2.focus({ preventScroll: true }); return; }
     var b = e.target.closest(".buy"); if (!b) return;
     var shc = b.getAttribute("data-shc");
     if (shc) {
@@ -5161,7 +5192,7 @@
     }
   });
   $("shopItems").addEventListener("keydown", function (e) {
-    var hit = e.target.closest(".buy") || e.target.closest("[data-tog]");
+    var hit = e.target.closest(".buy");
     if ((e.key === "Enter" || e.key === " ") && hit) { e.preventDefault(); e.stopPropagation(); hit.click(); }
   });
   function openShop() {
@@ -5221,6 +5252,7 @@
     document.body.classList.remove("athome", "launching");
     elapsed = 0;
     newRound();
+    syncBoost();
     fadeIn = 0;
     grabFocus();
   }
@@ -6713,7 +6745,7 @@
     // Shields: the upgrade's (renewed each flight) plus those banked by
     // completing bases (single use, kept until a crash spends them)
     upShieldsLeft = upLevel("shields");
-    boostsLeft = upLevel("boost"); corrLv = progress.correctorOff ? 0 : upLevel("corrector");
+    boostsLeft = upLevel("boost"); fixesLeft = upLevel("corrector"); fixing = false; downAt = null; clearTimeout(downTimer);
     shields = upShieldsLeft + (progress.shieldBank || 0); shieldEarned = {}; discovered = {}; kuiperAt = oortAt = exitAt = null;
     progress.flights = (progress.flights || 0) + 1;
     // From Earth the course is the one chosen (inner once unlocked); from a base, outward
