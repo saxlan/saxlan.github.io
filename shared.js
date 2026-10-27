@@ -1764,6 +1764,9 @@ function normalizeCourse(input){
     o = o && typeof o === 'object' ? o : {};
     var text = typeof o.text === 'string' ? o.text.replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').trim().slice(0, 2000) : '';
     if (!text) return { error: 'empty' };
+    /* slurs and strong profanity are refused, and the page names the words to take out */
+    var bad = SX.flagged(text);
+    if (bad.length) return { error: 'words', words: bad.slice(0, 8) };
     return { kind: o.kind === 'bug' ? 'bug' : 'idea', text: text };
   };
 

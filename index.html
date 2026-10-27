@@ -6178,7 +6178,7 @@ async function sendSugg(){
   const sb={kind:suggKind,text};if(!passKey)sb.device=guestId();
   try{r=await gsRun('rpcSuggest',sb,passKey||'');}catch(e){r={error:'conn'};}
   if(r&&r.ok){const d=document.getElementById('sugg');d.innerHTML=suggHTML(true);return;}
-  b.disabled=false;b.classList.remove('busy');b.textContent='Send';if(msg)msg.textContent=r&&r.error==='busy'?'Too many sent, try later':'Not sent, try again';
+  b.disabled=false;b.classList.remove('busy');b.textContent='Send';if(msg)msg.textContent=r&&r.error==='words'?'Not sent. Take out: '+(r.words||[]).join(', '):r&&r.error==='busy'?'Too many sent, try later':'Not sent, try again';
 }
 document.addEventListener('click',e=>{
   if(e.target.closest('[data-act-sugg]')){e.stopPropagation();openSugg();return;}

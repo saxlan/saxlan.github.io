@@ -1130,7 +1130,7 @@ function rpcSuggest(k, input) {
   ensureStore_();
   let me = ''; try { if (k) me = auth_(k); } catch (e) { me = ''; }
   const c = SX.cleanSuggestion(input);
-  if (c.error) return { error: c.error };
+  if (c.error) return { error: c.error, words: c.words };
   const cache = CacheService.getScriptCache(), n = Number(cache.get('suggN') || 0);
   if (n >= 60) return { error: 'busy' };
   cache.put('suggN', String(n + 1), 3600);
