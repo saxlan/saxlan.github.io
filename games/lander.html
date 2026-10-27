@@ -222,6 +222,20 @@
   .buy.off { background: var(--soft); color: var(--faint); cursor: default; }
   .buy.max { background: var(--gold-wash); border-color: #ffe48a; color: var(--gold-dark); cursor: default; }
   .item.flash { animation: flash 0.6s ease-out; }
+  .sh-sub { padding: 6px 20px 0; color: var(--purple); }
+  .skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px; padding: 10px 20px 22px; }
+  .skin { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 10px; border-radius: 16px; border: 2px solid var(--line); border-bottom-width: 4px; }
+  .skin.on { border-color: var(--blue); background: var(--blue-wash); }
+  .skin > svg { width: 40px; height: 64px; }
+  .skin .nm { font: 700 16px/1.15 var(--display); color: var(--text); }
+  .skin .buy { min-width: 0; width: 100%; min-height: 44px; flex-direction: row; }
+  .skin .buy .bp { font-size: 16px; }
+  .tog { display: inline-flex; align-items: center; min-height: 28px; margin-left: 8px; padding: 0 10px; border-radius: 10px; border: 2px solid var(--line); font: 800 11px/1 var(--font); letter-spacing: 0.04em; color: var(--faint); background: #fff; cursor: pointer; }
+  .tog.on { border-color: var(--blue); color: var(--blue); background: var(--blue-wash); }
+  #boostBtn { display: none; position: fixed; z-index: 6; right: max(16px, env(safe-area-inset-right)); top: max(16px, env(safe-area-inset-top)); min-height: 48px; padding: 0 16px; gap: 8px; color: #1899d6; pointer-events: auto; }
+  body.boosting #boostBtn { display: inline-flex; }
+  #boostBtn .bn { font: 700 18px/1 var(--display); font-variant-numeric: tabular-nums; }
+  @media screen and (max-width: 520px) { .sh-sub { padding: 4px 14px 0; } .skins { padding: 8px 14px 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @keyframes flash { from { background: var(--blue-wash); } to { background: #fff; } }
   @media screen and (max-width: 520px) {
     .sh-head { flex-wrap: wrap; padding: 14px 14px 4px; } .sh-items { padding: 10px 14px 16px; }
@@ -268,6 +282,7 @@
     <div class="row"><span>Engine Starts</span><span class="lead"></span><span class="v" id="sBurns"></span></div>
     <div class="row"><span>Planets Reached</span><span class="lead"></span><span class="v" id="sPlanets"></span></div>
     <div class="row" id="rBases" style="display:none"><span id="lBases">Base Bonus</span><span class="lead"></span><span class="v"><span id="sBases"></span><i>COINS</i></span></div>
+    <div class="row" id="rMult" style="display:none"><span>Coin Multiplier</span><span class="lead"></span><span class="v" id="sMult"></span></div>
   </div>
   <div class="btns" id="btnRow">
     <div class="btn primary wait" id="again" role="button" tabindex="0"><span id="againLabel">Play again</span><kbd>Space</kbd></div>
@@ -309,6 +324,7 @@
   <div class="btn shopBtn" id="shopBtn" role="button" tabindex="0" aria-label="Shop"><span class="shopIco"></span><span class="st">Shop</span></div>
   <div class="hBottom"><div class="btn primary launch" id="launchBtn" role="button" tabindex="0"><div class="lw"><div class="lt">Launch</div><div class="ld" id="hDest">Earth</div></div><kbd>Space</kbd></div></div>
 </div>
+<div class="btn" id="boostBtn" role="button" tabindex="-1" aria-label="Boost"><span>Boost</span><span class="bn" id="boostN">0</span><kbd>S</kbd></div>
 <div id="shop" role="dialog" aria-label="Shop">
   <div class="sh-panel">
     <div class="sh-head">
@@ -360,6 +376,10 @@
       sky: ["#020824", "#12307f", "#2c5bbd"], ground: { fill: "#24489c", rock: [222, 52, 30] }, maxR: 0.2, orbitR: 0.16 },
     { id: "pluto", name: "Pluto", appear: 500000, orbit: 540000, grav: 0.0024, pads: [32, 36, 40], starHide: 0.2,
       sky: ["#040509", "#14141d", "#2a2730"], ground: { fill: "#a68d6d", rock: [32, 22, 55] }, maxR: 0.12, orbitR: 0.1 },
+    // Past the edge of the solar system: a rogue world with toxic air. Its acid eats the hull no matter what is
+    // fitted (heat shields and heaters do nothing here), so landing has to be quick
+    { id: "rogue", name: "Viridian", appear: 960000, orbit: 1000000, grav: 0.0036, pads: [36, 40, 44], starHide: 0.45,
+      sky: ["#03140a", "#0f4a24", "#3f8f2e"], ground: { fill: "#5fae2e", rock: [96, 40, 34] }, maxR: 0.2, orbitR: 0.16 },
     // The inner route, flown after coming back to Earth: Venus, then Mercury
     { id: "venus", name: "Venus", appear: 12000, orbit: 20000, grav: 0.0034, pads: [8, 12, 16], starHide: 1,
       sky: ["#6b3c12", "#c27a2a", "#efbf73"], ground: { fill: "#99582c", rock: [22, 42, 34] }, maxR: 0.2, orbitR: 0.16 },
@@ -373,7 +393,7 @@
       sky: ["#2a0602", "#8f2207", "#f0701a"], flatSky: "#d9480f", ground: { fill: "#ffa21f", rock: [30, 90, 50] }, maxR: 0.3, orbitR: 0.22 }
   ];
   // Courses through the bodies: outward from Earth, or inward toward the Sun
-  var ROUTES = { outer: ["earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"], inner: ["earth", "venus", "mercury", "sun"] };
+  var ROUTES = { outer: ["earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "rogue"], inner: ["earth", "venus", "mercury", "sun"] };
   function idxOf(id) { for (var i = 0; i < BODIES.length; i++) if (BODIES[i].id === id) return i; return -1; }
   function routeDepth(id) { var a = ROUTES.outer.indexOf(id); return a >= 0 ? a : Math.max(0, ROUTES.inner.indexOf(id)); }
   // Coming back down to Earth from space: Earth shows up below at
@@ -418,9 +438,11 @@
   var MILESTONES = {
     real: { moon: [5000, 10000], mars: [18000, 28000], jupiter: [80000, 110000], saturn: [150000, 190000],
             uranus: [250000, 290000], neptune: [350000, 400000], pluto: [500000, 540000], belt: [40000, 60000], kuiper: [420000, 490000],
+            oort: [620000, 820000], exit: [880000, 900000], rogue: [960000, 1000000],
             venus: [12000, 20000], mercury: [30000, 42000], sun: [64000, 80000] },
     test: { moon: [1250, 2500], mars: [3750, 5000], jupiter: [7500, 10000], saturn: [11250, 12500],
             uranus: [13750, 15000], neptune: [16250, 17500], pluto: [18750, 20000], belt: [6000, 7000], kuiper: [17700, 18600],
+            oort: [20500, 21500], exit: [22000, 22600], rogue: [23750, 25000],
             venus: [1250, 2500], mercury: [3750, 5000], sun: [6250, 7500] }
   };
   var ACTIVE_MILESTONES = TEST_SPACING ? MILESTONES.test : MILESTONES.real;
@@ -431,6 +453,10 @@
   var BELT_FROM = ACTIVE_MILESTONES.belt[0], BELT_TO = ACTIVE_MILESTONES.belt[1];
   // Kuiper belt: after Neptune's orbit, before Pluto shows up
   var KUIPER_FROM = ACTIVE_MILESTONES.kuiper[0], KUIPER_TO = ACTIVE_MILESTONES.kuiper[1];
+  // Oort cloud: a wide shell of ice past Pluto. Then the edge of the solar system: from EXIT_FROM the
+  // galaxy fades in behind the stars (fully by EXIT_TO) and the little orrery fades out
+  var OORT_FROM = ACTIVE_MILESTONES.oort[0], OORT_TO = ACTIVE_MILESTONES.oort[1];
+  var EXIT_FROM = ACTIVE_MILESTONES.exit[0], EXIT_TO = ACTIVE_MILESTONES.exit[1];
 
   // ---- Session progress: landings per body, bases built, belt deaths ----
   // Kept in memory and saved to localStorage so it survives closing the tab
@@ -444,7 +470,7 @@
   var SX_TEST = !!window.SX_TEST; // planner testing mode: maxed out, nothing saved
   function loadProgress() {
     var pr = { landings: {}, bases: {}, towers: {}, baseOrder: [], beltDeaths: 0, kuiperDeaths: 0, muted: false, coins: 0, upgrades: {}, crashStreak: 0, shieldBank: 0, route: "outer", innerUnlocked: false, savedAt: 0,
-      coinsEarned: 0, bestLanding: 0, flights: 0, sunAt: 0 };
+      coinsEarned: 0, bestLanding: 0, flights: 0, sunAt: 0, oortDeaths: 0, shieldColors: {}, shieldColor: "blue", skins: {}, skin: "classic", correctorOff: false };
     try {
       // v2: everything saved before this version is discarded
       try { sessionStorage.removeItem("lander.progress"); } catch (e2) {}
@@ -563,8 +589,36 @@
     { id: "thrust", name: "Increased speed", info: "+10% engine thrust per level", icon: "engine",
       prices: [150, 350, 700, 1200], effect: function (lv) { return lv ? "+" + lv * 10 + "% thrust" : "Stock engine"; } },
     { id: "shields", name: "Additional shields", info: "+1 shield at the start of every flight", icon: "shield",
-      prices: [10000, 35000, 75000, 150000], effect: function (lv) { return lv ? lv + (lv === 1 ? " extra shield" : " extra shields") : "No extra shields"; } }
+      prices: [10000, 35000, 75000, 150000], effect: function (lv) { return lv ? lv + (lv === 1 ? " extra shield" : " extra shields") : "No extra shields"; } },
+    { id: "coins", name: "Coin multiplier", info: "+25% coins from every landing per level", icon: "coins",
+      prices: [2500, 6000, 12000, 25000], effect: function (lv) { return "\u00d7" + (1 + 0.25 * lv) + " coins"; } },
+    { id: "boost", name: "Boosters", info: "A burst of speed in the direction the rocket points, refilled every flight", icon: "boost",
+      prices: [1200, 3000, 6500], effect: function (lv) { return lv ? lv + (lv === 1 ? " boost" : " boosts") + " per flight" : "No boosters"; } },
+    { id: "corrector", name: "Course corrector", info: "When you aren't steering, slowly turns the rocket back to within 15\u00b0 of upright", icon: "corrector",
+      prices: [2000, 5000, 10000], effect: function (lv) { return ["Not installed", "Gentle", "Steady", "Quick"][lv]; } },
+    { id: "heatshield", name: "Heat shield", info: "Heat builds 15% slower per level near the Sun", icon: "heat",
+      prices: [1500, 3500, 7000, 12000], effect: function (lv) { return lv ? lv * 15 + "% slower heating" : "Stock hull"; } },
+    { id: "heater", name: "Portable heater", info: "Cold builds 15% slower per level on Uranus, Neptune and Pluto", icon: "heater",
+      prices: [1500, 3500, 7000, 12000], effect: function (lv) { return lv ? lv * 15 + "% slower freezing" : "No heater"; } },
+    { id: "neptune", name: "Neptune base permit", info: "Lets you build a launch tower and a base on Neptune, like the other base worlds", icon: "permit",
+      prices: [200000], effect: function (lv) { return lv ? "Neptune bases allowed" : "No permit"; } },
+    { id: "baseup", name: "Base upgrades", info: "Every base pays 5 more coins on each landing", icon: "base",
+      prices: [3000, 6000, 10000, 16000, 25000], effect: function (lv) { return "+" + (BASE_COINS + 5 * lv) + " coins per base"; } }
   ];
+  // Rocket skins: bought once, then picked in the shop. Colors follow the stock ship's parts.
+  var SKINS = [
+    { id: "classic", name: "Classic", price: 0, c: {} },
+    { id: "sunburst", name: "Sunburst", price: 1000, c: { hull: "#ffc800", hullDk: "#e5b400", nose: "#ff9600", noseDk: "#e08600" } },
+    { id: "ocean", name: "Ocean", price: 2000, c: { hull: "#1cb0f6", hullDk: "#1899d6", nose: "#ffffff", noseDk: "#d3dde3", win: "#ffc800", winDk: "#e5b400" } },
+    { id: "forest", name: "Forest", price: 3500, c: { hull: "#58cc02", hullDk: "#46a302", nose: "#ffc800", noseDk: "#e5b400" } },
+    { id: "grape", name: "Grape", price: 5000, c: { hull: "#ce82ff", hullDk: "#a560e8", nose: "#ff86d0", noseDk: "#e86bb8", win: "#ffffff", winDk: "#d3dde3" } },
+    { id: "midnight", name: "Midnight", price: 8000, c: { hull: "#37464f", hullDk: "#2b363d", nose: "#1cb0f6", noseDk: "#1899d6", win: "#ffc800", winDk: "#e5b400", skirt: "#5c6b75", skirtDk: "#4b5862" } },
+    { id: "gold", name: "Gold", price: 20000, c: { hull: "#ffde59", hullDk: "#f5c400", nose: "#ffffff", noseDk: "#e5e5e5", win: "#ff9600", winDk: "#e08600", skirt: "#e5b400", skirtDk: "#cc9f00" } }
+  ];
+  if (!progress.skins || typeof progress.skins !== "object") progress.skins = {};
+  if (!progress.shieldColors || typeof progress.shieldColors !== "object") progress.shieldColors = {};
+  // The Neptune permit adds Neptune to the base worlds
+  if (SX_TEST || (progress.upgrades.neptune | 0) > 0) BASE_BODIES.neptune = true;
   if (!progress.upgrades || typeof progress.upgrades !== "object") progress.upgrades = {};
   progress.coins = Math.max(0, Math.floor(Number(progress.coins) || 0));
   // Lifetime coins (for the leaderboard): saves from before it was tracked start from the coins on hand
@@ -573,6 +627,7 @@
     // testing mode: every upgrade at max, every tower and base built, the inner route open, plenty of coins
     progress.coins = 999999;
     UPGRADES.forEach(function (u) { progress.upgrades[u.id] = u.prices.length; });
+    SKINS.forEach(function (k) { progress.skins[k.id] = true; });
     Object.keys(BASE_BODIES).forEach(function (id) { progress.towers[id] = true; progress.bases[id] = true; });
     progress.shieldBank = Object.keys(BASE_BODIES).length;
     progress.innerUnlocked = true;
@@ -585,10 +640,23 @@
     if (price === null || progress.coins < price) return false;
     progress.coins -= price;
     progress.upgrades[id] = upLevel(id) + 1;
+    if (id === "neptune") BASE_BODIES.neptune = true;
     saveProgress();
     onProgress("upgrade", id);
     return true;
   }
+  function skinDef(id) { for (var i = 0; i < SKINS.length; i++) if (SKINS[i].id === id) return SKINS[i]; return null; }
+  function ownSkin(id) { var k = skinDef(id); return !!k && (k.price === 0 || !!progress.skins[id]); }
+  function buySkin(id) {
+    var k = skinDef(id);
+    if (!k || ownSkin(id) || progress.coins < k.price) return false;
+    progress.coins -= k.price; progress.skins[id] = true; progress.skin = id;
+    applySkin(); saveProgress(); onProgress("upgrade", id);
+    return true;
+  }
+  function pickSkin(id) { if (!ownSkin(id)) return false; progress.skin = id; applySkin(); saveProgress(); return true; }
+  function coinMult() { return 1 + 0.25 * upLevel("coins"); }
+  function baseCoinsEach() { return BASE_COINS + 5 * upLevel("baseup"); }
   function addCoins(n) {
     if (!(n > 0)) return 0;
     progress.coins += n;
@@ -601,6 +669,11 @@
   // reaching open-space density by about 20.
   function beltDensity() {
     var n = progress.beltDeaths;
+    return n < 5 ? 1 : 1 - clamp01(4, 20, n);
+  }
+  // ... and the Oort cloud
+  function oortDensity() {
+    var n = progress.oortDeaths || 0;
     return n < 5 ? 1 : 1 - clamp01(4, 20, n);
   }
   // Same mercy rule for the Kuiper belt
@@ -940,6 +1013,7 @@
     mars:    { hull: [28, 40, 80],  trim: [12, 55, 44],  dark: [16, 35, 20],  panel: [212, 50, 42], foot: [18, 26, 40], glow: [40, 95, 65] },
     jupiter: { hull: [36, 50, 82],  trim: [16, 48, 46],  dark: [20, 30, 26],  panel: [212, 40, 46], foot: [30, 32, 52], glow: [30, 100, 60] },
     uranus:  { hull: [192, 22, 86], trim: [186, 70, 44], dark: [200, 34, 22], panel: [210, 55, 46], foot: [195, 14, 58], glow: [186, 90, 65] },
+    neptune: { hull: [218, 24, 88], trim: [224, 70, 46], dark: [228, 42, 20], panel: [210, 55, 46], foot: [222, 16, 56], glow: [198, 95, 66] },
     venus:   { hull: [42, 34, 86],  trim: [20, 72, 42],  dark: [18, 40, 18],  panel: [208, 42, 40], foot: [26, 36, 40], glow: [44, 100, 62] },
     mercury: { hull: [210, 8, 90],  trim: [6, 70, 46],   dark: [220, 14, 16], panel: [216, 62, 44], foot: [30, 6, 44],  glow: [48, 100, 72] }
   };
@@ -1005,6 +1079,7 @@
     marsColony: ["idome", "bunker", "solarfarm"],
     mars: ["idome", "idome", "bunker", "bunker", "commsmast", "solarfarm", "pad"],
     uranus: ["saucer", "saucer", "sphere", "spire", "cryo", "cryo"],
+    neptune: ["sphere", "saucer", "spire", "cryo", "cryo", "commsmast"],
     jupiter: ["aerostat", "aerostat", "ringst", "scoop", "scoop", "aerostat"],
     // Venus: squat pressure spheres and bunkers built for the crushing air, a tall heat-venting spire
     venus: ["sphere", "sphere", "bunker", "bunker", "spire", "commsmast"],
@@ -1509,11 +1584,13 @@
     if (d) { sat = d / (1 - Math.abs(2 * l - 1)); h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; }
     return [((h * 60) + 360) % 360, sat * 100 / VIVID, l * 100];
   }
-  var MID = { venus: { haze: 0.5, y: 0.63, amp: 0.045, tint: [40, 72, 70] }, mercury: { haze: 0.4, y: 0.6, amp: 0.06 }, mars: { haze: 0.42, y: 0.6, amp: 0.05 }, jupiter: { haze: 0.5, y: 0.68, amp: 0.03 }, uranus: { haze: 0.42, y: 0.6, amp: 0.045 } };
+  var MID = { venus: { haze: 0.5, y: 0.63, amp: 0.045, tint: [40, 72, 70] }, mercury: { haze: 0.4, y: 0.6, amp: 0.06 }, mars: { haze: 0.42, y: 0.6, amp: 0.05 }, jupiter: { haze: 0.5, y: 0.68, amp: 0.03 }, uranus: { haze: 0.42, y: 0.6, amp: 0.045 }, neptune: { haze: 0.42, y: 0.6, amp: 0.045 } };
   function buildMidLayer(body, idx) {
     sceneMid = null;
     var cfg = MID[body.id];
     if (!cfg) return;
+    // Neptune keeps its plain look until its base stands
+    if (body.id === "neptune" && !baseBuilt("neptune")) return;
     var R = seeded(sceneSeed(idx, 5)), jup = body.id === "jupiter";
     // Structures only once that body's base is built (no standing Mars colony)
     var withBase = baseBuilt(body.id);
@@ -1982,6 +2059,10 @@
       var streak = soft(Math.abs(my - 0.25), 0.16);
       return [mix(222, 212, streak), 66, 40 + light * 16 + streak * 9 + rnd(-1, 1)];
     },
+    rogue: function (mx, my, light) {
+      var sw = soft(Math.abs(Math.sin(mx * 4 + my * 2.4 + 0.6)), 0.3), pool = soft(Math.hypot(mx + 0.32, my - 0.18), 0.32);
+      return [mix(98, 70, sw), mix(46, 72, sw), 32 + light * 14 + sw * 14 + pool * 12 + rnd(-1, 1)];
+    },
     pluto: function (mx, my, light) {
       var heart = soft(Math.hypot((mx - 0.2) / 1.2, my - 0.22), 0.42);
       return [mix(28, 36, heart), mix(34, 22, heart), 56 + light * 18 + heart * 18 + rnd(-1, 1)];
@@ -2237,7 +2318,7 @@
   var TRAIL = {
     earth: ["#9cc4f0", "#2f5f9e"], moon: ["#d8d8d8", "#6e6e72"], mars: ["#e09a70", "#7a3018"],
     jupiter: ["#ead2b0", "#8a6440"], saturn: ["#f0e2b8", "#9a8456"], uranus: ["#c8eef0", "#5a9aa4"],
-    neptune: ["#8aa8f0", "#1e3c90"], pluto: ["#e8d8c0", "#8a7458"]
+    neptune: ["#8aa8f0", "#1e3c90"], pluto: ["#e8d8c0", "#8a7458"], rogue: ["#b8f070", "#3c7a1e"]
   };
   var TRAIL_MOONS = {
     earth: [{ id: "moon", a: 2.3, r: 0.27, w: 0.00035 }],
@@ -2250,7 +2331,7 @@
   var trailFacets = {};
   function buildTrailFacets() {
     trailFacets = {};
-    ["mercury", "venus", "earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto",
+    ["mercury", "venus", "earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "rogue",
      "phobos", "deimos", "io", "europa", "titan", "enceladus", "mimas", "rhea", "sun"].forEach(function (id) {
       trailFacets[id] = buildFacets(id, id === "phobos" || id === "deimos", true);
     });
@@ -2301,6 +2382,57 @@
     { id: "uranus", a: 1.16, r: 5 }, { id: "neptune", a: 1.38, r: 5 }, { id: "pluto", a: 1.6, r: 2.2, ecc: true }
   ];
   var discovered = {};
+  // The Milky Way seen from outside the solar system: a deep violet field, a dusty band of light across it
+  // and a spiral galaxy, drawn once per screen size
+  var galaxy = null;
+  function buildGalaxy() {
+    var off = document.createElement("canvas");
+    off.width = Math.ceil(W * DPR); off.height = Math.ceil(H * DPR);
+    var c = off.getContext("2d"), R = seeded(97);
+    c.scale(DPR, DPR);
+    var bg = c.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, "#0a0620"); bg.addColorStop(0.55, "#170c3a"); bg.addColorStop(1, "#08122e");
+    c.fillStyle = bg; c.fillRect(0, 0, W, H);
+    // The band: soft clouds along a diagonal, then a dark dust lane through it
+    var ang = -0.42, cx = W / 2, cy = H * 0.55, len = Math.hypot(W, H);
+    var tones = ["rgba(206, 130, 255, 0.10)", "rgba(132, 216, 255, 0.08)", "rgba(255, 134, 208, 0.07)", "rgba(255, 222, 89, 0.05)"];
+    for (var i = 0; i < 70; i++) {
+      var t = R.r(-0.55, 0.55) * len, off2 = R.r(-1, 1) * Math.min(W, H) * 0.12, r = R.r(0.05, 0.16) * Math.min(W, H) * 1.4;
+      var x = cx + Math.cos(ang) * t - Math.sin(ang) * off2, y = cy + Math.sin(ang) * t + Math.cos(ang) * off2;
+      var gr = c.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, tones[i % tones.length]); gr.addColorStop(1, "rgba(0, 0, 0, 0)");
+      c.fillStyle = gr; c.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    for (var j = 0; j < 900; j++) {
+      var t2 = R.r(-0.6, 0.6) * len, o2 = (R() + R() + R() - 1.5) * Math.min(W, H) * 0.1;
+      var px = cx + Math.cos(ang) * t2 - Math.sin(ang) * o2, py = cy + Math.sin(ang) * t2 + Math.cos(ang) * o2;
+      c.fillStyle = R() < 0.15 ? "rgba(255, 236, 200, 0.75)" : "rgba(220, 230, 255, 0.5)";
+      c.fillRect(px, py, R() < 0.1 ? 2 : 1, R() < 0.1 ? 2 : 1);
+    }
+    c.save(); c.translate(cx, cy); c.rotate(ang);
+    c.fillStyle = "rgba(6, 3, 18, 0.18)";
+    c.beginPath(); c.ellipse(0, Math.min(W, H) * 0.02, len * 0.5, Math.min(W, H) * 0.025, 0, 0, Math.PI * 2); c.fill();
+    c.restore();
+    // A spiral galaxy, high on the right: two arms of stars around a bright core
+    var gx = W * 0.8, gy = H * 0.2, gs = Math.min(W, H) * 0.16, tilt = 0.45;
+    var halo = c.createRadialGradient(gx, gy, 0, gx, gy, gs * 1.2);
+    halo.addColorStop(0, "rgba(255, 236, 200, 0.55)"); halo.addColorStop(0.25, "rgba(206, 130, 255, 0.22)"); halo.addColorStop(1, "rgba(0, 0, 0, 0)");
+    c.fillStyle = halo; c.beginPath(); c.ellipse(gx, gy, gs * 1.2, gs * 1.2 * tilt, -0.3, 0, Math.PI * 2); c.fill();
+    for (var arm = 0; arm < 2; arm++) for (var k = 0; k < 260; k++) {
+      var th = k / 260 * 3.4 * Math.PI, rr = gs * 0.08 * Math.exp(th * 0.24), sp = gs * 0.05 * (0.4 + th / 6);
+      var ax = Math.cos(th + arm * Math.PI) * rr + R.r(-1, 1) * sp, ay = (Math.sin(th + arm * Math.PI) * rr + R.r(-1, 1) * sp) * tilt;
+      var qx = gx + ax * Math.cos(-0.3) - ay * Math.sin(-0.3), qy = gy + ax * Math.sin(-0.3) + ay * Math.cos(-0.3);
+      c.fillStyle = R() < 0.3 ? "rgba(132, 216, 255, 0.8)" : R() < 0.5 ? "rgba(255, 190, 230, 0.7)" : "rgba(255, 245, 225, 0.75)";
+      c.fillRect(qx, qy, 1.5, 1.5);
+    }
+    c.fillStyle = "rgba(255, 248, 230, 0.95)"; c.beginPath(); c.ellipse(gx, gy, gs * 0.07, gs * 0.07 * tilt * 1.4, -0.3, 0, Math.PI * 2); c.fill();
+    galaxy = { canvas: off, w: W, h: H };
+  }
+  function drawGalaxy(alpha) {
+    if (alpha <= 0) return;
+    if (!galaxy || galaxy.w !== W || galaxy.h !== H) buildGalaxy();
+    ctx.save(); ctx.globalAlpha = alpha; ctx.drawImage(galaxy.canvas, 0, 0, W, H); ctx.restore();
+  }
   function drawTrail(alpha) {
     if (alpha <= 0) return;
     withLayer(alpha * 0.85, drawTrailLayer);
@@ -2320,6 +2452,12 @@
       return { o: o, a: a, b: b, tilt: tilt, cx: cx, fade: fade,
         x: cx + ex * Math.cos(tilt) - ey * Math.sin(tilt), y: sy + ex * Math.sin(tilt) + ey * Math.cos(tilt), back: Math.sin(th) < 0 };
     });
+    if (discovered.oort !== undefined) {
+      // Oort cloud: a wide, faint shell of dots far past Pluto
+      var oa = 1.95 * mm, of = clamp01(discovered.oort, discovered.oort + 1500, elapsed);
+      ctx.save(); ctx.lineWidth = 6; ctx.strokeStyle = "#c8d4ff"; ctx.setLineDash([1.5, 9]); ctx.globalAlpha = 0.16 * of;
+      ctx.beginPath(); ctx.ellipse(sx, sy, oa, oa * 0.5, 0.22, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+    }
     if (discovered.kuiper !== undefined) {
       // Kuiper belt: a faint dotted ring just beyond Neptune's orbit
       var ka = 1.49 * mm, kf = clamp01(discovered.kuiper, discovered.kuiper + 1500, elapsed);
@@ -2539,7 +2677,7 @@
     L.vel = { x: 0, y: 0 }; L.spinVel = 0;
     L.hitKind = kind;
     L.doom = { kind: kind, at: elapsed, drips: [] };
-    if (kind === "heat") for (var i = 0; i < 9; i++) L.doom.drips.push({ u: rnd(-0.9, 0.9), t0: rnd(0.05, 0.75), r: rnd(2.4, 4.2), sp: rnd(0.8, 1.3) });
+    if (kind === "heat" || kind === "acid") for (var i = 0; i < 9; i++) L.doom.drips.push({ u: rnd(-0.9, 0.9), t0: rnd(0.05, 0.75), r: rnd(2.4, 4.2), sp: rnd(0.8, 1.3) });
   }
   // The ship outline in screen space: the box and its pointed nose
   function shipOutline(x, y, angle) {
@@ -2556,8 +2694,9 @@
   function drawDoomShip(L) {
     var D = L.doom, p = clamp01(0, DOOM_MS, elapsed - D.at), x = L.shown.x, y = L.shown.y;
     var pts = shipOutline(x, y, L.angle);
-    if (D.kind === "heat") {
-      // Sagging: everything slumps toward the lowest point and spreads out
+    if (D.kind === "heat" || D.kind === "acid") {
+      // Sagging: everything slumps toward the lowest point and spreads out (acid: the same, eaten away in green)
+      var ac = D.kind === "acid";
       var low = Math.max.apply(null, pts.map(function (q) { return q[1]; })), tall = LH * 1.5, sag = Math.pow(p, 1.4);
       var soft = [];
       pts.forEach(function (q, i) {
@@ -2571,10 +2710,10 @@
       });
       ctx.save();
       shipPath(soft); ctx.fillStyle = bodyGradient; ctx.fill();
-      ctx.globalAlpha = Math.min(1, p * 1.6) * 0.85; ctx.fillStyle = hsl(22, 100, 52); ctx.fill();
+      ctx.globalAlpha = Math.min(1, p * 1.6) * 0.85; ctx.fillStyle = ac ? hsl(96, 80, 44) : hsl(22, 100, 52); ctx.fill();
       ctx.globalAlpha = Math.min(1, p * 1.6) * 0.6;
       var core = soft.map(function (q) { return [x + (q[0] - x) * 0.55, low - (low - q[1]) * 0.55]; });
-      shipPath(core); ctx.fillStyle = hsl(44, 100, 64); ctx.fill();
+      shipPath(core); ctx.fillStyle = ac ? hsl(80, 90, 60) : hsl(44, 100, 64); ctx.fill();
       ctx.globalAlpha = 1;
       // Drips: a bead grows at the lower edge, stretches and falls
       D.drips.forEach(function (d) {
@@ -2582,7 +2721,7 @@
         if (q <= 0) return;
         var dx = x + d.u * LW * (0.5 + sag * 0.7), stretch = Math.min(1, q * 2) * 9 * d.sp, fall = Math.max(0, q - 0.5) * 2;
         var dy = low + fall * fall * 140 * d.sp;
-        ctx.fillStyle = q > 0.5 ? hsl(46, 100, 62) : hsl(30, 100, 56);
+        ctx.fillStyle = ac ? (q > 0.5 ? hsl(80, 90, 60) : hsl(96, 80, 46)) : q > 0.5 ? hsl(46, 100, 62) : hsl(30, 100, 56);
         ctx.beginPath(); ctx.moveTo(dx - d.r * 0.5, dy - stretch); ctx.lineTo(dx + d.r * 0.5, dy - stretch);
         ctx.lineTo(dx + d.r, dy); ctx.lineTo(dx, dy + d.r * 1.4); ctx.lineTo(dx - d.r, dy); ctx.closePath(); ctx.fill();
       });
@@ -2616,9 +2755,9 @@
   }
   // After melting: the molten hull falls apart in glowing drops that
   // settle on the ground and cool
-  function meltWreck(at, angle) {
+  function meltWreck(at, angle, acidic) {
     var x = at.x, y = Math.max.apply(null, shipOutline(at.x, at.y, angle).map(function (q) { return q[1]; })) - 4;
-    var hot = burst({ x: x, y: y }, { x: 0, y: -0.6 }, hsl(30, 100, 56), 11, 16, true), glow = burst({ x: x, y: y }, { x: 0, y: -1 }, hsl(46, 100, 62), 6, 18, true), born = elapsed;
+    var hot = burst({ x: x, y: y }, { x: 0, y: -0.6 }, acidic ? hsl(96, 80, 46) : hsl(30, 100, 56), 11, 16, true), glow = burst({ x: x, y: y }, { x: 0, y: -1 }, acidic ? hsl(80, 90, 60) : hsl(46, 100, 62), 6, 18, true), born = elapsed;
     return { draw: function (dt) {
       var a = 1 - clamp01(4000, 6000, elapsed - born);
       if (a <= 0) return;
@@ -3036,6 +3175,7 @@
     else {
       if (route === "outer" && dNow >= BELT_FROM && dNow <= BELT_TO) { progress.beltDeaths++; saveProgress(); }
       if (route === "outer" && dNow >= KUIPER_FROM && dNow <= KUIPER_TO) { progress.kuiperDeaths = (progress.kuiperDeaths || 0) + 1; saveProgress(); }
+      if (route === "outer" && dNow >= OORT_FROM && dNow <= OORT_TO) { progress.oortDeaths = (progress.oortDeaths || 0) + 1; saveProgress(); }
       r.baseNote = recordCrash();
       if (r.baseNote && r.baseNote.lost) purgeSceneBases();
       // A crashed landing attempt at a site with only a tower loses the tower
@@ -3051,7 +3191,7 @@
     } else {
       r.score = frac(Math.min(MAX_SAFE_SPEED * SPEED_TO_MPH, MAX_SAFE_ANGLE), 900, combo) * 100;
       var wAt = inSpace() ? L.shown : L.pos;
-      L.wreck = byRock && L.hitKind === "heat" ? meltWreck(wAt, L.angle) : byRock && L.hitKind === "freeze" ? iceWreck(wAt, L.vel, L.angle, !inSpace())
+      L.wreck = byRock && L.hitKind === "heat" ? meltWreck(wAt, L.angle) : byRock && L.hitKind === "acid" ? meltWreck(wAt, L.angle, true) : byRock && L.hitKind === "freeze" ? iceWreck(wAt, L.vel, L.angle, !inSpace())
         : landerBreakup(wAt, L.vel, L.angle, !inSpace());
       L.vel = { x: 0, y: 0 };
     }
@@ -3101,13 +3241,27 @@
   // a plane and pushed outward toward the rim so they foreshorten like a
   // sphere, brighter toward the edge, with a soft cyan halo.
   var barrier = null;
+  // Shield colors: bought once in the shop, then picked. fill/cell/line/flash are rgb, rim is the outline
+  var SHIELD_COLORS = [
+    { id: "blue", name: "Blue", price: 0, fill: [28, 176, 246], cell: [70, 160, 255], line: [150, 225, 255], flash: [170, 240, 255], rim: "#84d8ff" },
+    { id: "green", name: "Green", price: 1500, fill: [88, 204, 2], cell: [70, 190, 40], line: [170, 240, 120], flash: [200, 255, 170], rim: "#a5ed6e" },
+    { id: "pink", name: "Pink", price: 2500, fill: [255, 134, 208], cell: [240, 100, 190], line: [255, 190, 230], flash: [255, 215, 240], rim: "#ffb3e2" },
+    { id: "gold", name: "Gold", price: 4000, fill: [255, 200, 0], cell: [240, 180, 20], line: [255, 230, 140], flash: [255, 242, 190], rim: "#ffde59" },
+    { id: "purple", name: "Purple", price: 6000, fill: [206, 130, 255], cell: [165, 96, 232], line: [225, 190, 255], flash: [238, 215, 255], rim: "#d9a8ff" },
+    { id: "red", name: "Red", price: 10000, fill: [255, 75, 75], cell: [234, 43, 43], line: [255, 160, 160], flash: [255, 205, 205], rim: "#ff8f8f" }
+  ];
+  function shieldColorDef(id) { for (var i = 0; i < SHIELD_COLORS.length; i++) if (SHIELD_COLORS[i].id === id) return SHIELD_COLORS[i]; return SHIELD_COLORS[0]; }
+  function ownShieldColor(id) { var k = shieldColorDef(id); return k.id === id && (k.price === 0 || SX_TEST || !!progress.shieldColors[id]); }
+  function shieldCol() { return shieldColorDef(ownShieldColor(progress.shieldColor) ? progress.shieldColor : "blue"); }
+  function rgba(c, a) { return "rgba(" + c[0] + ", " + c[1] + ", " + c[2] + ", " + a + ")"; }
   function buildBarrier() {
     var RC = 64, pad = 1.25, size = Math.ceil(RC * 2 * pad * 2);
     var off = document.createElement("canvas");
     off.width = off.height = size;
     var c = off.getContext("2d"), mid = size / 2, sc = size / (2 * pad);
     c.translate(mid, mid); c.scale(sc / RC, sc / RC);
-    c.fillStyle = "rgba(28, 176, 246, 0.22)"; c.beginPath(); c.arc(0, 0, RC, 0, Math.PI * 2); c.fill();
+    var SC = shieldCol();
+    c.fillStyle = rgba(SC.fill, 0.22); c.beginPath(); c.arc(0, 0, RC, 0, Math.PI * 2); c.fill();
     var map = function (x, y) {
       var r = Math.hypot(x, y); if (r < 1e-6) return [0, 0];
       var k = Math.sin(Math.min(1, r) * Math.PI / 2) / r;
@@ -3126,12 +3280,12 @@
     cells.forEach(function (cl) {
       var f = cl.rho * cl.rho;
       c.beginPath(); cl.vs.forEach(function (q, i) { if (i) c.lineTo(q[0], q[1]); else c.moveTo(q[0], q[1]); }); c.closePath();
-      c.fillStyle = "rgba(70, 160, 255, " + (0.07 + 0.18 * f).toFixed(3) + ")"; c.fill();
-      c.strokeStyle = "rgba(150, 225, 255, " + (0.22 + 0.45 * f).toFixed(3) + ")"; c.lineWidth = 1.1; c.stroke();
+      c.fillStyle = rgba(SC.cell, (0.07 + 0.18 * f).toFixed(3)); c.fill();
+      c.strokeStyle = rgba(SC.line, (0.22 + 0.45 * f).toFixed(3)); c.lineWidth = 1.1; c.stroke();
     });
     c.restore();
-    c.strokeStyle = "#84d8ff"; c.lineWidth = 3; c.beginPath(); c.arc(0, 0, RC, 0, Math.PI * 2); c.stroke();
-    barrier = { canvas: off, RC: RC, pad: pad, cells: cells };
+    c.strokeStyle = SC.rim; c.lineWidth = 3; c.beginPath(); c.arc(0, 0, RC, 0, Math.PI * 2); c.stroke();
+    barrier = { canvas: off, RC: RC, pad: pad, cells: cells, flash: rgba(SC.flash, 0.45) };
   }
   function drawBarrier(R, alpha) {
     if (!barrier) buildBarrier();
@@ -3141,7 +3295,7 @@
     ctx.drawImage(barrier.canvas, -span, -span, span * 2, span * 2);
     // A few cells flash brighter, changing every ~120 ms
     var tick = Math.floor(elapsed / 120), k = R / barrier.RC;
-    ctx.fillStyle = "rgba(170, 240, 255, 0.45)";
+    ctx.fillStyle = barrier.flash;
     barrier.cells.forEach(function (cl, i) {
       var h = Math.sin(i * 127.1 + tick * 311.7) * 43758.5453;
       if (h - Math.floor(h) > 0.035) return;
@@ -3197,20 +3351,22 @@
   // while flying the surface; full means the lander melts or freezes solid
   var heat = 0, cold = 0, HEAT_MS = 8000, DOOM_MS = 2000;
   var COLD_MS = { uranus: 8500, neptune: 7500, pluto: 6500 };
+  // Viridian's toxic air: acid builds up steadily whatever the engine does, and no upgrade slows it
+  var acid = 0, TOXIC_MS = 40000;
   function drawHeatHud() {
-    var id = BODIES[sceneIdx].id, isHeat = id === "sun", isCold = !!COLD_MS[id];
-    if (scene !== "surface" || (!isHeat && !isCold)) return;
-    var v = Math.min(1, isHeat ? heat : cold);
+    var id = BODIES[sceneIdx].id, isHeat = id === "sun", isCold = !!COLD_MS[id], isAcid = id === "rogue";
+    if (scene !== "surface" || (!isHeat && !isCold && !isAcid)) return;
+    var v = Math.min(1, isHeat ? heat : isAcid ? acid : cold);
     // Narrow screens: top left under the shield row, clear of the top-right text
     var narrow = W < 600, w = narrow ? Math.round(Math.min(150, W * 0.38)) : Math.round(Math.min(240, W * 0.36)), h = 10;
     var x = narrow ? Math.round(hudMargin()) + 2 : Math.round((W - w) / 2), y = Math.round(narrow ? shieldRowY() + 48 : hudMargin() + 20);
     ctx.save();
     ctx.font = "800 12px " + FONT; ctx.letterSpacing = "2px"; ctx.textAlign = narrow ? "left" : "center"; ctx.textBaseline = "alphabetic";
     var warn = v > 0.75 && Math.floor(elapsed / 250) % 2;
-    ctx.fillStyle = warn ? (isHeat ? "#ff4b4b" : "#84d8ff") : "#fff";
-    ctx.fillText((isHeat ? "HEAT " : "COLD ") + Math.floor(v * 100) + "%", narrow ? x : W / 2, y - 6);
+    ctx.fillStyle = warn ? (isHeat ? "#ff4b4b" : isAcid ? "#a5ed6e" : "#84d8ff") : "#fff";
+    ctx.fillText((isHeat ? "HEAT " : isAcid ? "ACID " : "COLD ") + Math.floor(v * 100) + "%", narrow ? x : W / 2, y - 6);
     ctx.fillStyle = "rgba(255, 255, 255, 0.25)"; ctx.beginPath(); ctx.roundRect(x - 2, y, w + 4, h + 4, (h + 4) / 2); ctx.fill();
-    ctx.fillStyle = isHeat ? (v > 0.75 ? "#ff4b4b" : v > 0.45 ? "#ff9600" : "#ffc800") : (v > 0.75 ? "#1899d6" : "#84d8ff");
+    ctx.fillStyle = isHeat ? (v > 0.75 ? "#ff4b4b" : v > 0.45 ? "#ff9600" : "#ffc800") : isAcid ? (v > 0.75 ? "#58a700" : "#89e219") : (v > 0.75 ? "#1899d6" : "#84d8ff");
     if (v > 0) { ctx.beginPath(); ctx.roundRect(x, y + 2, Math.max(h, Math.round(w * v)), h, h / 2); ctx.fill(); }
     ctx.restore();
   }
@@ -3282,6 +3438,14 @@
     if (!touching && !below) {
       if (L.right) L.spinVel += k * 0.01;
       if (L.left) L.spinVel -= k * 0.01;
+      // Course corrector: with no steering, ease the rocket back to within 15 deg of upright
+      if (corrLv && !L.left && !L.right) {
+        var tlt = tiltDegSigned(L.angle), cap = 0.25 + 0.25 * corrLv, acc = k * 0.002 * (1 + corrLv);
+        if (Math.abs(tlt) > 15) {
+          var want = -Math.sign(tlt) * cap;
+          L.spinVel += Math.max(-acc, Math.min(acc, want - L.spinVel));
+        } else L.spinVel *= Math.pow(0.97, k);
+      }
       L.pos.x += k * L.vel.x;
       L.pos.x = ((L.pos.x % W) + W) % W;
       L.angle += k * (Math.PI / 180 * L.spinVel);
@@ -3294,6 +3458,10 @@
         L.vel.x *= dv; L.vel.y *= dv;
       }
       L.shown.x = L.pos.x;
+      if (L.t < (L.boostUntil || 0)) {
+        L.vel.x += k * thrust * BOOST_POWER * Math.sin(L.angle);
+        L.vel.y -= k * thrust * BOOST_POWER * Math.cos(L.angle);
+      }
       if (L.engine) {
         L.vel.x += k * thrust * Math.sin(L.angle);
         L.vel.y -= k * thrust * Math.cos(L.angle);
@@ -3466,7 +3634,11 @@
   // Flat ship art inside the unchanged outline: white hull with a shaded
   // right half, red nose cone, blue porthole and a gray engine skirt.
   // Expects the outline as the current path, centered on the hull.
-  var SHIP = { hull: "#ffffff", hullDk: "#d3dde3", nose: "#ff4b4b", noseDk: "#ea2b2b", win: "#1cb0f6", winDk: "#1899d6", skirt: "#8a9aa5", skirtDk: "#6f7f8a" };
+  var SHIP_STOCK = { hull: "#ffffff", hullDk: "#d3dde3", nose: "#ff4b4b", noseDk: "#ea2b2b", win: "#1cb0f6", winDk: "#1899d6", skirt: "#8a9aa5", skirtDk: "#6f7f8a" };
+  var SHIP = {};
+  function skinColors(id) { var k = skinDef(id) || SKINS[0], o = {}; Object.keys(SHIP_STOCK).forEach(function (p) { o[p] = k.c[p] || SHIP_STOCK[p]; }); return o; }
+  function applySkin() { if (!ownSkin(progress.skin)) progress.skin = "classic"; var o = skinColors(progress.skin); Object.keys(o).forEach(function (p) { SHIP[p] = o[p]; }); }
+  applySkin();
   function paintShipBody(g) {
     g.save();
     g.fillStyle = SHIP.hull; g.fill();
@@ -3510,6 +3682,12 @@
         ctx.closePath(); ctx.fill();
         at = end + rnd(0.05, 0.12);
       }
+    }
+    // Booster burn: a long blue flame under the stock one
+    if (jets && L.t < (L.boostUntil || 0)) {
+      var bl = rnd(46, 74), bw = LW / 2 - 1;
+      ctx.fillStyle = "#1cb0f6"; ctx.beginPath(); ctx.moveTo(LW / 2 - bw, LH); ctx.lineTo(LW / 2 + bw, LH); ctx.lineTo(LW / 2, LH + bl); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#84d8ff"; ctx.beginPath(); ctx.moveTo(LW / 2 - bw * 0.5, LH); ctx.lineTo(LW / 2 + bw * 0.5, LH); ctx.lineTo(LW / 2, LH + bl * 0.6); ctx.closePath(); ctx.fill();
     }
     function sideJet(x0, dir) {
       if (Math.random() < 0.18) return;          // a skipped puff now and then
@@ -3573,6 +3751,19 @@
     }
   }
 
+  // Boosters: each one burns BOOST_MS at BOOST_POWER times the engine's thrust
+  var BOOST_MS = 700, BOOST_POWER = 2.5, boostsLeft = 0, corrLv = 0;
+  function syncBoost() {
+    var on = mode === "game" && boostsLeft > 0 && !lander.result && !lander.doom;
+    document.body.classList.toggle("boosting", on);
+    $("boostN").textContent = boostsLeft;
+  }
+  function useBoost() {
+    var L = lander;
+    if (mode !== "game" || !controlsLive || boostsLeft <= 0 || L.result || L.doom || L.t < (L.boostUntil || 0)) return;
+    boostsLeft--; L.parked = false; L.boostUntil = L.t + BOOST_MS;
+    syncBoost();
+  }
   function engineOn() {
     var L = lander;
     if (L.engine || L.result || L.doom) return;
@@ -4067,7 +4258,7 @@
     // Earth, Venus and Mercury are always in the sky's little orrery
     if (!shieldEarned[idx] && idx > 0) { shieldEarned[idx] = true; if (body.id !== "venus" && body.id !== "mercury") discovered[body.id] = elapsed; }
     scene = "surface";
-    sceneIdx = idx; heat = cold = 0;
+    sceneIdx = idx; heat = cold = acid = 0;
     sceneBase = body.orbit || 0;
     grav = body.grav;
     orbit = null;
@@ -4096,16 +4287,20 @@
 
   // Small travel readouts: next planet top right, progress bottom right
   // "KUIPER BELT" shown briefly on entering it, small HUD style
-  var kuiperAt = null;
+  var kuiperAt = null, oortAt = null, exitAt = null;
   function drawZoneLabel() {
     var text = "KUIPER BELT", t0 = kuiperAt;
+    if (oortAt !== null && (t0 === null || oortAt > t0)) { text = "OORT CLOUD"; t0 = oortAt; }
+    if (exitAt !== null && (t0 === null || exitAt > t0)) { text = "LEAVING THE SOLAR SYSTEM"; t0 = exitAt; }
     if (t0 === null) return;
     var t = elapsed - t0;
     if (t > 3500) return;
     ctx.save();
     ctx.globalAlpha = Math.min(1, t / 400) * (1 - clamp01(2600, 3500, t));
     ctx.font = "700 12px " + FONT; ctx.letterSpacing = "3px"; ctx.textAlign = "center"; ctx.fillStyle = "#e8f0ff";
-    ctx.fillText(text, W / 2, hudMargin() + 6);
+    // below the heat, cold or acid meter when that sits in the top middle
+    var hid = BODIES[sceneIdx].id, meter = scene === "surface" && W >= 600 && (hid === "sun" || hid === "rogue" || !!COLD_MS[hid]);
+    ctx.fillText(text, W / 2, hudMargin() + 6 + (meter ? 46 : 0));
     ctx.restore();
   }
   function hudMargin() { return Math.max(12, Math.min(20, W * 0.016)); }
@@ -4192,6 +4387,7 @@
       }
       return;
     }
+    if (controlsLive && !e.metaKey && !e.ctrlKey && (k === "s" || k === "arrowdown") && !e.repeat) { useBoost(); return; }
     if (controlsLive && !e.metaKey && !e.ctrlKey) {
       var z = KEY_ZONE[k];
       if (z && !heldKeys.has(e.code)) { heldKeys.set(e.code, z); grab(z, e.code); }
@@ -4314,6 +4510,12 @@
     "The lander is now a very expensive ice cube",
     "Too long in the cold"
   ];
+  var ACID_LINES = [
+    "The acid ate through the hull",
+    "Viridian's air is not for breathing. Or for landers",
+    "Land faster, the acid never stops",
+    "Dissolved"
+  ];
   var HEAT_LINES = [
     "The heat shield gave out",
     "Too long in the Sun\u2019s glare",
@@ -4342,14 +4544,18 @@
     bonus.hidden = true;
     var total = r.score + bonus.total;
     var line = r.landed ? (r.slam ? "Hoverslam!" : landedLine(total))
-      : r.byRock ? pickLine(r.hitKind === "sat" ? SAT_LINES : r.hitKind === "ice" ? ICE_LINES : r.hitKind === "heat" ? HEAT_LINES : r.hitKind === "freeze" ? COLD_LINES : ROCK_LINES) : crashedLine(total);
+      : r.byRock ? pickLine(r.hitKind === "sat" ? SAT_LINES : r.hitKind === "ice" ? ICE_LINES : r.hitKind === "heat" ? HEAT_LINES : r.hitKind === "acid" ? ACID_LINES : r.hitKind === "freeze" ? COLD_LINES : ROCK_LINES) : crashedLine(total);
     var shown = fmt(total, 1);
     var where = BODIES[sceneIdx].name;
     // Coins: the points scored, only for a successful landing, plus
     // BASE_COINS for every base owned
-    var nBases = Object.keys(BASE_BODIES).filter(baseBuilt).length, baseCoins = r.landed ? nBases * BASE_COINS : 0;
+    var nBases = Object.keys(BASE_BODIES).filter(baseBuilt).length, baseCoins = r.landed ? nBases * baseCoinsEach() : 0;
     if (r.landed && total > (progress.bestLanding || 0)) progress.bestLanding = Math.round(total * 10) / 10;
-    var earned = r.landed ? addCoins(Math.max(0, Math.round(total)) + baseCoins) : 0;
+    var mult = coinMult();
+    var earned = r.landed ? addCoins(Math.round((Math.max(0, Math.round(total)) + baseCoins) * mult)) : 0;
+    $("rMult").style.display = r.landed && mult > 1 ? "" : "none";
+    $("sMult").textContent = "\u00d7" + mult;
+    syncBoost();
     $("rBases").style.display = baseCoins ? "" : "none";
     $("lBases").textContent = "Base Bonus (" + nBases + (nBases === 1 ? " base)" : " bases)");
     $("sBases").textContent = "+" + fmt(baseCoins);
@@ -4809,6 +5015,25 @@
     '<rect x="6" y="11" width="22" height="19" rx="4" fill="#ce82ff"/><path d="M17 11h7a4 4 0 0 1 4 4v11a4 4 0 0 1-4 4h-7z" fill="#b66df0"/>' +
     '<circle cx="12.5" cy="16.5" r="1.7" fill="#fff"/><circle cx="21.5" cy="16.5" r="1.7" fill="#fff"/></svg>';
   var ICONS = {
+    permit: '<svg viewBox="0 0 58 58" aria-hidden="true"><rect x="8" y="6" width="36" height="46" rx="6" fill="#fff" stroke="#d3dde3" stroke-width="3"/><circle cx="26" cy="22" r="9" fill="#1e4fb0"/>' +
+      '<path d="M17 21c5 2 13 2 18 0" stroke="#84a8f0" stroke-width="2.5"/><path d="M15 36h22M15 43h14" stroke="#d3dde3" stroke-width="3" stroke-linecap="round"/>' +
+      '<circle cx="44" cy="44" r="10" fill="#58cc02"/><path d="M39 44l4 4 6-7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    coins: '<svg viewBox="0 0 58 58" aria-hidden="true"><circle cx="22" cy="34" r="15" fill="#e5b400"/><circle cx="22" cy="32" r="15" fill="#ffc800"/><circle cx="22" cy="32" r="9" fill="#ffde59"/>' +
+      '<circle cx="38" cy="22" r="15" fill="#e5b400"/><circle cx="38" cy="20" r="15" fill="#ffc800"/><circle cx="38" cy="20" r="9" fill="#ffde59"/>' +
+      '<rect x="38" y="38" width="16" height="16" rx="5" fill="#58cc02"/><path d="M42 42l8 8M50 42l-8 8" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>',
+    boost: '<svg viewBox="0 0 58 58" aria-hidden="true"><path d="M29 4c7 6 10 13 10 22v12H19V26c0-9 3-16 10-22z" fill="#fff"/><path d="M29 4c7 6 10 13 10 22v12H29z" fill="#d3dde3"/>' +
+      '<circle cx="29" cy="22" r="5" fill="#1cb0f6"/><path d="M19 38h20l-4 6H23z" fill="#8a9aa5"/><path d="M21 44h16L29 58z" fill="#1cb0f6"/><path d="M25 44h8l-4 9z" fill="#84d8ff"/>' +
+      '<path d="M8 30h7M6 38h9M8 46h7" stroke="#84d8ff" stroke-width="3" stroke-linecap="round"/></svg>',
+    corrector: '<svg viewBox="0 0 58 58" aria-hidden="true"><circle cx="29" cy="31" r="23" fill="#ddf4ff"/><path d="M12 31a17 17 0 0 1 34 0" fill="none" stroke="#1cb0f6" stroke-width="4" stroke-linecap="round"/>' +
+      '<path d="M20 15l9 16 9-16" fill="none" stroke="#58cc02" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 6"/><path d="M29 31l0-20" stroke="#4b4b4b" stroke-width="4" stroke-linecap="round"/><circle cx="29" cy="31" r="5" fill="#4b4b4b"/></svg>',
+    heat: '<svg viewBox="0 0 58 58" aria-hidden="true"><circle cx="40" cy="16" r="11" fill="#ffc800"/><path d="M27 16h-6M40 32v4M51 27l3 3" stroke="#ffc800" stroke-width="3" stroke-linecap="round"/>' +
+      '<path d="M24 22l16 5v11c0 9-7 15-16 18-9-3-16-9-16-18V27z" fill="#ff9600"/><path d="M24 22l16 5v11c0 9-7 15-16 18z" fill="#e08600"/>' +
+      '<path d="M24 29l9 3v6c0 5-4 9-9 11-5-2-9-6-9-11v-6z" fill="#ffc800"/></svg>',
+    heater: '<svg viewBox="0 0 58 58" aria-hidden="true"><rect x="9" y="14" width="40" height="34" rx="8" fill="#ff4b4b"/><rect x="9" y="14" width="40" height="8" rx="4" fill="#ea2b2b"/>' +
+      '<path d="M17 28v12M25 28v12M33 28v12M41 28v12" stroke="#ffde59" stroke-width="3" stroke-linecap="round"/><rect x="14" y="48" width="6" height="5" rx="2" fill="#4b4b4b"/><rect x="38" y="48" width="6" height="5" rx="2" fill="#4b4b4b"/>' +
+      '<path d="M22 4c-3 3 3 5 0 8M30 4c-3 3 3 5 0 8M38 4c-3 3 3 5 0 8" fill="none" stroke="#ff9600" stroke-width="2.5" stroke-linecap="round"/></svg>',
+    base: '<svg viewBox="0 0 58 58" aria-hidden="true"><path d="M4 50h50" stroke="#a5a5a5" stroke-width="4" stroke-linecap="round"/><path d="M10 50V34a19 19 0 0 1 38 0v16z" fill="#d3dde3"/><path d="M29 15a19 19 0 0 1 19 19v16H29z" fill="#b6c3cc"/>' +
+      '<rect x="23" y="38" width="12" height="12" rx="3" fill="#1cb0f6"/><circle cx="44" cy="14" r="10" fill="#ffc800"/><path d="M44 9v10M39 14h10" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>',
     engine: '<svg viewBox="0 0 58 58" aria-hidden="true"><rect x="18" y="5" width="22" height="22" rx="5" fill="#d3dde3"/><path d="M29 5h-6a5 5 0 0 0-5 5v12a5 5 0 0 0 5 5h6z" fill="#fff"/>' +
       '<rect x="22" y="12" width="14" height="5" rx="2.5" fill="#1cb0f6"/><path d="M21 27h16l7 11H14z" fill="#8a9aa5"/><path d="M21 27h8v11H14z" fill="#a9b6bf"/>' +
       '<path d="M15 38h28L29 56z" fill="#ff9600"/><path d="M21 38h16l-8 12z" fill="#ffc800"/></svg>',
@@ -4864,6 +5089,7 @@
     BODIES.forEach(function (b) {
       var n = progress.landings[b.id] || 0; total += n;
       if ((b.id === "venus" || b.id === "mercury" || b.id === "sun") && !progress.innerUnlocked && !n) return;
+      if (b.id === "rogue" && !n) return;
       var tag = BASE_BODIES[b.id] ? '<span class="bs" title="Tower, base">' + baseSegs(b.id) + "</span>" : '<span class="bs na">-</span>';
       html += '<div class="lrow' + (n ? "" : " dim") + '"><span class="nm">' + b.name +
         '</span><span class="n">' + n + "</span>" + tag + "</div>";
@@ -4882,12 +5108,51 @@
         : '<span class="bl">' + (progress.coins < price ? "Need" : "Upgrade") + '</span><span class="bp">' + COIN_SVG + fmt(price) + "</span>";
       html += '<div class="item" data-id="' + u.id + '"><div class="ic">' + ICONS[u.icon] + '</div><div><div class="nm">' + u.name +
         '</div><div class="inf lbl">' + u.info + '</div><div class="pips">' + pips + '<span class="lbl">Lv '  + lv + " of " + u.prices.length + " &#160; " + u.effect(lv) +
+        (u.id === "corrector" && lv ? '<span class="tog' + (progress.correctorOff ? "" : " on") + '" role="button" tabindex="0" data-tog="corrector">' + (progress.correctorOff ? "Off" : "On") + "</span>" : "") +
         '</span></div></div><div class="' + cls + '" role="button" tabindex="0" aria-disabled="' + (cls !== "btn primary buy") + '">' + btn + "</div></div>";
     });
+    html += '<div class="sh-sub lbl">Rocket skins</div><div class="skins">';
+    SKINS.forEach(function (k) {
+      var own = ownSkin(k.id), on = progress.skin === k.id, c = skinColors(k.id);
+      var pic = '<svg viewBox="-12 -42 24 64" aria-hidden="true"><path d="M-10 -20L0 -40L10 -20V20H-10z" fill="' + c.hull + '"/><path d="M0 -40L10 -20V20H0z" fill="' + c.hullDk + '"/>' +
+        '<path d="M-10 -20L0 -40V-20z" fill="' + c.nose + '"/><path d="M0 -40L10 -20H0z" fill="' + c.noseDk + '"/><rect x="-10" y="14" width="20" height="6" fill="' + c.skirt + '"/><rect x="0" y="14" width="10" height="6" fill="' + c.skirtDk + '"/>' +
+        '<circle cx="0" cy="-8" r="6.4" fill="' + c.skirt + '"/><circle cx="0" cy="-8" r="5" fill="' + c.win + '"/><path d="M0 -13a5 5 0 0 1 0 10z" fill="' + c.winDk + '"/></svg>';
+      var b = on ? '<div class="btn buy max" role="button" tabindex="0" aria-disabled="true" data-skin="' + k.id + '"><span class="bp">In use</span></div>'
+        : own ? '<div class="btn buy" role="button" tabindex="0" data-skin="' + k.id + '"><span class="bp">Use</span></div>'
+        : '<div class="' + (progress.coins < k.price ? "btn buy off" : "btn primary buy") + '" role="button" tabindex="0" aria-disabled="' + (progress.coins < k.price) + '" data-skin="' + k.id + '"><span class="bp">' + COIN_SVG + fmt(k.price) + "</span></div>";
+      html += '<div class="skin' + (on ? " on" : "") + '">' + pic + '<div class="nm">' + k.name + "</div>" + b + "</div>";
+    });
+    html += "</div>";
+    html += '<div class="sh-sub lbl">Shield colors</div><div class="skins">';
+    SHIELD_COLORS.forEach(function (k) {
+      var own = ownShieldColor(k.id), on = shieldCol().id === k.id;
+      var pic = '<svg viewBox="0 0 64 64" aria-hidden="true" style="width:56px;height:56px"><circle cx="32" cy="32" r="28" fill="' + rgba(k.fill, 0.3) + '" stroke="' + k.rim + '" stroke-width="4"/>' +
+        '<path d="M20 22l8 -5 8 5v9l-8 5 -8 -5z M36 31l8 -5 8 5v9l-8 5 -8 -5z M20 40l8 -5 8 5v9l-8 5 -8 -5z" fill="none" stroke="' + rgba(k.line, 0.9) + '" stroke-width="2"/></svg>';
+      var b = on ? '<div class="btn buy max" role="button" tabindex="0" aria-disabled="true" data-shc="' + k.id + '"><span class="bp">In use</span></div>'
+        : own ? '<div class="btn buy" role="button" tabindex="0" data-shc="' + k.id + '"><span class="bp">Use</span></div>'
+        : '<div class="' + (progress.coins < k.price ? "btn buy off" : "btn primary buy") + '" role="button" tabindex="0" aria-disabled="' + (progress.coins < k.price) + '" data-shc="' + k.id + '"><span class="bp">' + COIN_SVG + fmt(k.price) + "</span></div>";
+      html += '<div class="skin' + (on ? " on" : "") + '">' + pic + '<div class="nm">' + k.name + "</div>" + b + "</div>";
+    });
+    html += "</div>";
     $("shopItems").innerHTML = html;
   }
   $("shopItems").addEventListener("click", function (e) {
+    var tg = e.target.closest("[data-tog]");
+    if (tg) { progress.correctorOff = !progress.correctorOff; saveProgress(); renderShop(); var t2 = $("shopItems").querySelector("[data-tog]"); if (t2) t2.focus({ preventScroll: true }); return; }
     var b = e.target.closest(".buy"); if (!b) return;
+    var shc = b.getAttribute("data-shc");
+    if (shc) {
+      var kk = shieldColorDef(shc), ok = false;
+      if (ownShieldColor(shc)) ok = true;
+      else if (progress.coins >= kk.price) { progress.coins -= kk.price; progress.shieldColors[shc] = true; ok = true; }
+      if (ok) { progress.shieldColor = shc; barrier = null; saveProgress(); refreshHome(); var nb3 = $("shopItems").querySelector('[data-shc="' + shc + '"]'); if (nb3) nb3.focus({ preventScroll: true }); }
+      return;
+    }
+    var sk = b.getAttribute("data-skin");
+    if (sk) {
+      if (ownSkin(sk) ? pickSkin(sk) : buySkin(sk)) { refreshHome(); var nb2 = $("shopItems").querySelector('[data-skin="' + sk + '"]'); if (nb2) nb2.focus({ preventScroll: true }); }
+      return;
+    }
     var item = b.closest(".item"), id = item.getAttribute("data-id");
     if (buyUpgrade(id)) {
       refreshHome();
@@ -4896,7 +5161,8 @@
     }
   });
   $("shopItems").addEventListener("keydown", function (e) {
-    if ((e.key === "Enter" || e.key === " ") && e.target.closest(".buy")) { e.preventDefault(); e.stopPropagation(); e.target.closest(".buy").click(); }
+    var hit = e.target.closest(".buy") || e.target.closest("[data-tog]");
+    if ((e.key === "Enter" || e.key === " ") && hit) { e.preventDefault(); e.stopPropagation(); hit.click(); }
   });
   function openShop() {
     if (mode !== "home" || shopOpen) return;
@@ -6026,7 +6292,7 @@
         return { intro: [], loop: [v1, v2, v3, v4, v5, v6, v7] };
       }
     };
-    var BODY_THEME = { earth: "epic", venus: "venus", mercury: "mercury", moon: "mercury", mars: "mars", jupiter: "jupiter", saturn: "saturn", uranus: "uranus", neptune: "neptune", pluto: "venus", sun: "epic" };
+    var BODY_THEME = { earth: "epic", venus: "venus", mercury: "mercury", moon: "mercury", mars: "mars", jupiter: "jupiter", saturn: "saturn", uranus: "uranus", neptune: "neptune", pluto: "venus", rogue: "neptune", sun: "epic" };
     // ---- Track 2: epic trailer theme, D minor (original) ----
     // Loop of 36 bars, 4/4: open (4) grand impact over the organ ostinato;
     // build (8) i-bVI-bIII-bVII, taiko and spiccato strings rising, choir hits;
@@ -6447,11 +6713,12 @@
     // Shields: the upgrade's (renewed each flight) plus those banked by
     // completing bases (single use, kept until a crash spends them)
     upShieldsLeft = upLevel("shields");
-    shields = upShieldsLeft + (progress.shieldBank || 0); shieldEarned = {}; discovered = {}; kuiperAt = null;
+    boostsLeft = upLevel("boost"); corrLv = progress.correctorOff ? 0 : upLevel("corrector");
+    shields = upShieldsLeft + (progress.shieldBank || 0); shieldEarned = {}; discovered = {}; kuiperAt = oortAt = exitAt = null;
     progress.flights = (progress.flights || 0) + 1;
     // From Earth the course is the one chosen (inner once unlocked); from a base, outward
     route = progress.innerUnlocked && progress.route === "inner" ? "inner" : "outer";
-    earthArmed = false; turnMs = 0; homeward = false; backMs = onwardMs = 0; hudNote = null; heat = cold = 0;
+    earthArmed = false; turnMs = 0; homeward = false; backMs = onwardMs = 0; hudNote = null; heat = cold = acid = 0;
     scene = "surface"; sceneIdx = 0; sceneBase = 0; grav = BODIES[0].grav; orbit = null; fadeIn = null;
     extraConfetti = [];
     buildGround(BODIES[0]);
@@ -6516,7 +6783,9 @@
     // Venus's air is opaque: stars and the far bodies show only near its top
     var clear = here.id === "venus" ? Math.pow(1 - air, 3) : 1 - air;
     var starFade = here.id === "venus" ? clear : 1 - air * here.starHide;
-    drawTrail(clamp01(0, -H, L.pos.y) * clear);
+    var gal = route === "outer" ? clamp01(EXIT_FROM, EXIT_TO, distNow()) : 0;
+    if (gal > 0) drawGalaxy(gal * clear);
+    drawTrail(clamp01(0, -H, L.pos.y) * clear * (1 - gal));
     if (starFade > 0) {
       drawStars(L.vel, dt, starFade);
       drawConstellations(L.vel, dt, starFade);
@@ -6535,11 +6804,14 @@
     if (scene === "surface" && !L.result && !L.parked && !L.doom) {
       if (here.id === "sun") {
         var near = L.pos.y > -H * 2 ? clamp01(-H * 2, groundLevel, L.pos.y) : 0;
-        heat = Math.max(0, heat + dt / HEAT_MS * (near * near * 1.4 - 0.25));
+        heat = Math.max(0, heat + dt / HEAT_MS * (near * near * 1.4 * (1 - 0.15 * upLevel("heatshield")) - 0.25));
         if (heat >= 1) { heat = 1; startDoom("heat"); }
       } else if (COLD_MS[here.id]) {
-        cold = Math.max(0, cold + dt / COLD_MS[here.id] * (L.engine ? -1.5 : 1));
+        cold = Math.max(0, cold + dt / COLD_MS[here.id] * (L.engine ? -1.5 : 1 - 0.15 * upLevel("heater")));
         if (cold >= 1) { cold = 1; startDoom("freeze"); }
+      } else if (here.id === "rogue") {
+        acid = Math.min(1, acid + dt / TOXIC_MS);
+        if (acid >= 1) startDoom("acid");
       }
     }
     var outer = route === "outer";
@@ -6549,6 +6821,15 @@
     if (inKuiper && discovered.kuiper === undefined) discovered.kuiper = elapsed;
     if (inKuiper && kuiperAt === null) kuiperAt = elapsed;
     if (!inKuiper) kuiperAt = null;
+    // Past Pluto: the Oort cloud, then the edge of the solar system
+    var pastPluto = outer && here.id === "pluto";
+    if (outer && d > OORT_TO && progress.oortDeaths) { progress.oortDeaths = 0; saveProgress(); }
+    var inOort = pastPluto && d >= OORT_FROM && d <= OORT_TO;
+    if (inOort && discovered.oort === undefined) discovered.oort = elapsed;
+    if (inOort && oortAt === null) oortAt = elapsed;
+    if (!inOort) oortAt = null;
+    if (pastPluto && d >= EXIT_FROM && exitAt === null) exitAt = elapsed;
+    if (!pastPluto || d < EXIT_FROM) exitAt = null;
     if (next && next.facets && d < next.appear - 3000) releasePlanet(next);
     if (next && d >= next.appear) {
       var lay = approachLayout(next, d);
@@ -6617,7 +6898,7 @@
       // The belt between Mars and Jupiter is far busier than open space
       var belt = outer && d >= BELT_FROM && d <= BELT_TO, wide = W / 800, dens = belt ? beltDensity() : 0;
       // The Kuiper belt: icy bodies, a little sparser than the asteroid belt
-      var kd = inKuiper ? kuiperDensity() : 0, ice = inKuiper && kd > 0;
+      var kd = inKuiper ? kuiperDensity() : inOort ? oortDensity() * 0.75 : 0, ice = (inKuiper || inOort) && kd > 0;
       if (d >= fb.orbit && Math.round(rnd(0, (ice ? mix(100, 5, kd) : mix(100, 10, dens)) / wide)) === 0) spaceRocks.push(SpaceRock(ice));
       if (d >= fb.orbit && Math.round(rnd(0, (ice ? mix(700, 30, kd) : mix(700, 60, dens)) / wide)) === 0) bigRocks.push(BigRock("space", ice));
       if (Math.round(rnd(0, 2200 / wide)) === 0) bigRocks.push(Satellite());
