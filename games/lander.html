@@ -228,6 +228,8 @@
   .skin.on { border-color: var(--blue); background: var(--blue-wash); }
   .skin > svg { width: 40px; height: 64px; }
   .skin .nm { font: 700 16px/1.15 var(--display); color: var(--text); }
+  .skin .inf { text-transform: none; letter-spacing: 0; font-size: 12px; text-align: center; min-height: 30px; }
+  #shTabs { padding: 4px 20px 0; }
   .skin .buy { min-width: 0; width: 100%; min-height: 44px; flex-direction: row; }
   .skin .buy .bp { font-size: 16px; }
   .tog { display: inline-flex; align-items: center; min-height: 28px; margin-left: 8px; padding: 0 10px; border-radius: 10px; border: 2px solid var(--line); font: 800 11px/1 var(--font); letter-spacing: 0.04em; color: var(--faint); background: #fff; cursor: pointer; }
@@ -279,6 +281,7 @@
     <div class="row"><span>Engine Starts</span><span class="lead"></span><span class="v" id="sBurns"></span></div>
     <div class="row"><span>Planets Reached</span><span class="lead"></span><span class="v" id="sPlanets"></span></div>
     <div class="row" id="rBases" style="display:none"><span id="lBases">Base Bonus</span><span class="lead"></span><span class="v"><span id="sBases"></span><i>COINS</i></span></div>
+    <div class="row" id="rSkin" style="display:none"><span id="lSkin">Skin Bonus</span><span class="lead"></span><span class="v"><span id="sSkin"></span><i>COINS</i></span></div>
     <div class="row" id="rMult" style="display:none"><span>Coin Multiplier</span><span class="lead"></span><span class="v" id="sMult"></span></div>
   </div>
   <div class="btns" id="btnRow">
@@ -315,7 +318,7 @@
     <div class="tut card" id="tut"></div>
     <script>if (window.SX_TEST) document.write('<span class="sxtest">TEST</span>');</script>
   </div>
-  <div class="log card" id="hLog"><h2><span class="ttl">Flight log</span><span class="lbl" id="hTotal"></span></h2><div class="lhead lbl"><span>Body</span><span>Landings</span><span style="text-align:right">Base</span></div><div class="rows" id="hRows"></div><div class="route" id="hRoute"><span class="lbl">Route</span><span class="cap" role="button" tabindex="0" data-r="outer">Outer</span><span class="cap" role="button" tabindex="0" data-r="inner">Inner</span></div></div>
+  <div class="log card" id="hLog"><h2><span class="ttl">Flight log</span><span class="lbl" id="hTotal"></span></h2><div class="lhead lbl"><span>Body</span><span>Landings</span><span style="text-align:right">Base</span></div><div class="rows" id="hRows"></div><div class="route on"><span class="cap" role="button" tabindex="0" id="hExtra">Additional planets</span></div><div class="route" id="hRoute"><span class="lbl">Route</span><span class="cap" role="button" tabindex="0" data-r="outer">Outer</span><span class="cap" role="button" tabindex="0" data-r="inner">Inner</span></div></div>
   <div class="btn muteBtn" id="muteBtn" role="button" tabindex="0"><span class="st">Sound on</span><kbd>M</kbd></div>
   <div class="btn lbBtn" id="lbBtn" role="button" tabindex="0"><span class="st">Leaderboard</span></div>
   <div class="btn shopBtn" id="shopBtn" role="button" tabindex="0" aria-label="Shop"><span class="shopIco"></span><span class="st">Shop</span></div>
@@ -324,10 +327,11 @@
 <div id="shop" role="dialog" aria-label="Shop">
   <div class="sh-panel">
     <div class="sh-head">
-      <div class="tt"><div class="sh-kicker lbl">Hangar 07</div><div class="sh-title">Workshop</div></div>
+      <div class="tt"><div class="sh-kicker lbl" id="shKick">Hangar 01</div><div class="sh-title" id="shTitle">Workshop</div></div>
       <div class="sh-coins"><span class="coinIco"></span><span class="num" id="sCoins">0</span></div>
       <div class="btn sh-x" id="shopX" role="button" tabindex="0" aria-label="Close">&#215;</div>
     </div>
+    <div class="lb-tabs" id="shTabs"><span class="cap on" role="button" tabindex="0" data-h="1">Hangar 01</span><span class="cap" role="button" tabindex="0" data-h="2">Hangar 02</span><span class="cap" role="button" tabindex="0" data-h="3">Hangar 03</span></div>
     <div class="sh-items" id="shopItems"></div>
   </div>
 </div>
@@ -372,10 +376,20 @@
       sky: ["#020824", "#12307f", "#2c5bbd"], ground: { fill: "#24489c", rock: [222, 52, 30] }, maxR: 0.2, orbitR: 0.16 },
     { id: "pluto", name: "Pluto", appear: 500000, orbit: 540000, grav: 0.0024, pads: [32, 36, 40], starHide: 0.2,
       sky: ["#040509", "#14141d", "#2a2730"], ground: { fill: "#a68d6d", rock: [32, 22, 55] }, maxR: 0.12, orbitR: 0.1 },
-    // Past the edge of the solar system: a rogue world with toxic air. Its acid eats the hull no matter what is
-    // fitted (heat shields and heaters do nothing here), so landing has to be quick
-    { id: "rogue", name: "Viridian", appear: 960000, orbit: 1000000, grav: 0.0036, pads: [36, 40, 44], starHide: 0.45,
+    // Past the edge of the solar system. Nomad: banded like Jupiter, and its whole surface drifts sideways,
+    // carrying the pads with it
+    { id: "nomad", name: "Nomad", appear: 960000, orbit: 1000000, grav: 0.0038, pads: [36, 40, 44], starHide: 0.85,
+      sky: ["#2a1a0e", "#8a5e38", "#d9b183"], ground: { fill: "#b5855a", rock: [26, 38, 42] }, maxR: 0.22, orbitR: 0.18 },
+    // Viridian: a rogue world with toxic air. Its acid eats the hull no matter what is fitted (heat shields and
+    // heaters do nothing here), so landing has to be quick
+    { id: "rogue", name: "Viridian", appear: 1450000, orbit: 1500000, grav: 0.0036, pads: [36, 40, 44], starHide: 0.45,
       sky: ["#03140a", "#0f4a24", "#3f8f2e"], ground: { fill: "#5fae2e", rock: [96, 40, 34] }, maxR: 0.2, orbitR: 0.16 },
+    // Ignis: a volcanic world under dark ash. Far too hot for the lander: a drone flies down instead, and has to
+    // meet the lander (floating overhead) to leave again. The hull heats up fast near the ground
+    { id: "ignis", name: "Ignis", appear: 2150000, orbit: 2200000, grav: 0.004, pads: [44, 48, 52], starHide: 0.95, drone: true,
+      sky: ["#141416", "#2c2c30", "#46403e"], flatSky: "#2c2c30", ground: { fill: "#3a3a3e", rock: [0, 0, 24] }, maxR: 0.2, orbitR: 0.16 },
+    { id: "heaven", name: "Elysium", appear: 0, orbit: 10000, grav: 0.003, pads: [70, 77, 84], starHide: 1,
+      sky: ["#fff3cf", "#ffe7a8", "#fffdf4"], flatSky: "#fff5d6", ground: { fill: "#f4efe4", rock: [44, 40, 86] }, maxR: 0.24, orbitR: 0.18 },
     // The inner route, flown after coming back to Earth: Venus, then Mercury
     { id: "venus", name: "Venus", appear: 12000, orbit: 20000, grav: 0.0034, pads: [8, 12, 16], starHide: 1,
       sky: ["#6b3c12", "#c27a2a", "#efbf73"], ground: { fill: "#99582c", rock: [22, 42, 34] }, maxR: 0.2, orbitR: 0.16 },
@@ -389,7 +403,7 @@
       sky: ["#2a0602", "#8f2207", "#f0701a"], flatSky: "#d9480f", ground: { fill: "#ffa21f", rock: [30, 90, 50] }, maxR: 0.3, orbitR: 0.22 }
   ];
   // Courses through the bodies: outward from Earth, or inward toward the Sun
-  var ROUTES = { outer: ["earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "rogue"], inner: ["earth", "venus", "mercury", "sun"] };
+  var ROUTES = { outer: ["earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "nomad", "rogue", "ignis"], inner: ["earth", "venus", "mercury", "sun"] };
   function idxOf(id) { for (var i = 0; i < BODIES.length; i++) if (BODIES[i].id === id) return i; return -1; }
   function routeDepth(id) { var a = ROUTES.outer.indexOf(id); return a >= 0 ? a : Math.max(0, ROUTES.inner.indexOf(id)); }
   // Coming back down to Earth from space: Earth shows up below at
@@ -434,11 +448,11 @@
   var MILESTONES = {
     real: { moon: [5000, 10000], mars: [18000, 28000], jupiter: [80000, 110000], saturn: [150000, 190000],
             uranus: [250000, 290000], neptune: [350000, 400000], pluto: [500000, 540000], belt: [40000, 60000], kuiper: [420000, 490000],
-            oort: [620000, 820000], exit: [880000, 900000], rogue: [960000, 1000000],
+            oort: [620000, 820000], exit: [880000, 900000], nomad: [960000, 1000000], rogue: [1450000, 1500000], ignis: [2150000, 2200000],
             venus: [12000, 20000], mercury: [30000, 42000], sun: [64000, 80000] },
     test: { moon: [1250, 2500], mars: [3750, 5000], jupiter: [7500, 10000], saturn: [11250, 12500],
             uranus: [13750, 15000], neptune: [16250, 17500], pluto: [18750, 20000], belt: [6000, 7000], kuiper: [17700, 18600],
-            oort: [20500, 21500], exit: [22000, 22600], rogue: [23750, 25000],
+            oort: [20500, 21500], exit: [22000, 22600], nomad: [23750, 25000], rogue: [26250, 27500], ignis: [28750, 30000],
             venus: [1250, 2500], mercury: [3750, 5000], sun: [6250, 7500] }
   };
   var ACTIVE_MILESTONES = TEST_SPACING ? MILESTONES.test : MILESTONES.real;
@@ -453,6 +467,8 @@
   // galaxy fades in behind the stars (fully by EXIT_TO) and the little orrery fades out
   var OORT_FROM = ACTIVE_MILESTONES.oort[0], OORT_TO = ACTIVE_MILESTONES.oort[1];
   var EXIT_FROM = ACTIVE_MILESTONES.exit[0], EXIT_TO = ACTIVE_MILESTONES.exit[1];
+  var EXTRA_IDS = ["nomad", "rogue", "ignis", "heaven"];
+  var EDGE_FT = 46500000;
 
   // ---- Session progress: landings per body, bases built, belt deaths ----
   // Kept in memory and saved to localStorage so it survives closing the tab
@@ -466,7 +482,7 @@
   var SX_TEST = !!window.SX_TEST; // planner testing mode: maxed out, nothing saved
   function loadProgress() {
     var pr = { landings: {}, bases: {}, towers: {}, baseOrder: [], beltDeaths: 0, kuiperDeaths: 0, muted: false, coins: 0, upgrades: {}, crashStreak: 0, shieldBank: 0, route: "outer", innerUnlocked: false, savedAt: 0,
-      coinsEarned: 0, bestLanding: 0, flights: 0, sunAt: 0, oortDeaths: 0, shieldColors: {}, shieldColor: "blue", skins: {}, skin: "classic" };
+      coinsEarned: 0, bestLanding: 0, flights: 0, sunAt: 0, oortDeaths: 0, reached: {}, heaven: false, logExtra: false, shieldColors: {}, shieldColor: "blue", skins: {}, skin: "classic" };
     try {
       // v2: everything saved before this version is discarded
       try { sessionStorage.removeItem("lander.progress"); } catch (e2) {}
@@ -603,14 +619,31 @@
   ];
   // Rocket skins: bought once, then picked in the shop. Colors follow the stock ship's parts.
   var SKINS = [
-    { id: "classic", name: "Classic", price: 0, c: {} },
-    { id: "sunburst", name: "Sunburst", price: 1000, c: { hull: "#ffc800", hullDk: "#e5b400", nose: "#ff9600", noseDk: "#e08600" } },
-    { id: "ocean", name: "Ocean", price: 2000, c: { hull: "#1cb0f6", hullDk: "#1899d6", nose: "#ffffff", noseDk: "#d3dde3", win: "#ffc800", winDk: "#e5b400" } },
-    { id: "forest", name: "Forest", price: 3500, c: { hull: "#58cc02", hullDk: "#46a302", nose: "#ffc800", noseDk: "#e5b400" } },
-    { id: "grape", name: "Grape", price: 5000, c: { hull: "#ce82ff", hullDk: "#a560e8", nose: "#ff86d0", noseDk: "#e86bb8", win: "#ffffff", winDk: "#d3dde3" } },
-    { id: "midnight", name: "Midnight", price: 8000, c: { hull: "#37464f", hullDk: "#2b363d", nose: "#1cb0f6", noseDk: "#1899d6", win: "#ffc800", winDk: "#e5b400", skirt: "#5c6b75", skirtDk: "#4b5862" } },
-    { id: "gold", name: "Gold", price: 20000, c: { hull: "#ffde59", hullDk: "#f5c400", nose: "#ffffff", noseDk: "#e5e5e5", win: "#ff9600", winDk: "#e08600", skirt: "#e5b400", skirtDk: "#cc9f00" } }
+    { id: "classic", name: "Classic", price: 0, c: { nose: "#a5b1ba", noseDk: "#8a9aa5", win: "#84d8ff", winDk: "#5cc8f5" } },
+    { id: "sunburst", name: "Sunburst", price: 1000, bonus: 5, at: ["sun"], where: "the Sun",
+      c: { hull: "#ffc800", hullDk: "#e5b400", nose: "#ff9600", noseDk: "#e08600", win: "#fff2b3", winDk: "#ffde59", skirt: "#e08600", skirtDk: "#c77700" } },
+    { id: "ocean", name: "Ocean", price: 2000, bonus: 10, at: ["uranus", "neptune"], where: "Uranus and Neptune",
+      c: { hull: "#1cb0f6", hullDk: "#1899d6", nose: "#0b6fae", noseDk: "#0a5f96", win: "#bfeaff", winDk: "#84d8ff", skirt: "#1572a8", skirtDk: "#0f5f8e" } },
+    { id: "forest", name: "Forest", price: 3500, bonus: 15, at: ["earth"], where: "Earth",
+      c: { hull: "#58cc02", hullDk: "#46a302", nose: "#2b7a0b", noseDk: "#236608", win: "#d7ffb8", winDk: "#a5ed6e", skirt: "#3d8a10", skirtDk: "#2f700b" } },
+    { id: "grape", name: "Grape", price: 5000, bonus: 20, beyond: true, where: "every world past Pluto",
+      c: { hull: "#ce82ff", hullDk: "#a560e8", nose: "#8a3fd1", noseDk: "#7330b8", win: "#f3e3ff", winDk: "#d9a8ff", skirt: "#8a3fd1", skirtDk: "#7330b8" } },
+    { id: "midnight", name: "Midnight", price: 8000, bonus: 25, at: ["moon", "mercury"], where: "the Moon and Mercury",
+      c: { hull: "#37464f", hullDk: "#2b363d", nose: "#1f2a30", noseDk: "#161e23", win: "#6f8a99", winDk: "#5c7a8a", skirt: "#4b5862", skirtDk: "#3c4850" } },
+    { id: "gold", name: "Gold", price: 20000, bonus: 30, at: ["jupiter", "saturn"], where: "Jupiter and Saturn",
+      c: { hull: "#ffde59", hullDk: "#f5c400", nose: "#ffc800", noseDk: "#e5b400", win: "#fff6c8", winDk: "#ffe48a", skirt: "#e5b400", skirtDk: "#cc9f00" } },
+    { id: "ember", name: "Ember", price: 30000, bonus: 35, at: ["mars", "venus"], where: "Mars and Venus",
+      c: { hull: "#ff4b4b", hullDk: "#ea2b2b", nose: "#b81c1c", noseDk: "#9e1717", win: "#ffd0d0", winDk: "#ff9f9f", skirt: "#c42222", skirtDk: "#a81d1d" } },
+    { id: "frost", name: "Frost", price: 45000, bonus: 40, at: ["pluto"], where: "Pluto",
+      c: { hull: "#eef9ff", hullDk: "#cdeaf7", nose: "#a8dcf0", noseDk: "#8ccbe3", win: "#ffffff", winDk: "#e3f5fd", skirt: "#a8dcf0", skirtDk: "#8ccbe3" } }
   ];
+  // extra coins for landing on the skin's worlds
+  function skinBonus(id) {
+    var k = skinDef(progress.skin);
+    if (!k || !k.bonus) return 0;
+    if (k.beyond) return ROUTES.outer.indexOf(id) > ROUTES.outer.indexOf("pluto") || id === "heaven" ? k.bonus : 0;
+    return k.at.indexOf(id) >= 0 ? k.bonus : 0;
+  }
   if (!progress.skins || typeof progress.skins !== "object") progress.skins = {};
   if (!progress.shieldColors || typeof progress.shieldColors !== "object") progress.shieldColors = {};
   // The Neptune permit adds Neptune to the base worlds
@@ -651,7 +684,7 @@
     return true;
   }
   function pickSkin(id) { if (!ownSkin(id)) return false; progress.skin = id; applySkin(); saveProgress(); return true; }
-  function coinMult() { return 1 + 0.25 * upLevel("coins"); }
+  function coinMult() { return (1 + 0.25 * upLevel("coins")) * (progress.heaven ? 7 : 1); }
   function baseCoinsEach() { return BASE_COINS + 5 * upLevel("baseup"); }
   function addCoins(n) {
     if (!(n > 0)) return 0;
@@ -949,7 +982,11 @@
       return b > m.x - m.w / 2 - margin && a < x1 + margin;
     });
   }
+  // Nomad's surface drifts sideways by gShift (it wraps at the screen edges, which meet at the same height)
+  var gShift = 0, NOMAD_SPEED = 0.03;
+  function gWrap(x) { return gShift ? ((x - gShift) % W + W) % W : x; }
   function surfaceY(x) {
+    x = gWrap(x);
     var i = Math.max(0, Math.min(ground.pts.length - 2, Math.floor(x / ground.step))), a = ground.pts[i], b = ground.pts[i + 1];
     return a.y + (b.y - a.y) * Math.max(0, Math.min(1, (x - a.x) / (b.x - a.x)));
   }
@@ -1837,7 +1874,8 @@
       try { paintGround(); } finally { ctx = keep; }
       ground.layer = lay.c;
     }
-    blitLayer(ground.layer, 0, 0, W, H);
+    blitLayer(ground.layer, gShift, 0, W, H);
+    if (gShift) blitLayer(ground.layer, gShift - W, 0, W, H);
     if (ground.tower) drawTower(ground.tower);
   }
   function paintGround() {
@@ -2055,6 +2093,19 @@
       var streak = soft(Math.abs(my - 0.25), 0.16);
       return [mix(222, 212, streak), 66, 40 + light * 16 + streak * 9 + rnd(-1, 1)];
     },
+    nomad: function (mx, my, light) {
+      var b = bandColor([[30, 52, 70], [22, 46, 52], [36, 58, 80], [26, 50, 58], [32, 54, 72]], my);
+      var swirl = soft(Math.abs(Math.sin(mx * 6 + my * 9)), 0.18);
+      return [b[0] - swirl * 6, b[1], b[2] + light * 10 - swirl * 6 + rnd(-1, 1)];
+    },
+    ignis: function (mx, my, light) {
+      var crack = soft(Math.abs(Math.sin(mx * 7 - my * 5) * Math.cos(my * 6 + mx * 2)), 0.12);
+      return [mix(0, 22, crack), mix(0, 100, crack), mix(26 + light * 10, 54, crack) + rnd(-1, 1)];
+    },
+    heaven: function (mx, my, light) {
+      var glow = soft(Math.hypot(mx + 0.2, my + 0.25), 0.7);
+      return [mix(44, 46, glow), mix(60, 100, glow), 86 + glow * 8 + rnd(-0.5, 0.5)];
+    },
     rogue: function (mx, my, light) {
       var sw = soft(Math.abs(Math.sin(mx * 4 + my * 2.4 + 0.6)), 0.3), pool = soft(Math.hypot(mx + 0.32, my - 0.18), 0.32);
       return [mix(98, 70, sw), mix(46, 72, sw), 32 + light * 14 + sw * 14 + pool * 12 + rnd(-1, 1)];
@@ -2109,7 +2160,7 @@
     return null;
   }
   // Facets for a disc (or a lumpy potato for small moons), colored and smoothed
-  var STRIPED = { jupiter: true, saturn: true, uranus: true, neptune: true, venus: true };
+  var STRIPED = { jupiter: true, saturn: true, uranus: true, neptune: true, venus: true, nomad: true };
   function buildFacets(id, lumpy, small) {
     var rings = small
       ? (id === "earth" ? [[{ x: 0, y: 0, ang: 0 }], ringPoints(7, 0.45, 0.1), ringPoints(13, 0.8, 0.08), ringPoints(16, 1, 0.05)]
@@ -2314,7 +2365,7 @@
   var TRAIL = {
     earth: ["#9cc4f0", "#2f5f9e"], moon: ["#d8d8d8", "#6e6e72"], mars: ["#e09a70", "#7a3018"],
     jupiter: ["#ead2b0", "#8a6440"], saturn: ["#f0e2b8", "#9a8456"], uranus: ["#c8eef0", "#5a9aa4"],
-    neptune: ["#8aa8f0", "#1e3c90"], pluto: ["#e8d8c0", "#8a7458"], rogue: ["#b8f070", "#3c7a1e"]
+    neptune: ["#8aa8f0", "#1e3c90"], pluto: ["#e8d8c0", "#8a7458"], rogue: ["#b8f070", "#3c7a1e"], nomad: ["#e6c49a", "#8a5e38"], ignis: ["#6a6a70", "#2a2a2e"], heaven: ["#fffbe8", "#e8c860"]
   };
   var TRAIL_MOONS = {
     earth: [{ id: "moon", a: 2.3, r: 0.27, w: 0.00035 }],
@@ -2327,7 +2378,7 @@
   var trailFacets = {};
   function buildTrailFacets() {
     trailFacets = {};
-    ["mercury", "venus", "earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "rogue",
+    ["mercury", "venus", "earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "nomad", "rogue", "ignis", "heaven",
      "phobos", "deimos", "io", "europa", "titan", "enceladus", "mimas", "rhea", "sun"].forEach(function (id) {
       trailFacets[id] = buildFacets(id, id === "phobos" || id === "deimos", true);
     });
@@ -2405,10 +2456,6 @@
       c.fillStyle = R() < 0.15 ? "rgba(255, 236, 200, 0.75)" : "rgba(220, 230, 255, 0.5)";
       c.fillRect(px, py, R() < 0.1 ? 2 : 1, R() < 0.1 ? 2 : 1);
     }
-    c.save(); c.translate(cx, cy); c.rotate(ang);
-    c.fillStyle = "rgba(6, 3, 18, 0.18)";
-    c.beginPath(); c.ellipse(0, Math.min(W, H) * 0.02, len * 0.5, Math.min(W, H) * 0.025, 0, 0, Math.PI * 2); c.fill();
-    c.restore();
     // A spiral galaxy, high on the right: two arms of stars around a bright core
     var gx = W * 0.8, gy = H * 0.2, gs = Math.min(W, H) * 0.16, tilt = 0.45;
     var halo = c.createRadialGradient(gx, gy, 0, gx, gy, gs * 1.2);
@@ -2428,6 +2475,35 @@
     if (alpha <= 0) return;
     if (!galaxy || galaxy.w !== W || galaxy.h !== H) buildGalaxy();
     ctx.save(); ctx.globalAlpha = alpha; ctx.drawImage(galaxy.canvas, 0, 0, W, H); ctx.restore();
+  }
+  // Elysium: white and gold palaces along the horizon, behind the ground
+  var palaces = null;
+  function drawPalaces(drop) {
+    if (!palaces || palaces.w !== W) {
+      var R = seeded(4242), list = [], x = -20;
+      while (x < W + 40) { var w = R.r(70, 150); list.push({ x: x, w: w, h: R.r(50, 120), dome: R() < 0.6, cols: Math.max(3, Math.round(w / 18)), tower: R() < 0.4 }); x += w + R.r(10, 60); }
+      palaces = { w: W, list: list };
+    }
+    var base = H * 0.68 + drop;
+    if (base - 260 > H) return;
+    palaces.list.forEach(function (p) {
+      var y0 = base - p.h;
+      ctx.fillStyle = "#fffaf0"; ctx.fillRect(p.x, y0, p.w, p.h + 40);
+      ctx.fillStyle = "#efe6d2"; ctx.fillRect(p.x + p.w * 0.55, y0, p.w * 0.45, p.h + 40);
+      ctx.fillStyle = "#e8c860"; ctx.fillRect(p.x - 4, y0 - 6, p.w + 8, 7);
+      ctx.fillStyle = "#e5dcc6";
+      for (var c = 0; c < p.cols; c++) ctx.fillRect(p.x + 6 + c * (p.w - 12) / p.cols, y0 + 10, 4, p.h - 14);
+      if (p.dome) {
+        ctx.fillStyle = "#ffd84d"; ctx.beginPath(); ctx.arc(p.x + p.w / 2, y0 - 6, p.w * 0.22, Math.PI, 0); ctx.fill();
+        ctx.fillStyle = "#f5c400"; ctx.beginPath(); ctx.arc(p.x + p.w / 2, y0 - 6, p.w * 0.22, Math.PI * 1.5, 0); ctx.lineTo(p.x + p.w / 2, y0 - 6); ctx.fill();
+        ctx.fillStyle = "#fffbe0"; ctx.fillRect(p.x + p.w / 2 - 1.5, y0 - 6 - p.w * 0.22 - 12, 3, 12);
+      }
+      if (p.tower) {
+        var tx = p.x + p.w * 0.15;
+        ctx.fillStyle = "#fffaf0"; ctx.fillRect(tx, y0 - p.h * 0.6, 16, p.h * 0.6);
+        ctx.fillStyle = "#e8c860"; ctx.beginPath(); ctx.moveTo(tx - 3, y0 - p.h * 0.6); ctx.lineTo(tx + 8, y0 - p.h * 0.6 - 24); ctx.lineTo(tx + 19, y0 - p.h * 0.6); ctx.closePath(); ctx.fill();
+      }
+    });
   }
   function drawTrail(alpha) {
     if (alpha <= 0) return;
@@ -2690,6 +2766,13 @@
   function drawDoomShip(L) {
     var D = L.doom, p = clamp01(0, DOOM_MS, elapsed - D.at), x = L.shown.x, y = L.shown.y;
     var pts = shipOutline(x, y, L.angle);
+    if (D.kind === "hole") {
+      // stretched thin and swallowed
+      var e2 = sine(Math.min(1, p * 1.3)), sx = mix(x, D.hx, e2), sy = mix(y, D.hy, e2);
+      ctx.save(); ctx.translate(sx, sy); ctx.rotate(Math.atan2(D.hy - y, D.hx - x) + Math.PI / 2); ctx.scale(Math.max(0.05, 1 - e2) * 0.6, 1 + e2 * 2.5);
+      ctx.globalAlpha = 1 - clamp01(0.75, 1, p); drawShipAt(0, 0, 0, 1, false); ctx.restore();
+      return;
+    }
     if (D.kind === "heat" || D.kind === "acid") {
       // Sagging: everything slumps toward the lowest point and spreads out (acid: the same, eaten away in green)
       var ac = D.kind === "acid";
@@ -3165,6 +3248,7 @@
       var bid = BODIES[sceneIdx].id, hadTower = !!progress.towers[bid], hadBase = !!progress.bases[bid];
       // The Sun is the end of the game: the first landing there is recorded for good
       if (bid === "sun") { r.finale = true; if (!progress.sunAt && !SX_TEST) progress.sunAt = Date.now(); }
+      if (bid === "heaven" && !progress.heaven) { progress.heaven = true; r.heaven = true; }
       recordLanding(bid);
       r.build = !hadBase && progress.bases[bid] ? "base" : !hadTower && progress.towers[bid] ? "tower" : null;
     }
@@ -3187,7 +3271,7 @@
     } else {
       r.score = frac(Math.min(MAX_SAFE_SPEED * SPEED_TO_MPH, MAX_SAFE_ANGLE), 900, combo) * 100;
       var wAt = inSpace() ? L.shown : L.pos;
-      L.wreck = byRock && L.hitKind === "heat" ? meltWreck(wAt, L.angle) : byRock && L.hitKind === "acid" ? meltWreck(wAt, L.angle, true) : byRock && L.hitKind === "freeze" ? iceWreck(wAt, L.vel, L.angle, !inSpace())
+      L.wreck = byRock && L.hitKind === "hole" ? { draw: function () {} } : byRock && L.hitKind === "heat" ? meltWreck(wAt, L.angle) : byRock && L.hitKind === "acid" ? meltWreck(wAt, L.angle, true) : byRock && L.hitKind === "freeze" ? iceWreck(wAt, L.vel, L.angle, !inSpace())
         : landerBreakup(wAt, L.vel, L.angle, !inSpace());
       L.vel = { x: 0, y: 0 };
     }
@@ -3207,7 +3291,11 @@
   var SAT_FIELD_MS = 5000;
   function raiseField(ms) {
     var L = lander;
-    if (!shieldActive()) L.shieldFrom = L.t;
+    if (!shieldActive()) {
+      L.shieldFrom = L.t;
+      var sb = shieldSpeed();
+      if (sb) { L.vel.x *= 1 + sb; L.vel.y *= 1 + sb; }
+    }
     L.shieldUntil = Math.max(L.shieldUntil, L.t + ms);
   }
   // True when a crash was absorbed (by an active window or a spare shield)
@@ -3249,6 +3337,7 @@
   function shieldColorDef(id) { for (var i = 0; i < SHIELD_COLORS.length; i++) if (SHIELD_COLORS[i].id === id) return SHIELD_COLORS[i]; return SHIELD_COLORS[0]; }
   function ownShieldColor(id) { var k = shieldColorDef(id); return k.id === id && (k.price === 0 || SX_TEST || !!progress.shieldColors[id]); }
   function shieldCol() { return shieldColorDef(ownShieldColor(progress.shieldColor) ? progress.shieldColor : "blue"); }
+  function shieldSpeed() { return 0.05 * SHIELD_COLORS.indexOf(shieldCol()); }
   function rgba(c, a) { return "rgba(" + c[0] + ", " + c[1] + ", " + c[2] + ", " + a + ")"; }
   function buildBarrier() {
     var RC = 64, pad = 1.25, size = Math.ceil(RC * 2 * pad * 2);
@@ -3348,9 +3437,9 @@
   var heat = 0, cold = 0, HEAT_MS = 8000, DOOM_MS = 2000;
   var COLD_MS = { uranus: 8500, neptune: 7500, pluto: 6500 };
   // Viridian's toxic air: acid builds up steadily whatever the engine does, and no upgrade slows it
-  var acid = 0, TOXIC_MS = 40000;
+  var acid = 0, TOXIC_MS = 40000, hazeAir = 1;
   function drawHeatHud() {
-    var id = BODIES[sceneIdx].id, isHeat = id === "sun", isCold = !!COLD_MS[id], isAcid = id === "rogue";
+    var id = BODIES[sceneIdx].id, isHeat = id === "sun" || (id === "ignis" && (hazeAir > 0 || heat > 0)), isCold = !!COLD_MS[id], isAcid = id === "rogue" && hazeAir > 0;
     if (scene !== "surface" || (!isHeat && !isCold && !isAcid)) return;
     var v = Math.min(1, isHeat ? heat : isAcid ? acid : cold);
     // Narrow screens: top left under the shield row, clear of the top-right text
@@ -3423,6 +3512,7 @@
     var L = lander, k = dt / TICK;
     // Resting on a base pad after a respawn: nothing moves until thrust
     if (L.parked) { if (!L.engine) return; L.parked = false; }
+    if (L.grab) return;
     L.pos.y += k * L.vel.y;
     var touching = inGround(ground.path, L.pos.x, L.pos.y + LH / 2);
     if (!touching && ground.solids) {
@@ -3432,8 +3522,11 @@
     }
     var below = L.pos.y >= H;
     if (!touching && !below) {
-      if (L.right) L.spinVel += k * 0.01;
-      if (L.left) L.spinVel -= k * 0.01;
+      // the drone turns more gently and settles by itself
+      var turnK = L.drone ? 0.006 : 0.01;
+      if (L.right) L.spinVel += k * turnK;
+      if (L.left) L.spinVel -= k * turnK;
+      if (L.drone && !L.left && !L.right) L.spinVel *= Math.pow(0.985, k);
       // Course corrector (held down): turn back upright, easing in, then stop by itself
       if (fixing) {
         var tlt = tiltDegSigned(L.angle), want = -Math.sign(tlt) * Math.min(1.5, Math.abs(tlt) * 0.05);
@@ -3443,7 +3536,10 @@
       L.pos.x += k * L.vel.x;
       L.pos.x = ((L.pos.x % W) + W) % W;
       L.angle += k * (Math.PI / 180 * L.spinVel);
-      L.vel.y += k * arrivalGrav();
+      L.vel.y += k * arrivalGrav() * (L.drone ? 0.55 : 1);
+      // the drone falls slower, and can't climb out of the ash to leave the planet
+      if (L.drone && L.vel.y > 0.9) L.vel.y *= Math.pow(0.985, k);
+      if (L.drone && L.pos.y < DRONE_TOP()) { L.pos.y = DRONE_TOP(); if (L.vel.y < 0) L.vel.y = 0; }
       if (moons.length) moonPull(k);
       if (BODIES[sceneIdx].id === "venus" && L.pos.y > -H * VENUS_TOP) {
         // Venus's thick air: drag, strongest at the ground (falling tops out
@@ -3457,8 +3553,9 @@
         L.vel.y -= k * thrust * BOOST_POWER * Math.cos(L.angle);
       }
       if (L.engine) {
-        L.vel.x += k * thrust * Math.sin(L.angle);
-        L.vel.y -= k * thrust * Math.cos(L.angle);
+        var thK = L.drone ? 0.85 : 1;
+        L.vel.x += k * thrust * thK * Math.sin(L.angle);
+        L.vel.y -= k * thrust * thK * Math.cos(L.angle);
       } else if (inSpace()) {
         // Coasting in space bleeds off a little speed (about 4% per second)
         var drag = Math.pow(0.96, dt / 1000);
@@ -3476,8 +3573,9 @@
       if (L.pos.y < L.heightMark + Math.min(-3500, L.heightMark * 3)) { L.heightMark = L.pos.y; award("newHeight"); }
       if (speedOf(L.vel) > speedOf(L.speedMark) + 10) { L.speedMark = { x: L.vel.x, y: L.vel.y }; award("newSpeed"); }
     } else if (!L.result) {
+      var lpx = gWrap(L.pos.x);
       var pad = ground.pads.find(function (p) {
-        return L.pos.x - LW / 2 >= p.x && L.pos.x + LW / 2 <= p.x + p.width && Math.abs(L.pos.y + LH / 2 - p.y) < 10;
+        return lpx - LW / 2 >= p.x && lpx + LW / 2 <= p.x + p.width && Math.abs(L.pos.y + LH / 2 - p.y) < 10;
       });
       var ok = speedOf(L.vel) < MAX_SAFE_SPEED && tiltDeg(L.angle) < MAX_SAFE_ANGLE && pad;
       if (!ok && absorbCrash()) {
@@ -3631,7 +3729,7 @@
   var SHIP_STOCK = { hull: "#ffffff", hullDk: "#d3dde3", nose: "#ff4b4b", noseDk: "#ea2b2b", win: "#1cb0f6", winDk: "#1899d6", skirt: "#8a9aa5", skirtDk: "#6f7f8a" };
   var SHIP = {};
   function skinColors(id) { var k = skinDef(id) || SKINS[0], o = {}; Object.keys(SHIP_STOCK).forEach(function (p) { o[p] = k.c[p] || SHIP_STOCK[p]; }); return o; }
-  function applySkin() { if (!ownSkin(progress.skin)) progress.skin = "classic"; var o = skinColors(progress.skin); Object.keys(o).forEach(function (p) { SHIP[p] = o[p]; }); }
+  function applySkin() { if (!ownSkin(progress.skin)) progress.skin = "classic"; var o = skinColors(progress.skin); Object.keys(o).forEach(function (p) { SHIP[p] = o[p]; }); SHIP.shine = progress.skin === "gold"; }
   applySkin();
   function paintShipBody(g) {
     g.save();
@@ -3646,10 +3744,38 @@
     g.beginPath(); g.arc(0, wy, wr + 1.6, 0, Math.PI * 2); g.fillStyle = SHIP.skirt; g.fill();
     g.beginPath(); g.arc(0, wy, wr, 0, Math.PI * 2); g.fillStyle = SHIP.win; g.fill();
     g.beginPath(); g.arc(0, wy, wr, -Math.PI / 2, Math.PI / 2); g.fillStyle = SHIP.winDk; g.fill();
+    if (SHIP.shine) {
+      // Polished gold: a bright edge on the lit side and a glint sweeping across every couple of seconds
+      g.fillStyle = "rgba(255, 255, 255, 0.45)"; g.fillRect(-LW / 2 + 2, -LH / 2, 2.5, LH - 6);
+      var gt = (Date.now() % 2200) / 2200, gx = -LW * 1.2 + gt * LW * 3.4;
+      g.fillStyle = "rgba(255, 255, 255, 0.75)";
+      g.beginPath(); g.moveTo(gx, LH / 2); g.lineTo(gx + 5, LH / 2); g.lineTo(gx + 5 + LH * 0.9, -LH); g.lineTo(gx + LH * 0.9, -LH); g.closePath(); g.fill();
+    }
     g.restore();
+  }
+  // The drone: a small quadcopter in the ship's colors, feet level with the lander's base
+  function drawDroneAt(x, y, angle) {
+    var L = lander;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
+    var by = LH / 2 - 9;
+    ctx.fillStyle = "#4b5862"; ctx.fillRect(-11, by + 5, 2, 4); ctx.fillRect(9, by + 5, 2, 4); ctx.fillRect(-13, by + 8, 7, 1.5); ctx.fillRect(6, by + 8, 7, 1.5);
+    ctx.fillStyle = "#6f7f8a"; ctx.fillRect(-20, by - 6, 40, 2.5);
+    ctx.fillStyle = SHIP.hull; ctx.beginPath(); ctx.roundRect(-10, by - 8, 20, 13, 4); ctx.fill();
+    ctx.fillStyle = SHIP.hullDk; ctx.beginPath(); ctx.roundRect(0, by - 8, 10, 13, [0, 4, 4, 0]); ctx.fill();
+    ctx.fillStyle = SHIP.nose; ctx.fillRect(-10, by - 8, 20, 3);
+    ctx.fillStyle = SHIP.win; ctx.beginPath(); ctx.arc(0, by - 1, 3, 0, Math.PI * 2); ctx.fill();
+    var blur = (Date.now() / 40) % 2 < 1;
+    [-18, 18].forEach(function (rx) {
+      ctx.fillStyle = "#4b5862"; ctx.fillRect(rx - 1, by - 10, 2, 5);
+      ctx.fillStyle = "rgba(220, 230, 240, " + (blur ? 0.75 : 0.45) + ")";
+      ctx.beginPath(); ctx.ellipse(rx, by - 10, 9, 1.8, 0, 0, Math.PI * 2); ctx.fill();
+    });
+    if (L.engine) { ctx.fillStyle = "rgba(255, 200, 0, 0.5)"; ctx.beginPath(); ctx.moveTo(-5, by + 6); ctx.lineTo(5, by + 6); ctx.lineTo(0, by + 6 + rnd(6, 14)); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
   }
   function drawShipAt(x, y, angle, scale, jets) {
     var L = lander;
+    if (jets && L.drone) { drawDroneAt(x, y, angle); return; }
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(angle);
@@ -3658,6 +3784,18 @@
     ctx.moveTo(-LW / 2, -LH / 2); ctx.lineTo(0, -LH); ctx.lineTo(LW / 2, -LH / 2);
     ctx.lineTo(LW / 2, LH / 2); ctx.lineTo(-LW / 2, LH / 2); ctx.closePath();
     paintShipBody(ctx);
+    if (SHIP.shine) {
+      // a few sparkles that pop around the hull
+      var sp = Math.floor(Date.now() / 260);
+      for (var si2 = 0; si2 < 3; si2++) {
+        var hh = Math.sin((sp + si2 * 7) * 12.9898) * 43758.5453; hh -= Math.floor(hh);
+        if (hh > 0.55) continue;
+        var px = (hh * 2 - 0.5) * LW * 1.4, py = (((hh * 97) % 1) - 0.6) * LH * 1.4, sz2 = 2 + hh * 3;
+        ctx.fillStyle = "#fffbe0";
+        ctx.beginPath(); ctx.moveTo(px, py - sz2); ctx.lineTo(px + sz2 * 0.3, py - sz2 * 0.3); ctx.lineTo(px + sz2, py); ctx.lineTo(px + sz2 * 0.3, py + sz2 * 0.3);
+        ctx.lineTo(px, py + sz2); ctx.lineTo(px - sz2 * 0.3, py + sz2 * 0.3); ctx.lineTo(px - sz2, py); ctx.lineTo(px - sz2 * 0.3, py - sz2 * 0.3); ctx.closePath(); ctx.fill();
+      }
+    }
 
     ctx.translate(-LW / 2, -LH / 2);
     var left = jets && L.left, right = jets && L.right;
@@ -3678,7 +3816,7 @@
       }
     }
     // Booster burn: a long blue flame under the stock one
-    if (jets && L.t < (L.boostUntil || 0)) {
+    if (jets && mode === "game" && L.t < (L.boostUntil || 0)) {
       var bl = rnd(46, 74), bw = LW / 2 - 1;
       ctx.fillStyle = "#1cb0f6"; ctx.beginPath(); ctx.moveTo(LW / 2 - bw, LH); ctx.lineTo(LW / 2 + bw, LH); ctx.lineTo(LW / 2, LH + bl); ctx.closePath(); ctx.fill();
       ctx.fillStyle = "#84d8ff"; ctx.beginPath(); ctx.moveTo(LW / 2 - bw * 0.5, LH); ctx.lineTo(LW / 2 + bw * 0.5, LH); ctx.lineTo(LW / 2, LH + bl * 0.6); ctx.closePath(); ctx.fill();
@@ -3745,6 +3883,135 @@
     }
   }
 
+  // ---- The mothership over Ignis: the drone docks with it (inside the dotted ring) to leave ----
+  var mother = null, MAG_R = 72;
+  function DRONE_TOP() { return -H * 0.42; }
+  function motherAt(drop) { return { x: W / 2 + Math.sin(elapsed / 1100) * W * 0.03, y: 56 + Math.sin(elapsed / 700) * 6 + drop }; }
+  function stepMother(drop) {
+    var L = lander;
+    if (!mother) return;
+    placeShown();
+    var m = motherAt(drop);
+    if (L.drone && !L.grab) {
+      ctx.save(); ctx.strokeStyle = "rgba(255, 255, 255, 0.45)"; ctx.lineWidth = 1.5; ctx.setLineDash([3, 6]);
+      ctx.beginPath(); ctx.arc(m.x, m.y, MAG_R, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+    }
+    drawShipAt(m.x, m.y, 0, 1, false);
+    if (!L.drone || L.result || L.doom) return;
+    if (!L.grab && Math.hypot(L.shown.x - m.x, L.shown.y - m.y) < MAG_R) {
+      L.grab = { at: elapsed, x: L.pos.x, y: L.pos.y, a: L.angle }; L.engine = L.left = L.right = false; L.vel = { x: 0, y: 0 }; L.spinVel = 0;
+    }
+    if (L.grab) {
+      // the magnet pulls the drone in, then the lander takes over and sets off
+      var p = clamp01(L.grab.at, L.grab.at + 650, elapsed), e = sine(p);
+      L.pos.x = mix(L.grab.x, m.x, e); L.pos.y = mix(L.grab.y, m.y - drop, e); L.angle = mix(L.grab.a, 0, e);
+      ctx.save(); ctx.strokeStyle = "rgba(132, 216, 255, " + (0.8 * (1 - p)) + ")"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(m.x, m.y, MAG_R * (1 - e * 0.7), 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+      if (p >= 1) {
+        L.drone = false; L.grab = null; mother = null;
+        L.pos.x = m.x; L.pos.y = m.y - drop; L.angle = 0; L.spinVel = 0; L.vel = { x: 0, y: -0.6 };
+        L.flipParty.push(confetti(12, L.shown, { x: 0, y: 0 }));
+      }
+    }
+  }
+  // ---- Black holes, past Viridian: a strong pull inside the dotted ring (always weaker than the stock engine,
+  // so a burn straight away escapes), and touching the core is the end ----
+  var holes = [], holeNextAt = 0, HOLE_FIELD = 230, HOLE_PULL = 0.0105;
+  function stepHoles(dt) {
+    var L = lander, k = dt / TICK;
+    holes = holes.filter(function (h) { return h.y < H + HOLE_FIELD && h.y > -HOLE_FIELD * 3; });
+    holes.forEach(function (h) {
+      if (!L.result && !L.doom) h.y -= L.vel.y * k;
+      var dx = h.x - L.shown.x, dy = h.y - L.shown.y, r = Math.hypot(dx, dy);
+      if (!L.result && !L.doom && r < HOLE_FIELD) {
+        var a = Math.min(HOLE_PULL, 0.0016 * HOLE_FIELD / Math.max(r, 20));
+        L.vel.x += k * a * dx / Math.max(r, 1); L.vel.y += k * a * dy / Math.max(r, 1);
+        if (r < 16) { startDoom("hole"); L.doom.hx = h.x; L.doom.hy = h.y; }
+      }
+      // the pull ring, a glowing disk and the black core
+      ctx.save();
+      ctx.strokeStyle = "rgba(206, 130, 255, 0.35)"; ctx.lineWidth = 1.5; ctx.setLineDash([3, 7]);
+      ctx.beginPath(); ctx.arc(h.x, h.y, HOLE_FIELD, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      var sp = elapsed / 900 + h.ph;
+      ctx.fillStyle = "rgba(255, 150, 0, 0.35)"; ctx.beginPath(); ctx.ellipse(h.x, h.y, 46, 11, -0.35, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "rgba(255, 200, 0, 0.55)"; ctx.beginPath(); ctx.ellipse(h.x, h.y, 34, 7, -0.35, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(h.x, h.y, 15, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "rgba(255, 236, 200, 0.9)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(h.x, h.y, 16.5, sp, sp + Math.PI * 1.4); ctx.stroke();
+      ctx.restore();
+    });
+  }
+  // ---- The edge. Nothing here is written down anywhere ----
+  var edge = null, heavenCourse = null;
+  function glitchSlices(n, amt) {
+    for (var i = 0; i < n; i++) {
+      var y = Math.floor(rnd(0, H)), h = Math.floor(rnd(4, 40)), off = rnd(-amt, amt);
+      try { ctx.drawImage(cv, 0, y * DPR, cv.width, h * DPR, off, y, W, h); } catch (e) {}
+    }
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    for (var j = 0; j < 4; j++) { ctx.fillStyle = j % 2 ? "rgba(255, 0, 80, 0.12)" : "rgba(0, 220, 255, 0.12)"; ctx.fillRect(0, rnd(0, H), W, rnd(2, 18)); }
+    ctx.restore();
+  }
+  function drawVoid(bubbleY) {
+    ctx.fillStyle = "#101014"; ctx.fillRect(0, 0, W, H);
+    if (bubbleY < H + 10) {
+      var R = Math.max(W, H) * 3;
+      ctx.save(); ctx.beginPath(); ctx.arc(W / 2, bubbleY + R, R, 0, Math.PI * 2); ctx.clip();
+      drawGalaxy(1); ctx.restore();
+      ctx.strokeStyle = "rgba(217, 168, 255, 0.8)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(W / 2, bubbleY + R, R, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  function drawEdge(dt) {
+    var L = lander, t = elapsed - edge.at, d = distNow();
+    L.t = elapsed;
+    if (edge.phase === "black" || edge.phase === "out") {
+      stepLander(dt); placeShown();
+      // nothing pulls out here
+      L.vel.y -= (dt / TICK) * arrivalGrav();
+      if (edge.phase === "black") { ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H); if (t > 700) { edge.phase = "out"; edge.at = elapsed; } return; }
+      drawVoid(L.shown.y + 40 + (d - EDGE_FT) * 0.08);
+      drawShipAt(L.shown.x, L.shown.y, L.angle, 1, true);
+      // turned back into the bubble
+      if (d < EDGE_FT) { edge.phase = "heaven"; edge.at = elapsed; controlsOff(); return; }
+      if (t > 6500) { edge.phase = "glitch"; edge.at = elapsed; controlsOff(); L.engine = L.left = L.right = false; }
+      return;
+    }
+    if (edge.phase === "heaven") {
+      drawGalaxy(1); drawShipAt(L.shown.x, L.shown.y, L.angle, 1, false);
+      glitchSlices(14 + Math.floor(t / 60), 40 + t / 20);
+      if (t > 1700) {
+        edge = null; heavenCourse = { ft: 0 };
+        L.vel = { x: L.vel.x * 0.3, y: L.vel.y * 0.3 };
+        controlsLive = true; flashNote("COURSE SET FOR HEAVEN");
+      }
+      return;
+    }
+    if (edge.phase === "glitch") {
+      drawVoid(L.shown.y + 40 + (d - EDGE_FT) * 0.08);
+      if (Math.random() < 0.8) {
+        ctx.save(); ctx.globalAlpha = 0.6; ctx.translate(rnd(-6, 6), 0); drawShipAt(L.shown.x - 3, L.shown.y, L.angle, 1, false); ctx.restore();
+        drawShipAt(L.shown.x + rnd(-2, 2), L.shown.y + rnd(-2, 2), L.angle + rnd(-0.1, 0.1), 1, false);
+      }
+      glitchSlices(6 + Math.floor(t / 150), 6 + t / 60);
+      if (t > 2600) { edge.phase = "black2"; edge.at = elapsed; }
+      return;
+    }
+    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+    if (edge.phase === "black2") { if (t > 1300) { edge.phase = "text"; edge.at = elapsed; addCoins(46500); } return; }
+    if (edge.phase === "text") {
+      ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.globalAlpha = Math.min(1, t / 1500) * (1 - clamp01(5200, 6200, t));
+      ctx.font = "600 22px " + FONT; ctx.letterSpacing = "6px"; ctx.fillStyle = "#cfcfd4";
+      ctx.fillText("was it all a simulation?", W / 2, H / 2);
+      ctx.globalAlpha *= clamp01(1800, 2600, t) * 0.6;
+      ctx.font = "700 13px " + FONT; ctx.letterSpacing = "3px"; ctx.fillText("+46,500", W / 2, H / 2 + 40);
+      ctx.restore();
+      if (t > 6400) {
+        edge.phase = "done";
+        fader.style.transition = "none"; fader.style.opacity = "1";
+        setTimeout(function () { showHome(); fader.style.transition = "opacity 0.45s ease"; fader.style.opacity = "0"; edge = null; }, 60);
+      }
+    }
+  }
   // Boosters: each one burns BOOST_MS at BOOST_POWER times the engine's thrust
   // Course corrector: each use, held down, turns the rocket back upright. One down key does both:
   // a tap (released within HOLD_MS) boosts, holding past HOLD_MS starts a correction instead
@@ -4167,6 +4434,7 @@
   var homeward = false;       // turned back toward Earth on the way out: Earth's orbit is the target
   var backMs = 0, onwardMs = 0; // nose-down / nose-up time on Earth's stretch
   var hudNote = null;            // short centered HUD note { text, at }
+  function here0() { return BODIES[sceneIdx]; }
   function nextBody() {
     var r = ROUTES[route], i = r.indexOf(BODIES[sceneIdx].id);
     return i >= 0 && i + 1 < r.length ? BODIES[idxOf(r[i + 1])] : null;
@@ -4272,7 +4540,8 @@
     // Earth, Venus and Mercury are always in the sky's little orrery
     if (!shieldEarned[idx] && idx > 0) { shieldEarned[idx] = true; if (body.id !== "venus" && body.id !== "mercury") discovered[body.id] = elapsed; }
     scene = "surface";
-    sceneIdx = idx; heat = cold = acid = 0;
+    sceneIdx = idx; heat = cold = acid = 0; gShift = 0; holes = []; heavenCourse = body.id === "heaven" ? null : heavenCourse;
+    if (EXTRA_IDS.indexOf(body.id) >= 0 && !(progress.reached || {})[body.id]) { progress.reached = progress.reached || {}; progress.reached[body.id] = true; saveProgress(); }
     sceneBase = body.orbit || 0;
     grav = body.grav;
     orbit = null;
@@ -4290,6 +4559,8 @@
     groundLevel = ground.avg - LH + LH / 2;
     placeLander(L, true);
     L.flipParty = [];
+    L.drone = !!body.drone; L.grab = null; mother = body.drone ? {} : null;
+    if (L.drone) L.pos.y = Math.max(L.pos.y, H * 0.42);
     // The engine stays exactly as the keys are: firing only while thrust is
     // held, carried straight through the scene switch.
     controlsLive = true;
@@ -4313,7 +4584,7 @@
     ctx.globalAlpha = Math.min(1, t / 400) * (1 - clamp01(2600, 3500, t));
     ctx.font = "700 12px " + FONT; ctx.letterSpacing = "3px"; ctx.textAlign = "center"; ctx.fillStyle = "#e8f0ff";
     // below the heat, cold or acid meter when that sits in the top middle
-    var hid = BODIES[sceneIdx].id, meter = scene === "surface" && W >= 600 && (hid === "sun" || hid === "rogue" || !!COLD_MS[hid]);
+    var hid = BODIES[sceneIdx].id, meter = scene === "surface" && W >= 600 && (hid === "sun" || hid === "ignis" || hid === "rogue" || !!COLD_MS[hid]);
     ctx.fillText(text, W / 2, hudMargin() + 6 + (meter ? 46 : 0));
     ctx.restore();
   }
@@ -4417,17 +4688,22 @@
       // Stops between here and the next body, in order: the asteroid belt, the Kuiper belt, the Oort cloud
       // and the edge of the solar system (the bodies, Viridian last, come from the course as before)
       var nbz = nextBody(), dz = distNow(), stop = null;
-      [[BELT_FROM, "ASTEROID BELT"], [KUIPER_FROM, "KUIPER BELT"], [OORT_FROM, "OORT CLOUD"], [EXIT_FROM, "EDGE OF THE SOLAR SYSTEM"]].forEach(function (z) {
-        if (!stop && dz < z[0] - 200 && nbz && z[0] < nbz.orbit) stop = z;
+      var holeAt = BODIES[idxOf("rogue")].orbit + 25000;
+      [[BELT_FROM, "ASTEROID BELT"], [KUIPER_FROM, "KUIPER BELT"], [OORT_FROM, "OORT CLOUD"], [EXIT_FROM, "EDGE OF THE SOLAR SYSTEM"],
+       [holeAt, "BLACK HOLE"], [EDGE_FT - 3000, "NEAR THE EDGE"]].forEach(function (z) {
+        if (!stop && dz < z[0] - 200 && (nbz ? z[0] < nbz.orbit : here0().id !== "heaven")) stop = z;
       });
       if (stop) {
-        var LZ = lander;
+        var LZ = lander, edgeStop = stop[0] === EDGE_FT - 3000;
         LZ.pos.y = groundLevel - (stop[0] + 300 - sceneBase) * 3.5;
-        LZ.vel = { x: 0, y: -1.5 }; LZ.angle = Math.PI * 2; LZ.spinVel = 0; LZ.parked = false;
-        spaceRocks = []; bigRocks = [];
+        LZ.vel = { x: 0, y: edgeStop ? -30 : -1.5 }; LZ.angle = Math.PI * 2; LZ.spinVel = 0; LZ.parked = false; LZ.drone = false; mother = null;
+        spaceRocks = []; bigRocks = []; holes = [];
+        if (stop[0] === holeAt) holes.push({ x: (LZ.pos.x + 190) % W, y: H / 2 - 80, ph: 0 });
         flashNote(stop[1]);
         return;
       }
+      // past the edge stop: straight to the hidden planet
+      if (!nbz && dz > EDGE_FT - 5000) { edge = null; heavenCourse = null; enterSurface(idxOf("heaven")); return; }
     }
     if (TEST_MODE && k === "j" && !lander.result) {
       var nb = nextBody(), to = scene === "orbit" ? orbit.idx : homebound() ? 0 : nb ? idxOf(nb.id) : -1;
@@ -4543,6 +4819,12 @@
     "The lander is now a very expensive ice cube",
     "Too long in the cold"
   ];
+  var HOLE_LINES = [
+    "Spaghettified",
+    "Even light couldn't get out of that one",
+    "That was a black hole. Was.",
+    "Gravity always wins in the end"
+  ];
   var ACID_LINES = [
     "The acid ate through the hull",
     "Viridian's air is not for breathing. Or for landers",
@@ -4577,7 +4859,7 @@
     bonus.hidden = true;
     var total = r.score + bonus.total;
     var line = r.landed ? (r.slam ? "Hoverslam!" : landedLine(total))
-      : r.byRock ? pickLine(r.hitKind === "sat" ? SAT_LINES : r.hitKind === "ice" ? ICE_LINES : r.hitKind === "heat" ? HEAT_LINES : r.hitKind === "acid" ? ACID_LINES : r.hitKind === "freeze" ? COLD_LINES : ROCK_LINES) : crashedLine(total);
+      : r.byRock ? pickLine(r.hitKind === "sat" ? SAT_LINES : r.hitKind === "ice" ? ICE_LINES : r.hitKind === "heat" ? HEAT_LINES : r.hitKind === "acid" ? ACID_LINES : r.hitKind === "hole" ? HOLE_LINES : r.hitKind === "freeze" ? COLD_LINES : ROCK_LINES) : crashedLine(total);
     var shown = fmt(total, 1);
     var where = BODIES[sceneIdx].name;
     // Coins: the points scored, only for a successful landing, plus
@@ -4585,8 +4867,11 @@
     var nBases = Object.keys(BASE_BODIES).filter(baseBuilt).length, baseCoins = r.landed ? nBases * baseCoinsEach() : 0;
     if (r.landed && total > (progress.bestLanding || 0)) progress.bestLanding = Math.round(total * 10) / 10;
     fixing = false;
-    var mult = coinMult();
-    var earned = r.landed ? addCoins(Math.round((Math.max(0, Math.round(total)) + baseCoins) * mult)) : 0;
+    var mult = coinMult(), skinCoins = r.landed ? skinBonus(BODIES[sceneIdx].id) : 0;
+    var earned = r.landed ? addCoins(Math.round((Math.max(0, Math.round(total)) + baseCoins + skinCoins) * mult)) : 0;
+    $("rSkin").style.display = skinCoins ? "" : "none";
+    $("lSkin").textContent = (skinDef(progress.skin) || SKINS[0]).name + " Bonus";
+    $("sSkin").textContent = "+" + fmt(skinCoins);
     $("rMult").style.display = r.landed && mult > 1 ? "" : "none";
     $("sMult").textContent = "\u00d7" + mult;
     syncBoost();
@@ -4600,6 +4885,7 @@
     nt.className = "note"; nt.textContent = "";
     function bodyName(id) { var b = BODIES.find(function (q) { return q.id === id; }); return b ? b.name : id; }
     bankrupt = !!(bn && bn.lost);
+    if (r.heaven) { nt.className = "note on good"; nt.innerHTML = "<span>Welcome to Elysium<small>Every coin you earn is now worth 7 times as much, for good</small></span>"; }
     if (bankrupt) {
       nt.className = "note on lost";
       nt.innerHTML = "<span>The " + bodyName(bn.lost) + " base couldn\u2019t get enough funding and went bankrupt!<small>All bases and towers lost. Next launch from Earth</small></span>";
@@ -5086,7 +5372,8 @@
         '<div class="row2"><span class="cap" data-z="left">Left</span><span class="cap" data-z="right">Right</span><span class="lb lbl">Rotate</span></div>';
     } else {
       t.innerHTML = '<div class="row2"><span class="cap" data-z="center">W</span><span class="or">or</span><span class="cap" data-z="center">&#8593;</span><span class="lb lbl">Thrust</span></div>' +
-        '<div class="row2"><span class="cap" data-z="left">A</span><span class="cap" data-z="right">D</span><span class="or">or</span><span class="cap" data-z="left">&#8592;</span><span class="cap" data-z="right">&#8594;</span><span class="lb lbl">Rotate</span></div>';
+        '<div class="row2"><span class="cap" data-z="left">A</span><span class="cap" data-z="right">D</span><span class="or">or</span><span class="cap" data-z="left">&#8592;</span><span class="cap" data-z="right">&#8594;</span><span class="lb lbl">Rotate</span></div>' +
+        '<div class="row2"><span class="cap" data-z="down">S</span><span class="or">or</span><span class="cap" data-z="down">&#8595;</span><span class="lb lbl">Boost, hold to straighten</span></div>';
     }
   })();
   if (!isTouch) document.body.classList.add("kb");
@@ -5123,18 +5410,27 @@
     BODIES.forEach(function (b) {
       var n = progress.landings[b.id] || 0; total += n;
       if ((b.id === "venus" || b.id === "mercury" || b.id === "sun") && !progress.innerUnlocked && !n) return;
-      if (b.id === "rogue" && !n) return;
+      var extra = EXTRA_IDS.indexOf(b.id) >= 0;
+      if (extra !== !!progress.logExtra) return;
+      if (extra && !n && !(progress.reached || {})[b.id]) {
+        html += '<div class="lrow dim"><span class="nm">???</span><span class="n">0</span><span class="bs na">-</span></div>';
+        return;
+      }
       var tag = BASE_BODIES[b.id] ? '<span class="bs" title="Tower, base">' + baseSegs(b.id) + "</span>" : '<span class="bs na">-</span>';
       html += '<div class="lrow' + (n ? "" : " dim") + '"><span class="nm">' + b.name +
         '</span><span class="n">' + n + "</span>" + tag + "</div>";
     });
     $("hRows").innerHTML = html;
+    $("hExtra").textContent = progress.logExtra ? "Main planets" : "Additional planets";
     $("hTotal").textContent = total + (total === 1 ? " landing" : " landings");
     renderShop();
   }
+  var shopHangar = 1;
   function renderShop() {
-    var html = "";
-    UPGRADES.forEach(function (u) {
+    var html = "", hg = shopHangar;
+    $("shKick").textContent = "Hangar 0" + hg; $("shTitle").textContent = ["Workshop", "Paint shop", "Shield lab"][hg - 1];
+    Array.prototype.forEach.call($("shTabs").querySelectorAll("[data-h]"), function (t) { t.classList.toggle("on", +t.getAttribute("data-h") === hg); });
+    if (hg === 1) UPGRADES.forEach(function (u) {
       var lv = upLevel(u.id), price = upPrice(u.id), pips = "";
       for (var i = 0; i < u.prices.length; i++) pips += '<i class="' + (i < lv ? "on" : "") + '"></i>';
       var cls = price === null ? "btn buy max" : progress.coins < price ? "btn buy off" : "btn primary buy";
@@ -5144,31 +5440,39 @@
         '</div><div class="inf lbl">' + u.info + '</div><div class="pips">' + pips + '<span class="lbl">Lv '  + lv + " of " + u.prices.length + " &#160; " + u.effect(lv) +
         '</span></div></div><div class="' + cls + '" role="button" tabindex="0" aria-disabled="' + (cls !== "btn primary buy") + '">' + btn + "</div></div>";
     });
-    html += '<div class="sh-sub lbl">Rocket skins</div><div class="skins">';
-    SKINS.forEach(function (k) {
+    if (hg === 2) html += '<div class="skins">';
+    if (hg === 2) SKINS.forEach(function (k) {
       var own = ownSkin(k.id), on = progress.skin === k.id, c = skinColors(k.id);
       var pic = '<svg viewBox="-12 -42 24 64" aria-hidden="true"><path d="M-10 -20L0 -40L10 -20V20H-10z" fill="' + c.hull + '"/><path d="M0 -40L10 -20V20H0z" fill="' + c.hullDk + '"/>' +
         '<path d="M-10 -20L0 -40V-20z" fill="' + c.nose + '"/><path d="M0 -40L10 -20H0z" fill="' + c.noseDk + '"/><rect x="-10" y="14" width="20" height="6" fill="' + c.skirt + '"/><rect x="0" y="14" width="10" height="6" fill="' + c.skirtDk + '"/>' +
-        '<circle cx="0" cy="-8" r="6.4" fill="' + c.skirt + '"/><circle cx="0" cy="-8" r="5" fill="' + c.win + '"/><path d="M0 -13a5 5 0 0 1 0 10z" fill="' + c.winDk + '"/></svg>';
+        '<circle cx="0" cy="-8" r="6.4" fill="' + c.skirt + '"/><circle cx="0" cy="-8" r="5" fill="' + c.win + '"/><path d="M0 -13a5 5 0 0 1 0 10z" fill="' + c.winDk + '"/>' +
+        (k.id === "gold" ? '<path d="M-8 18L-3 -28L-1 -24L-5 18z" fill="#fff" opacity="0.7"/><path d="M9 -30l1 3 3 1-3 1-1 3-1-3-3-1 3-1z" fill="#fffbe0"/>' : "") + "</svg>";
       var b = on ? '<div class="btn buy max" role="button" tabindex="0" aria-disabled="true" data-skin="' + k.id + '"><span class="bp">In use</span></div>'
         : own ? '<div class="btn buy" role="button" tabindex="0" data-skin="' + k.id + '"><span class="bp">Use</span></div>'
         : '<div class="' + (progress.coins < k.price ? "btn buy off" : "btn primary buy") + '" role="button" tabindex="0" aria-disabled="' + (progress.coins < k.price) + '" data-skin="' + k.id + '"><span class="bp">' + COIN_SVG + fmt(k.price) + "</span></div>";
-      html += '<div class="skin' + (on ? " on" : "") + '">' + pic + '<div class="nm">' + k.name + "</div>" + b + "</div>";
+      html += '<div class="skin' + (on ? " on" : "") + '">' + pic + '<div class="nm">' + k.name + "</div>" +
+        '<div class="inf lbl">' + (k.bonus ? "+" + k.bonus + " coins on " + k.where : "No bonus") + "</div>" + b + "</div>";
     });
-    html += "</div>";
-    html += '<div class="sh-sub lbl">Shield colors</div><div class="skins">';
-    SHIELD_COLORS.forEach(function (k) {
+    if (hg === 2) html += "</div>";
+    if (hg === 3) html += '<div class="skins">';
+    if (hg === 3) SHIELD_COLORS.forEach(function (k, ki) {
       var own = ownShieldColor(k.id), on = shieldCol().id === k.id;
       var pic = '<svg viewBox="0 0 64 64" aria-hidden="true" style="width:56px;height:56px"><circle cx="32" cy="32" r="28" fill="' + rgba(k.fill, 0.3) + '" stroke="' + k.rim + '" stroke-width="4"/>' +
         '<path d="M20 22l8 -5 8 5v9l-8 5 -8 -5z M36 31l8 -5 8 5v9l-8 5 -8 -5z M20 40l8 -5 8 5v9l-8 5 -8 -5z" fill="none" stroke="' + rgba(k.line, 0.9) + '" stroke-width="2"/></svg>';
       var b = on ? '<div class="btn buy max" role="button" tabindex="0" aria-disabled="true" data-shc="' + k.id + '"><span class="bp">In use</span></div>'
         : own ? '<div class="btn buy" role="button" tabindex="0" data-shc="' + k.id + '"><span class="bp">Use</span></div>'
         : '<div class="' + (progress.coins < k.price ? "btn buy off" : "btn primary buy") + '" role="button" tabindex="0" aria-disabled="' + (progress.coins < k.price) + '" data-shc="' + k.id + '"><span class="bp">' + COIN_SVG + fmt(k.price) + "</span></div>";
-      html += '<div class="skin' + (on ? " on" : "") + '">' + pic + '<div class="nm">' + k.name + "</div>" + b + "</div>";
+      html += '<div class="skin' + (on ? " on" : "") + '">' + pic + '<div class="nm">' + k.name + "</div>" +
+        '<div class="inf lbl">' + (ki ? "+" + ki * 5 + "% speed when a shield goes up" : "No bonus") + "</div>" + b + "</div>";
     });
-    html += "</div>";
+    if (hg === 3) html += "</div>";
     $("shopItems").innerHTML = html;
   }
+  $("shTabs").addEventListener("click", function (e) {
+    var t = e.target.closest("[data-h]"); if (!t) return;
+    shopHangar = +t.getAttribute("data-h"); renderShop(); $("shop").scrollTop = 0;
+  });
+  $("shTabs").addEventListener("keydown", function (e) { if ((e.key === "Enter" || e.key === " ") && e.target.closest("[data-h]")) { e.preventDefault(); e.target.click(); } });
   $("shopItems").addEventListener("click", function (e) {
     var b = e.target.closest(".buy"); if (!b) return;
     var shc = b.getAttribute("data-shc");
@@ -5218,6 +5522,7 @@
     progress.route = c.getAttribute("data-r"); saveProgress(); refreshHome();
   }
   $("hRoute").addEventListener("click", pickRoute);
+  activate($("hExtra"), function () { progress.logExtra = !progress.logExtra; saveProgress(); refreshHome(); });
   $("hRoute").addEventListener("keydown", pickRoute);
   // Admin mode only: a permanent shield for testing, shown above Sound
   if (TEST_MODE) {
@@ -6324,7 +6629,7 @@
         return { intro: [], loop: [v1, v2, v3, v4, v5, v6, v7] };
       }
     };
-    var BODY_THEME = { earth: "epic", venus: "venus", mercury: "mercury", moon: "mercury", mars: "mars", jupiter: "jupiter", saturn: "saturn", uranus: "uranus", neptune: "neptune", pluto: "venus", rogue: "neptune", sun: "epic" };
+    var BODY_THEME = { earth: "epic", venus: "venus", mercury: "mercury", moon: "mercury", mars: "mars", jupiter: "jupiter", saturn: "saturn", uranus: "uranus", neptune: "neptune", pluto: "venus", nomad: "jupiter", rogue: "neptune", ignis: "mars", heaven: "epic", sun: "epic" };
     // ---- Track 2: epic trailer theme, D minor (original) ----
     // Loop of 36 bars, 4/4: open (4) grand impact over the organ ostinato;
     // build (8) i-bVI-bIII-bVII, taiko and spiccato strings rising, choir hits;
@@ -6746,6 +7051,7 @@
     // completing bases (single use, kept until a crash spends them)
     upShieldsLeft = upLevel("shields");
     boostsLeft = upLevel("boost"); fixesLeft = upLevel("corrector"); fixing = false; downAt = null; clearTimeout(downTimer);
+    lander.boostUntil = 0; lander.drone = false; lander.grab = null; mother = null; holes = []; holeNextAt = 0; edge = null; heavenCourse = null; gShift = 0;
     shields = upShieldsLeft + (progress.shieldBank || 0); shieldEarned = {}; discovered = {}; kuiperAt = oortAt = exitAt = null;
     progress.flights = (progress.flights || 0) + 1;
     // From Earth the course is the one chosen (inner once unlocked); from a base, outward
@@ -6806,6 +7112,9 @@
     if (scene === "orbit") { drawOrbit(dt); return; }
 
     var L = lander, here = BODIES[sceneIdx];
+    if (!edge && !heavenCourse && route === "outer" && scene === "surface" && !L.result && !L.doom && distNow() >= EDGE_FT) { edge = { phase: "black", at: elapsed }; holes = []; }
+    if (edge && edge.phase !== "done") { drawEdge(dt); return; }
+    if (edge) return;
     // A body's sky thins out into space as the lander climbs away from it
     var air = here.sky ? 1 - clamp01(0, -H * (here.id === "venus" ? VENUS_TOP : 2), L.pos.y) : 0;
     ctx.fillStyle = skyGradient;
@@ -6814,6 +7123,7 @@
     else if (air > 0) { ctx.save(); ctx.globalAlpha = air; ctx.fillStyle = here.skyFill; ctx.fillRect(0, 0, W, H); ctx.restore(); }
     // Venus's air is opaque: stars and the far bodies show only near its top
     var clear = here.id === "venus" ? Math.pow(1 - air, 3) : 1 - air;
+    hazeAir = air;
     var starFade = here.id === "venus" ? clear : 1 - air * here.starHide;
     var gal = route === "outer" ? clamp01(EXIT_FROM, EXIT_TO, distNow()) : 0;
     if (gal > 0) drawGalaxy(gal * clear);
@@ -6828,6 +7138,18 @@
     var d = distNow(), next = nextBody();
     if (here.id === "saturn" && air > 0) drawRingSky(dropFor(L.pos.y), air);
     if (here.id === "venus") drawVenusBanks(L.pos.y);
+    if (here.id === "ignis" && air > 0) {
+      // bright volcanic haze: slow glowing bands low in the ash
+      ctx.save(); ctx.globalAlpha = air;
+      for (var hz = 0; hz < 6; hz++) {
+        var hy = H * (0.3 + hz * 0.09) + dropFor(L.pos.y) * 0.6 + Math.sin(elapsed / 2600 + hz) * 10, hx = W * (((hz * 0.37 + elapsed / 90000) % 1) * 1.2 - 0.1);
+        ctx.fillStyle = hz % 2 ? "rgba(255, 106, 0, 0.32)" : "rgba(255, 176, 32, 0.26)";
+        ctx.beginPath(); ctx.ellipse(hx, hy, W * 0.38, 7 + hz * 2, -0.05, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "rgba(255, 228, 140, 0.35)";
+        ctx.beginPath(); ctx.ellipse(hx, hy, W * 0.22, 2 + hz * 0.6, -0.05, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
     if (here.id === "mercury") drawSun(dropFor(L.pos.y), L.pos.y);
     // The Sun's heat: the hull heats up fast near the surface and cools off
     // high above it. Uranus, Neptune and Pluto: the hull freezes unless the
@@ -6842,8 +7164,16 @@
         cold = Math.max(0, cold + dt / COLD_MS[here.id] * (L.engine ? -1.5 : 1 - 0.15 * upLevel("heater")));
         if (cold >= 1) { cold = 1; startDoom("freeze"); }
       } else if (here.id === "rogue") {
-        acid = Math.min(1, acid + dt / TOXIC_MS);
-        if (acid >= 1) startDoom("acid");
+        // the acid is in the green haze only: above it, it is gone
+        if (air > 0) { acid = Math.min(1, acid + dt / TOXIC_MS); if (acid >= 1) startDoom("acid"); }
+        else acid = 0;
+      } else if (here.id === "ignis") {
+        // volcanic heat: fast near the ground, slower higher up, and it bleeds off above the ash
+        if (air > 0) {
+          var nearI = L.pos.y > -H * 2 ? clamp01(-H * 2, groundLevel, L.pos.y) : 0;
+          heat = Math.min(1, heat + dt / 13500 * (0.45 + 0.6 * nearI) * (1 - 0.15 * upLevel("heatshield")));
+          if (heat >= 1) { heat = 1; startDoom("heat"); }
+        } else heat = Math.max(0, heat - dt / 3000);
       }
     }
     var outer = route === "outer";
@@ -6867,6 +7197,14 @@
       var lay = approachLayout(next, d);
       drawBody(next, lay.x, lay.y, lay.r, lay.a);
     }
+    if (heavenCourse) {
+      var hb = BODIES[idxOf("heaven")];
+      heavenCourse.ft += speedOf(L.vel) * (dt / TICK) / 3.5;
+      var hl = approachLayout(hb, heavenCourse.ft);
+      drawBody(hb, hl.x, hl.y, hl.r, hl.a);
+    }
+    // Nomad's ground drifts (it stops once the flight is over)
+    if (here.id === "nomad" && scene === "surface" && !L.result) gShift = (gShift + dt * NOMAD_SPEED) % W;
     // Coming back down: Earth grows below as the target
     if (sceneIdx === 0 && !earthArmed && d >= EARTH_ARM_FT) earthArmed = true;
     if (homebound() && d < EARTH_APPEAR_FT) { var el = approachLayout(BODIES[0], d); drawBody(BODIES[0], el.x, el.y, el.r, el.a); }
@@ -6905,6 +7243,7 @@
 
     var drop = dropFor(L.pos.y);
     drawCity(drop);
+    if (here.id === "heaven") drawPalaces(drop);
     if (sceneIdx !== 0 && sceneMid) {
       var aB = clamp01(-H * 1.5, 0, L.pos.y);
       if (aB > 0) { drawMidLayer(drop, aB); sceneMid.hiddenAt = null; }
@@ -6934,7 +7273,13 @@
       if (d >= fb.orbit && Math.round(rnd(0, (ice ? mix(100, 5, kd) : mix(100, 10, dens)) / wide)) === 0) spaceRocks.push(SpaceRock(ice));
       if (d >= fb.orbit && Math.round(rnd(0, (ice ? mix(700, 30, kd) : mix(700, 60, dens)) / wide)) === 0) bigRocks.push(BigRock("space", ice));
       if (Math.round(rnd(0, 2200 / wide)) === 0) bigRocks.push(Satellite());
+      // black holes from just past Viridian on
+      if (outer && d > BODIES[idxOf("rogue")].orbit + 5000 && here.id !== "heaven") {
+        if (!holeNextAt) holeNextAt = d + rnd(6000, 15000);
+        if (d >= holeNextAt) { holes.push({ x: rnd(W * 0.15, W * 0.85), y: -HOLE_FIELD, ph: rnd(0, 6) }); holeNextAt = d + rnd(20000, 45000); }
+      }
     }
+    if (holes.length) stepHoles(dt);
     if (sendBig && elapsed > bigAt) { sendBig = false; bigRocks.push(BigRock("ground")); }
     spaceRocks = spaceRocks.filter(function (r) { return !r.finished(); });
     spaceRocks.forEach(function (r) { r.draw(dt); });
@@ -6946,6 +7291,7 @@
     ctx.restore();
 
     extraConfetti.forEach(function (c) { c.draw(dt); });
+    stepMother(drop);
     drawLander(elapsed, dt);
     dither();
     drawTravelHud();
@@ -6959,7 +7305,8 @@
       else { ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H); ctx.restore(); }
     }
 
-    if (next && !L.result && !homeward && backMs <= 0 && distNow() >= next.orbit) enterOrbit(idxOf(next.id));
+    if (heavenCourse && heavenCourse.ft >= 10000 && !L.result) { heavenCourse = null; enterOrbit(idxOf("heaven")); }
+    else if (next && !L.result && !homeward && backMs <= 0 && distNow() >= next.orbit) enterOrbit(idxOf(next.id));
     else if (homebound() && !L.result && L.vel.y > 0 && (distNow() <= EARTH_ORBIT_FT || L.pos.y > -H * 2)) enterOrbit(0);
   }
 
