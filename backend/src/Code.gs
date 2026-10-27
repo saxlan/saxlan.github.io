@@ -302,6 +302,22 @@ function doPost(e) {
   return ContentService.createTextOutput(text).setMimeType(ContentService.MimeType.JSON);
 }
 function rpcPing() { ensureStore_(); return { ok: true }; }
+// ---------- update notes: one short message to every account's inbox, from the site. Only callable with the secret
+// kept on the owner's computer (backend/announce-token, never committed); the same text is not sent twice.
+const ANNOUNCE_H_ = '9eda495126dc17c140db9f08add6b15efce0835a40a34c42ca9cd6b21c0b7faf';
+function rpcAnnounce(secret, text, force) {
+  if (typeof secret !== 'string' || hex_(sha_(bytes_(secret))) !== ANNOUNCE_H_) throw new Error('owner only');
+  text = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+  if (!text) return { error: 'empty' };
+  ensureStore_();
+  return withLock_(() => {
+    if (!force && get_('meta', 'lastAnnounce') === text) return { error: 'already sent' };
+    const io = socIO_(); let n = 0;
+    io.users().forEach(u => { try { if (SX.inboxAdd(io, u, text, SITE_NAME_)) n++; } catch (e) {} });
+    put_('meta', 'lastAnnounce', text);
+    return { ok: true, sent: n };
+  });
+}
 
 // ---------- the meme of the day: one safe meme from r/wholesomememes (via meme-api.com), fetched once a day and kept in the
 // sheet so every visitor that day gets the same one. The image comes back as a data URL, so the visitor's browser never
@@ -1151,7 +1167,7 @@ const RPC_ = {
   rpcImportIcal: rpcImportIcal,
   rpcListMyRes: rpcListMyRes, rpcSaveRes: rpcSaveRes, rpcDeleteRes: rpcDeleteRes, rpcResyncRes: rpcResyncRes, rpcGetPdf: rpcGetPdf,
   rpcGetLibrary: rpcGetLibrary, rpcImportRes: rpcImportRes, rpcGetResources: rpcGetResources,
-  rpcRoles: rpcRoles, rpcModerate: rpcModerate, rpcSocial: rpcSocial, rpcSuggest: rpcSuggest,
+  rpcRoles: rpcRoles, rpcModerate: rpcModerate, rpcSocial: rpcSocial, rpcSuggest: rpcSuggest, rpcAnnounce: rpcAnnounce,
   rpcLoadGame: rpcLoadGame, rpcSaveGame: rpcSaveGame, rpcLoadGuestGame: rpcLoadGuestGame, rpcSaveGuestGame: rpcSaveGuestGame,
   rpcRedeemGuest: rpcRedeemGuest, rpcRoom: rpcRoom
 };
