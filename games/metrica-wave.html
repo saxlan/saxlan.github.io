@@ -1109,8 +1109,26 @@ var Render = {
     for (var i = a; i <= b; i++) { var p = ch[i][key]; for (var j = 0; j < p.length; j++) { if (pts.length && j === 0) continue; pts.push(p[j]); } }
     return pts;
   },
-  /* floor and ceiling: a flat fill, with the scene's top colour and a darker lip running along the surface (clipped inside) */
+  /* floor and ceiling, one cached image per chunk (redrawn only when the size or colours change), placed at whole pixels */
   terrain: function (ctx, v, C, ch, a, b) {
+    if (!C.__id) C.__id = ++Render.palN;
+    var key = v.cell + '|' + v.h + '|' + C.__id;
+    for (var i = a; i <= b; i++) {
+      var k = ch[i], e = Render.tcache.get(k);
+      if (!e || e.key !== key) {
+        var len = k.x1 - k.x0, W = Math.ceil(len * v.cell) + 2, cv = document.createElement('canvas'), cell = v.cell, x0 = k.x0;
+        cv.width = W; cv.height = Math.max(1, Math.ceil(v.h));
+        var vv = { w: W, h: v.h, dpr: v.dpr, cell: cell, camX: x0, cols: len, sx: function (x) { return (x - x0) * cell; }, sy: v.sy };
+        var g = cv.getContext('2d'); g.beginPath(); g.rect(0, 0, W, cv.height); g.clip();
+        Render.terrainDraw(g, vv, C, ch, Math.max(0, i - 1), Math.min(ch.length - 1, i + 1));
+        e = { key: key, cv: cv }; Render.tcache.set(k, e);
+      }
+      ctx.drawImage(e.cv, Math.round(v.sx(k.x0)), 0);
+    }
+  },
+  tcache: new WeakMap(), palN: 0,
+  /* floor and ceiling: a flat fill, with the scene's top colour and a darker lip running along the surface (clipped inside) */
+  terrainDraw: function (ctx, v, C, ch, a, b) {
     var t1 = Math.max(4, v.cell * 0.56), t2 = Math.max(6, v.cell * 0.8), i;
     [['f', v.h], ['c', 0]].forEach(function (k) {
       var pts = Render.poly(ch, a, b, k[0]), edge = k[1];
@@ -1207,7 +1225,8 @@ var Render = {
 };
 /* canvas sizing helper: keeps a canvas at its css size times devicePixelRatio */
 function fit(cv) {
-  var dpr = Math.min(3, window.devicePixelRatio || 1), w = Math.max(1, Math.round(cv.clientWidth * dpr)), h = Math.max(1, Math.round(cv.clientHeight * dpr));
+  /* at most 2x and about 3.5 million pixels: past that a full redraw every frame costs more than the extra sharpness is worth */
+  var dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1, Math.sqrt(3.5e6 / Math.max(1, cv.clientWidth * cv.clientHeight)))), w = Math.max(1, Math.round(cv.clientWidth * dpr)), h = Math.max(1, Math.round(cv.clientHeight * dpr));
   if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
   return dpr;
 }
@@ -1368,17 +1387,19 @@ var UI = {
   },
   prog: function () {
     if (!Game.on) return;
-    var m = Math.floor(Math.max(0, Game.x) * MPU);
+    /* called every frame: each piece of the bar is written only when its text or width changes */
+    var m = Math.floor(Math.max(0, Game.x) * MPU), dist, wd, P = UI.pLast || (UI.pLast = {});
     if (Game.mode === 'endless') {
       var b = S.end.best * MPU;
-      $('pDist').innerHTML = '<b>' + m + '</b> m';
-      $('pFill').style.width = (b > 0 ? Math.min(1, m / b) * 100 : 0).toFixed(2) + '%';
+      dist = '<b>' + m + '</b> m'; wd = (b > 0 ? Math.min(1, m / b) * 100 : 0).toFixed(1) + '%';
     } else {
       var T = LEVELS[Game.idx].m; m = Math.min(m, T);
-      $('pDist').innerHTML = '<b>' + m + '</b> / ' + T + ' m';
-      $('pFill').style.width = (m / T * 100).toFixed(2) + '%';
+      dist = '<b>' + m + '</b> / ' + T + ' m'; wd = (m / T * 100).toFixed(1) + '%';
     }
-    $('pTime').innerHTML = '<b>' + fmtTime1(Game.t) + '</b>';
+    var tm = '<b>' + fmtTime1(Game.t) + '</b>';
+    if (P.dist !== dist) { P.dist = dist; $('pDist').innerHTML = dist; }
+    if (P.wd !== wd) { P.wd = wd; $('pFill').style.width = wd; }
+    if (P.tm !== tm) { P.tm = tm; $('pTime').innerHTML = tm; }
     var ink = Game.pal().fg; if (UI.ink !== ink) { UI.ink = ink; $('pbar').style.setProperty('--text', ink); }
   },
   flash: function (big, small) {

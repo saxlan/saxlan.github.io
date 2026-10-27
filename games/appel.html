@@ -1284,7 +1284,8 @@ var MX = (function () {
   ['pointerdown', 'keydown'].forEach(function (ev) { window.addEventListener(ev, function () { if (!SV.muted && AC && AC.state === 'suspended') { try { AC.resume(); } catch (e) {} } }, true); });
 
   /* ================= canvas helpers ================= */
-  function dpr() { return Math.max(1, Math.min(4, window.devicePixelRatio || 1)); }
+  /* at most 2x: past that a full redraw every frame costs more than the extra sharpness is worth */
+  function dpr() { return Math.max(1, Math.min(2, window.devicePixelRatio || 1)); }
   /* size a canvas to its CSS box in device pixels; returns false when it has no area */
   function fit(cv) {
     var r = cv.getBoundingClientRect(), d = dpr(), w = Math.round(r.width * d), h = Math.round(r.height * d);
@@ -1705,7 +1706,11 @@ var MX = (function () {
     var R = G.R, got = 0; for (var i = 0; i < R.got.length; i++) if (R.got[i]) got++;
     var s = got + '/' + R.got.length + '|' + R.deaths + '|' + R.t.toFixed(2);
     if (s === hudLast && !force) return; hudLast = s;
-    $('hudGems').textContent = got + '/' + R.got.length; $('hudDeaths').textContent = R.deaths; $('hudTime').textContent = fmtTime(R.t);
+    /* runs every frame while the clock ticks: write only the pieces whose text changed */
+    var hg = got + '/' + R.got.length, hd = '' + R.deaths, ht = fmtTime(R.t), H = hud.last || (hud.last = {});
+    if (force || H.g !== hg) { H.g = hg; $('hudGems').textContent = hg; }
+    if (force || H.d !== hd) { H.d = hd; $('hudDeaths').textContent = hd; }
+    if (force || H.t !== ht) { H.t = ht; $('hudTime').textContent = ht; }
   }
   function win() {
     var R = G.R, got = 0; for (var i = 0; i < R.got.length; i++) if (R.got[i]) got++;
