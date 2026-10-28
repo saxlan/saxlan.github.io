@@ -254,16 +254,61 @@ function rpcSignup(name, pw) {
   });
   return out.token ? withData_(name, out) : out;
 }
-function rpcLogin(name, pw) {
+function rpcLogin(name, pw, seq) {
   ensureStore_();
   name = normName_(name); pw = typeof pw === 'string' ? pw : '';
   if (!name || !pw) return { error: 'empty' };
   const rec = NAME_RE.test(name) && pw.length <= 200 ? rec_(name) : null;
   if (!rec) return { error: 'nouser' };
   // a wrong password only slows that one attempt down; no lockout, so nobody can lock someone else out
-  if (!checkPw_(pw, rec)) { Utilities.sleep(1500); return { error: 'wrong' }; }
-  const out = withLock_(() => { const r = rec_(name); if (r.pic && r.pic.n) r.pic.n = 0; return { token: session_(name, r), user: userOut_(name) }; });
-  return withData_(name, out);
+  if (!pwOk_(pw, rec)) { Utilities.sleep(1500); return { error: 'wrong' }; }
+  const out = withLock_(() => {
+    const r = rec_(name);
+    const tf = tfaCheck_(r, seq); if (tf) { put_('users', name, JSON.stringify(r)); return tf; }
+    if (!r.tfa && r.pic && r.pic.n) r.pic.n = 0; // the right password unlocks the picture password
+    return { token: session_(name, r), user: userOut_(name) };
+  });
+  return out.token ? withData_(name, out) : out;
+}
+// ---------- passwords: after a change the old password keeps working for 3 days; security notices (password
+// reset or changed, picture password, two-step login) are kept on the account for its Security page
+const PW_OLD_MS_ = 3 * 864e5;
+const pwOk_ = (pw, r) => checkPw_(pw, r) || !!(r.old && r.old.until > Date.now() && checkPw_(pw, r.old));
+function pwSet_(r, pw) { r.old = { s: r.s, i: r.i, a: r.a, h: r.h, until: Date.now() + PW_OLD_MS_ }; newPwRec_(pw, r); }
+const secNote_ = (r, m) => { r.sec = (r.sec || []).concat([[Date.now(), String(m).slice(0, 200)]]).slice(-30); };
+// two-step login: an account with it on also picks its picture password at every login. 6 wrong pictures lock
+// logins for an hour. Returns null when the login may go ahead, otherwise what to tell the page.
+function tfaCheck_(r, seq) {
+  if (!r.tfa || !r.pic || !r.pic.h) return null;
+  const p = r.pic;
+  if ((p.n || 0) >= PIC_TRIES_) { if (Date.now() - (p.lk || 0) < 3600000) return { error: 'tfalocked' }; p.n = 0; }
+  if (seq === undefined || seq === null) return { error: 'need2fa' };
+  const q = picSeq_(seq);
+  if (q && picHash_(q, p.s) === p.h) { p.n = 0; return null; }
+  p.n = (p.n || 0) + 1;
+  if (p.n >= PIC_TRIES_) { p.lk = Date.now(); secNote_(r, 'Logins locked for an hour after 6 wrong picture passwords'); return { error: 'tfalocked' }; }
+  return { error: 'tfawrong', left: PIC_TRIES_ - p.n };
+}
+function rpcPwChange(k, cur, next) {
+  const me = auth_(k); cur = typeof cur === 'string' ? cur : ''; next = typeof next === 'string' ? next : '';
+  if (next.length < 6) return { error: 'short' };
+  if (next.length > 200) return { error: 'long' };
+  if (!checkPw_(cur, rec_(me))) { Utilities.sleep(1500); return { error: 'wrongcur' }; }
+  return withLock_(() => { const r = rec_(me); pwSet_(r, next); secNote_(r, 'Password changed. The old one still works for 3 days.'); put_('users', me, JSON.stringify(r)); return { ok: true }; });
+}
+function rpcTfa(k, on) {
+  const me = auth_(k);
+  return withLock_(() => {
+    const r = rec_(me);
+    if (on && !(r.pic && r.pic.h)) return { error: 'nopic' };
+    if (!!r.tfa !== !!on) { r.tfa = !!on; secNote_(r, on ? 'Two-step login turned on' : 'Two-step login turned off'); put_('users', me, JSON.stringify(r)); }
+    return { ok: true, tfa: !!r.tfa };
+  });
+}
+function rpcSecurity(k) {
+  const me = auth_(k), r = rec_(me), d = loadUser_(me);
+  return { ok: true, pic: !!(r.pic && r.pic.h), tfa: !!r.tfa, picLocked: !!(r.pic && (r.pic.n || 0) >= PIC_TRIES_), ical: !!(d.settings && d.settings.ical),
+    notices: (r.sec || []).slice().reverse() };
 }
 // ---------- forgot password: an account proves it is its own with its Schoology calendar link plus one assignment
 // from that calendar (spelling and capitals exact), or with its picture password (3 of 12 pictures in order; 6 wrong
@@ -277,8 +322,8 @@ function rpcPicSet(k, seq) {
   const me = auth_(k);
   return withLock_(() => {
     const r = rec_(me);
-    if (seq === null) delete r.pic;
-    else { const q = picSeq_(seq); if (!q) return { error: 'pic' }; const salt = hex_(random_(16)); r.pic = { s: salt, h: picHash_(q, salt), n: 0 }; }
+    if (seq === null) { if (r.pic) secNote_(r, 'Picture password turned off' + (r.tfa ? ', and two-step login with it' : '')); delete r.pic; delete r.tfa; }
+    else { const q = picSeq_(seq); if (!q) return { error: 'pic' }; secNote_(r, r.pic ? 'Picture password changed' : 'Picture password set'); const salt = hex_(random_(16)); r.pic = { s: salt, h: picHash_(q, salt), n: 0 }; }
     put_('users', me, JSON.stringify(r));
     return { ok: true, pic: !!r.pic };
   });
@@ -290,9 +335,9 @@ function rpcPwInfo(name) {
   if (!r) return { error: 'nouser' };
   return { ok: true, pic: !!(r.pic && r.pic.h), picLocked: !!(r.pic && (r.pic.n || 0) >= PIC_TRIES_) };
 }
-function pwTicket_(name, r) {
+function pwTicket_(name, r, how) {
   const t = hex_(random_(24));
-  r.rt = [hex_(sha_(bytes_(t))), Date.now() + 15 * 60000];
+  r.rt = [hex_(sha_(bytes_(t))), Date.now() + 15 * 60000, how];
   put_('users', name, JSON.stringify(r));
   return t;
 }
@@ -310,7 +355,7 @@ function rpcPwCheck(name, how, a, b) {
       return { error: p.n >= PIC_TRIES_ ? 'piclocked' : 'picwrong', left: PIC_TRIES_ - p.n };
     }
     p.n = 0;
-    return { ok: true, ticket: pwTicket_(name, r) };
+    return { ok: true, ticket: pwTicket_(name, r, 'pic') };
   });
   if (how === 'school') {
     const link = icalNorm_(a), title = typeof b === 'string' ? b.trim() : '';
@@ -324,7 +369,7 @@ function rpcPwCheck(name, how, a, b) {
       if (t.ikey) titles[String(t.ikey).split('|').pop().trim()] = 1;
     }));
     if (link !== saved || !titles[title]) { Utilities.sleep(1500); return { error: 'nomatch' }; }
-    return withLock_(() => ({ ok: true, ticket: pwTicket_(name, rec_(name)) }));
+    return withLock_(() => ({ ok: true, ticket: pwTicket_(name, rec_(name), 'school') }));
   }
   return { error: 'bad' };
 }
@@ -336,8 +381,11 @@ function rpcPwReset(name, ticket, pw) {
   return withLock_(() => {
     const r = name && NAME_RE.test(name) ? rec_(name) : null;
     if (!r || !r.rt || typeof ticket !== 'string' || hex_(sha_(bytes_(ticket))) !== r.rt[0] || Date.now() > r.rt[1]) return { error: 'expired' };
-    delete r.rt; newPwRec_(pw, r); r.k = [];
+    const how = r.rt[2]; delete r.rt; pwSet_(r, pw); r.k = [];
     if (r.pic) r.pic.n = 0;
+    // a Schoology reset also turns two-step login off (the pictures may be what was forgotten)
+    secNote_(r, 'Password reset with Forgot my password (' + (how === 'school' ? 'Schoology link' : 'picture password') + ')' + (how === 'school' && r.tfa ? '. Two-step login was turned off.' : '') + ' The old password still works for 3 days.');
+    if (how === 'school') delete r.tfa;
     put_('users', name, JSON.stringify(r));
     return { ok: true };
   });
@@ -1326,7 +1374,7 @@ function rpcSuggest(k, input) {
 const RPC_ = {
   rpcPing: rpcPing, rpcDailyMeme: rpcDailyMeme,
   rpcLevelShare: rpcLevelShare, rpcLevelGet: rpcLevelGet,
-  rpcSignup: rpcSignup, rpcLogin: rpcLogin, rpcLogout: rpcLogout, rpcPicSet: rpcPicSet, rpcPwInfo: rpcPwInfo, rpcPwCheck: rpcPwCheck, rpcPwReset: rpcPwReset,
+  rpcSignup: rpcSignup, rpcLogin: rpcLogin, rpcLogout: rpcLogout, rpcPicSet: rpcPicSet, rpcPwChange: rpcPwChange, rpcTfa: rpcTfa, rpcSecurity: rpcSecurity, rpcPwInfo: rpcPwInfo, rpcPwCheck: rpcPwCheck, rpcPwReset: rpcPwReset,
   rpcGetData: rpcGetData, rpcSaveTask: rpcSaveTask, rpcDeleteTask: rpcDeleteTask, rpcSaveSettings: rpcSaveSettings,
   rpcSaveNote: rpcSaveNote, rpcDeleteNote: rpcDeleteNote, rpcSaveEvent: rpcSaveEvent, rpcDeleteEvent: rpcDeleteEvent,
   rpcImportIcal: rpcImportIcal,
