@@ -198,7 +198,7 @@
     padding: 16px; box-sizing: border-box; overflow-y: auto; }
   #lb, #fin { z-index: 30; }
   body.shopping #shop, body.ranking #lb, body.finale #fin { display: flex; }
-  .sh-panel { width: 100%; max-width: 620px; margin: auto; color: var(--text); background: #fff; border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 20px; overflow: hidden; }
+  .sh-panel { width: min(620px, 100%); flex: none; max-width: 620px; margin: auto; color: var(--text); background: #fff; border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 20px; overflow: hidden; }
   .sh-head { display: flex; align-items: center; gap: 12px; padding: 18px 20px 6px; }
   .sh-head .tt { flex: 1; min-width: 0; }
   .sh-kicker { color: var(--purple); }
@@ -630,13 +630,15 @@
       c: { hull: "#ce82ff", hullDk: "#a560e8", nose: "#8a3fd1", noseDk: "#7330b8", win: "#f3e3ff", winDk: "#d9a8ff", skirt: "#8a3fd1", skirtDk: "#7330b8" } },
     { id: "midnight", name: "Midnight", price: 8000, bonus: 25, at: ["moon", "mercury"], where: "the Moon and Mercury",
       c: { hull: "#37464f", hullDk: "#2b363d", nose: "#1f2a30", noseDk: "#161e23", win: "#6f8a99", winDk: "#5c7a8a", skirt: "#4b5862", skirtDk: "#3c4850" } },
-    { id: "gold", name: "Gold", price: 20000, bonus: 30, at: ["jupiter", "saturn"], where: "Jupiter and Saturn",
-      c: { hull: "#ffde59", hullDk: "#f5c400", nose: "#ffc800", noseDk: "#e5b400", win: "#fff6c8", winDk: "#ffe48a", skirt: "#e5b400", skirtDk: "#cc9f00" } },
-    { id: "ember", name: "Ember", price: 30000, bonus: 35, at: ["mars", "venus"], where: "Mars and Venus",
+    { id: "ember", name: "Ember", price: 60000, bonus: 30, at: ["mars", "venus"], where: "Mars and Venus", heat: true,
       c: { hull: "#ff4b4b", hullDk: "#ea2b2b", nose: "#b81c1c", noseDk: "#9e1717", win: "#ffd0d0", winDk: "#ff9f9f", skirt: "#c42222", skirtDk: "#a81d1d" } },
-    { id: "frost", name: "Frost", price: 45000, bonus: 40, at: ["pluto"], where: "Pluto",
-      c: { hull: "#eef9ff", hullDk: "#cdeaf7", nose: "#a8dcf0", noseDk: "#8ccbe3", win: "#ffffff", winDk: "#e3f5fd", skirt: "#a8dcf0", skirtDk: "#8ccbe3" } }
+    { id: "frost", name: "Frost", price: 75000, bonus: 35, at: ["pluto"], where: "Pluto", cold: true,
+      c: { hull: "#eef9ff", hullDk: "#cdeaf7", nose: "#a8dcf0", noseDk: "#8ccbe3", win: "#ffffff", winDk: "#e3f5fd", skirt: "#a8dcf0", skirtDk: "#8ccbe3" } },
+    { id: "gold", name: "Gold", price: 120000, bonus: 40, at: ["jupiter", "saturn"], where: "Jupiter and Saturn",
+      c: { hull: "#ffde59", hullDk: "#f5c400", nose: "#ffc800", noseDk: "#e5b400", win: "#fff6c8", winDk: "#ffe48a", skirt: "#e5b400", skirtDk: "#cc9f00" } }
   ];
+  function skinHeat() { var k = skinDef(progress.skin); return k && k.heat ? 0.5 : 1; }
+  function skinCold() { var k = skinDef(progress.skin); return k && k.cold ? 0.5 : 1; }
   // extra coins for landing on the skin's worlds
   function skinBonus(id) {
     var k = skinDef(progress.skin);
@@ -1758,6 +1760,30 @@
       return { img: lay.c, h: bh };
     }) };
   }
+  // Ignis: the same kind of banks as Venus's clouds, lit orange from the lava below
+  var IGNIS_BANKS = [[0.28, 0.3, 0.6, "rgba(255, 140, 40, 0.34)"], [-0.45, 0.4, 0.55, "rgba(255, 186, 90, 0.3)"], [-1.3, 0.5, 0.45, "rgba(255, 120, 30, 0.28)"]];
+  var ignisBanks = null;
+  function drawIgnisBanks(y) {
+    if (!ignisBanks || ignisBanks.W !== W || ignisBanks.H !== H) {
+      var R = seeded(sceneSeed(idxOf("ignis"), 43));
+      ignisBanks = { W: W, H: H, imgs: IGNIS_BANKS.map(function (bk) {
+        var bh = Math.round(H * bk[1]), lay = makeLayer(W, bh), g = lay.g;
+        for (var x = -W * 0.1; x < W * 1.1; x += W * R.r(0.08, 0.14)) {
+          var cy = bh * R.r(0.4, 0.6), rx = W * R.r(0.12, 0.22), ry = bh * R.r(0.28, 0.42);
+          g.save(); g.translate(x, cy); g.scale(1, ry / rx);
+          g.fillStyle = bk[3]; g.beginPath(); g.arc(0, 0, rx * 0.8, 0, Math.PI * 2); g.fill();
+          g.restore();
+        }
+        return { img: lay.c, h: bh };
+      }) };
+    }
+    var cam = venusCam(y);
+    IGNIS_BANKS.forEach(function (bk, i) {
+      var b = ignisBanks.imgs[i], top = bk[0] * H + cam - b.h / 2 + Math.sin(elapsed / 3000 + i) * 6;
+      if (top > H || top + b.h < 0) return;
+      ctx.save(); ctx.globalAlpha *= bk[2]; ctx.drawImage(b.img, 0, top, W, b.h); ctx.restore();
+    });
+  }
   function drawVenusBanks(y) {
     if (!venusBanks || venusBanks.W !== W || venusBanks.H !== H) buildVenusBanks();
     var cam = venusCam(y);
@@ -2484,12 +2510,14 @@
       while (x < W + 40) { var w = R.r(70, 150); list.push({ x: x, w: w, h: R.r(50, 120), dome: R() < 0.6, cols: Math.max(3, Math.round(w / 18)), tower: R() < 0.4 }); x += w + R.r(10, 60); }
       palaces = { w: W, list: list };
     }
-    var base = H * 0.68 + drop;
+    var base = H * 0.66 + drop;
     if (base - 260 > H) return;
+    // the middle ground: a gentle white rise the palaces stand on
+    function rise(x) { return base + 14 * Math.sin(x / W * Math.PI * 3 + 0.7) + 8 * Math.sin(x / W * Math.PI * 7); }
     palaces.list.forEach(function (p) {
-      var y0 = base - p.h;
-      ctx.fillStyle = "#fffaf0"; ctx.fillRect(p.x, y0, p.w, p.h + 40);
-      ctx.fillStyle = "#efe6d2"; ctx.fillRect(p.x + p.w * 0.55, y0, p.w * 0.45, p.h + 40);
+      var foot = Math.max(rise(p.x), rise(p.x + p.w / 2), rise(p.x + p.w)) + 6, y0 = foot - 6 - p.h;
+      ctx.fillStyle = "#fffaf0"; ctx.fillRect(p.x, y0, p.w, foot - y0);
+      ctx.fillStyle = "#efe6d2"; ctx.fillRect(p.x + p.w * 0.55, y0, p.w * 0.45, foot - y0);
       ctx.fillStyle = "#e8c860"; ctx.fillRect(p.x - 4, y0 - 6, p.w + 8, 7);
       ctx.fillStyle = "#e5dcc6";
       for (var c = 0; c < p.cols; c++) ctx.fillRect(p.x + 6 + c * (p.w - 12) / p.cols, y0 + 10, 4, p.h - 14);
@@ -2504,6 +2532,12 @@
         ctx.fillStyle = "#e8c860"; ctx.beginPath(); ctx.moveTo(tx - 3, y0 - p.h * 0.6); ctx.lineTo(tx + 8, y0 - p.h * 0.6 - 24); ctx.lineTo(tx + 19, y0 - p.h * 0.6); ctx.closePath(); ctx.fill();
       }
     });
+    ctx.fillStyle = "#f3ead6"; ctx.beginPath(); ctx.moveTo(0, H + 10);
+    for (var mx = 0; mx <= W + 8; mx += 8) ctx.lineTo(mx, rise(mx));
+    ctx.lineTo(W, H + 10); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#fffdf6"; ctx.lineWidth = 3; ctx.beginPath();
+    for (var mx2 = 0; mx2 <= W + 8; mx2 += 8) { if (mx2) ctx.lineTo(mx2, rise(mx2)); else ctx.moveTo(0, rise(0)); }
+    ctx.stroke();
   }
   function drawTrail(alpha) {
     if (alpha <= 0) return;
@@ -3283,6 +3317,7 @@
     // A crash plays out for a moment before the end screen comes up; the
     // debris keeps simulating behind it either way
     if (landed) Snd.chime(r.build === "base"); else Snd.crash();
+    if (landed && BODIES[sceneIdx].id === "heaven") { genesis = { at: elapsed, r: r }; return; }
     roundOver(r);
   }
 
@@ -3964,6 +3999,44 @@
       ctx.strokeStyle = "rgba(217, 168, 255, 0.8)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(W / 2, bubbleY + R, R, 0, Math.PI * 2); ctx.stroke();
     }
   }
+  var SIM_LINES = [
+    ["\u201cWho in the world am I? Ah, that\u2019s the great puzzle!\u201d", "Lewis Carroll, Alice\u2019s Adventures in Wonderland"],
+    ["\u201cEverything is only for a day, both that which remembers and that which is remembered.\u201d", "Marcus Aurelius, Meditations"],
+    ["\u201cVanity of vanities; all is vanity.\u201d", "Ecclesiastes"]
+  ];
+  // centered text in lines no wider than maxW
+  function wrapLines(text, maxW) {
+    var words = text.split(" "), out = [], cur = "";
+    words.forEach(function (w) { var t = cur ? cur + " " + w : w; if (cur && ctx.measureText(t).width > maxW) { out.push(cur); cur = w; } else cur = t; });
+    if (cur) out.push(cur);
+    return out;
+  }
+  // Landing on Elysium: the first three verses of Genesis, then the end screen
+  var GENESIS = [
+    "In the beginning God created the heaven and the earth.",
+    "And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.",
+    "And God said, Let there be light: and there was light."
+  ];
+  var genesis = null;
+  function drawGenesis() {
+    if (!genesis) return;
+    var t = elapsed - genesis.at, end = 1200 + GENESIS.length * 4200 + 600;
+    var fade = clamp01(0, 1200, t) * (1 - clamp01(end, end + 1000, t));
+    ctx.save(); ctx.globalAlpha = fade; ctx.fillStyle = "#fffaf0"; ctx.fillRect(0, 0, W, H); ctx.restore();
+    var sz = W < 600 ? 15 : 19, lineH = sz * 1.5;
+    ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "italic 500 " + sz + "px " + FONT; ctx.fillStyle = "#6b5520";
+    var blocks = GENESIS.map(function (v) { return wrapLines(v, Math.min(W * 0.8, 640)); }), total = 0;
+    blocks.forEach(function (b) { total += b.length * lineH + lineH * 0.8; });
+    var y = H / 2 - total / 2 + lineH / 2;
+    blocks.forEach(function (b, i) {
+      var t0 = 1200 + i * 4200, a = clamp01(t0, t0 + 1100, t) * (1 - clamp01(end, end + 900, t));
+      ctx.globalAlpha = a;
+      b.forEach(function (ln) { ctx.fillText(ln, W / 2, y); y += lineH; });
+      y += lineH * 0.8;
+    });
+    ctx.restore();
+    if (t > end + 1000 && !genesis.done) { genesis.done = true; var r = genesis.r; genesis = null; roundOver(r); }
+  }
   function drawEdge(dt) {
     var L = lander, t = elapsed - edge.at, d = distNow();
     L.t = elapsed;
@@ -4003,13 +4076,23 @@
     if (edge.phase === "black2") { if (t > 1300) { edge.phase = "text"; edge.at = elapsed; addCoins(46500); } return; }
     if (edge.phase === "text") {
       ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.globalAlpha = Math.min(1, t / 1500) * (1 - clamp01(5200, 6200, t));
+      ctx.globalAlpha = Math.min(1, t / 1500) * (1 - clamp01(4400, 5200, t));
       ctx.font = "600 22px " + FONT; ctx.letterSpacing = "6px"; ctx.fillStyle = "#cfcfd4";
       ctx.fillText("was it all a simulation?", W / 2, H / 2);
       ctx.globalAlpha *= clamp01(1800, 2600, t) * 0.6;
       ctx.font = "700 13px " + FONT; ctx.letterSpacing = "3px"; ctx.fillText("+46,500", W / 2, H / 2 + 40);
       ctx.restore();
-      if (t > 6400) {
+      // then one line each from three books, one after another
+      SIM_LINES.forEach(function (q, i) {
+        var t0 = 5600 + i * 4600, a = clamp01(t0, t0 + 900, t) * (1 - clamp01(t0 + 3600, t0 + 4400, t));
+        if (a <= 0) return;
+        ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.globalAlpha = a; ctx.fillStyle = "#cfcfd4";
+        ctx.font = "italic 500 " + (W < 600 ? 15 : 19) + "px " + FONT; ctx.letterSpacing = "1px";
+        wrapLines(q[0], W * 0.82).forEach(function (ln, li, all) { ctx.fillText(ln, W / 2, H / 2 + (li - (all.length - 1) / 2) * 26); });
+        ctx.globalAlpha = a * 0.5; ctx.font = "700 11px " + FONT; ctx.letterSpacing = "3px"; ctx.fillText(q[1].toUpperCase(), W / 2, H / 2 + 52);
+        ctx.restore();
+      });
+      if (t > 5600 + SIM_LINES.length * 4600) {
         edge.phase = "done";
         fader.style.transition = "none"; fader.style.opacity = "1";
         setTimeout(function () { showHome(); fader.style.transition = "opacity 0.45s ease"; fader.style.opacity = "0"; edge = null; }, 60);
@@ -5466,7 +5549,7 @@
         : own ? '<div class="btn buy" role="button" tabindex="0" data-skin="' + k.id + '"><span class="bp">Use</span></div>'
         : '<div class="' + (progress.coins < k.price ? "btn buy off" : "btn primary buy") + '" role="button" tabindex="0" aria-disabled="' + (progress.coins < k.price) + '" data-skin="' + k.id + '"><span class="bp">' + COIN_SVG + fmt(k.price) + "</span></div>";
       html += '<div class="skin' + (on ? " on" : "") + '">' + pic + '<div class="nm">' + k.name + "</div>" +
-        '<div class="inf lbl">' + (k.bonus ? "+" + k.bonus + " coins on " + k.where : "No bonus") + "</div>" + b + "</div>";
+        '<div class="inf lbl">' + (k.bonus ? "+" + k.bonus + " coins on " + k.where : "No bonus") + (k.heat ? ", heat builds 50% slower" : k.cold ? ", cold builds 50% slower" : "") + "</div>" + b + "</div>";
     });
     if (hg === 2) html += "</div>";
     if (hg === 3) html += '<div class="skins">';
@@ -7066,7 +7149,7 @@
     // completing bases (single use, kept until a crash spends them)
     upShieldsLeft = upLevel("shields");
     boostsLeft = upLevel("boost"); fixesLeft = upLevel("corrector"); fixing = false; downAt = null; clearTimeout(downTimer);
-    lander.boostUntil = 0; lander.drone = false; lander.grab = null; mother = null; holes = []; holeNextAt = 0; edge = null; heavenCourse = null; gShift = 0;
+    genesis = null; lander.boostUntil = 0; lander.drone = false; lander.grab = null; mother = null; holes = []; holeNextAt = 0; edge = null; heavenCourse = null; gShift = 0;
     shields = upShieldsLeft + (progress.shieldBank || 0); shieldEarned = {}; discovered = {}; kuiperAt = oortAt = exitAt = null;
     progress.flights = (progress.flights || 0) + 1;
     // From Earth the course is the one chosen (inner once unlocked); from a base, outward
@@ -7127,7 +7210,7 @@
     if (scene === "orbit") { drawOrbit(dt); return; }
 
     var L = lander, here = BODIES[sceneIdx];
-    if (!edge && !heavenCourse && route === "outer" && scene === "surface" && !L.result && !L.doom && distNow() >= EDGE_FT) { edge = { phase: "black", at: elapsed }; holes = []; }
+    if (!edge && !heavenCourse && route === "outer" && scene === "surface" && !L.result && !L.doom && distNow() >= EDGE_FT) { edge = { phase: "black", at: elapsed }; holes = []; L.vel = { x: 0, y: 0 }; L.spinVel = 0; L.boostUntil = 0; }
     if (edge && edge.phase !== "done") { drawEdge(dt); return; }
     if (edge) return;
     // A body's sky thins out into space as the lander climbs away from it
@@ -7153,18 +7236,7 @@
     var d = distNow(), next = nextBody();
     if (here.id === "saturn" && air > 0) drawRingSky(dropFor(L.pos.y), air);
     if (here.id === "venus") drawVenusBanks(L.pos.y);
-    if (here.id === "ignis" && air > 0) {
-      // bright volcanic haze: slow glowing bands low in the ash
-      ctx.save(); ctx.globalAlpha = air;
-      for (var hz = 0; hz < 6; hz++) {
-        var hy = H * (0.3 + hz * 0.09) + dropFor(L.pos.y) * 0.6 + Math.sin(elapsed / 2600 + hz) * 10, hx = W * (((hz * 0.37 + elapsed / 90000) % 1) * 1.2 - 0.1);
-        ctx.fillStyle = hz % 2 ? "rgba(255, 106, 0, 0.32)" : "rgba(255, 176, 32, 0.26)";
-        ctx.beginPath(); ctx.ellipse(hx, hy, W * 0.38, 7 + hz * 2, -0.05, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = "rgba(255, 228, 140, 0.35)";
-        ctx.beginPath(); ctx.ellipse(hx, hy, W * 0.22, 2 + hz * 0.6, -0.05, 0, Math.PI * 2); ctx.fill();
-      }
-      ctx.restore();
-    }
+    if (here.id === "ignis" && air > 0) { ctx.save(); ctx.globalAlpha = air; drawIgnisBanks(L.pos.y); ctx.restore(); }
     if (here.id === "mercury") drawSun(dropFor(L.pos.y), L.pos.y);
     // The Sun's heat: the hull heats up fast near the surface and cools off
     // high above it. Uranus, Neptune and Pluto: the hull freezes unless the
@@ -7173,10 +7245,10 @@
     if (scene === "surface" && !L.result && !L.parked && !L.doom) {
       if (here.id === "sun") {
         var near = L.pos.y > -H * 2 ? clamp01(-H * 2, groundLevel, L.pos.y) : 0;
-        heat = Math.max(0, heat + dt / HEAT_MS * (near * near * 1.4 * (1 - 0.15 * upLevel("heatshield")) - 0.25));
+        heat = Math.max(0, heat + dt / HEAT_MS * (near * near * 1.4 * (1 - 0.15 * upLevel("heatshield")) * skinHeat() - 0.25));
         if (heat >= 1) { heat = 1; startDoom("heat"); }
       } else if (COLD_MS[here.id]) {
-        cold = Math.max(0, cold + dt / COLD_MS[here.id] * (L.engine ? -1.5 : 1 - 0.15 * upLevel("heater")));
+        cold = Math.max(0, cold + dt / COLD_MS[here.id] * (L.engine ? -1.5 : (1 - 0.15 * upLevel("heater")) * skinCold()));
         if (cold >= 1) { cold = 1; startDoom("freeze"); }
       } else if (here.id === "rogue") {
         // the acid is in the green haze only: above it, it is gone
@@ -7186,7 +7258,7 @@
         // volcanic heat: fast near the ground, slower higher up, and it bleeds off above the ash
         if (air > 0) {
           var nearI = L.pos.y > -H * 2 ? clamp01(-H * 2, groundLevel, L.pos.y) : 0;
-          heat = Math.min(1, heat + dt / 13500 * (0.45 + 0.6 * nearI) * (1 - 0.15 * upLevel("heatshield")));
+          heat = Math.min(1, heat + dt / 13500 * (0.45 + 0.6 * nearI) * (1 - 0.15 * upLevel("heatshield")) * skinHeat());
           if (heat >= 1) { heat = 1; startDoom("heat"); }
         } else heat = Math.max(0, heat - dt / 3000);
       }
@@ -7313,6 +7385,7 @@
     drawShieldHud();
     drawHeatHud();
     drawZoneLabel();
+    drawGenesis();
 
     if (fadeIn !== null) {
       var a = 1 - clamp01(fadeIn, fadeIn + FADE_MS, elapsed);
