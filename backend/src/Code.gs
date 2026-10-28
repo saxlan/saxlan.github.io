@@ -305,6 +305,11 @@ function rpcPing() { ensureStore_(); return { ok: true }; }
 // ---------- update notes: one short message to every account's inbox, from the site. Only callable with the secret
 // kept on the owner's computer (backend/announce-token, never committed); the same text is not sent twice.
 const ANNOUNCE_H_ = '9eda495126dc17c140db9f08add6b15efce0835a40a34c42ca9cd6b21c0b7faf';
+function rpcMemeDrop(secret, match) {
+  if (typeof secret !== 'string' || hex_(sha_(bytes_(secret))) !== ANNOUNCE_H_) throw new Error('owner only');
+  ensureStore_();
+  return memeDrop_(match);
+}
 function rpcAnnounce(secret, text, force) {
   if (typeof secret !== 'string' || hex_(sha_(bytes_(secret))) !== ANNOUNCE_H_) throw new Error('owner only');
   text = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 300);
@@ -367,11 +372,41 @@ function memeRefillStep_() {
     if (!owed) {
       const owner = PROPS.getProperty('owner');
       if (owner) try {
-        SX.inboxAdd(socIO_(), owner, fresh.length + ' new memes are saved for the days ahead: ' +
+        SX.inboxAdd(socIO_(), owner, fresh.length + (fresh.length === 1 ? ' new meme is' : ' new memes are') + ' saved for the days ahead: ' +
           fresh.map((t, i) => (i + 1) + ') ' + String(t).slice(0, 60)).join('; '), SITE_NAME_);
       } catch (e) {}
     }
   } catch (e) { put_('meta', 'memeTry', String(Date.now())); console.error('meme', e && e.message); }
+}
+// owner only: take saved memes whose title contains `match` out of the stock and fetch replacements right away
+function memeDrop_(match) {
+  match = String(match || '').toLowerCase().trim();
+  if (!match) return { error: 'empty' };
+  return withLock_(() => {
+    const q = memeJ_('memeQ', []), keep = [], removed = [];
+    q.forEach(key => {
+      const m = memeJ_(key, null);
+      if (m && String(m.title || '').toLowerCase().indexOf(match) >= 0) { removed.push(m.title); try { del_('meta', key); } catch (e) {} }
+      else keep.push(key);
+    });
+    // today's meme too: the next saved one takes its place
+    let cur = memeLoad_();
+    if (cur && String(cur.title || '').toLowerCase().indexOf(match) >= 0) {
+      removed.push(cur.title + ' (today)');
+      while (keep.length) {
+        const key = keep.shift(), next = memeJ_(key, null);
+        try { del_('meta', key); } catch (e) {}
+        if (next && next.data) { cur = { date: memeToday_(), title: next.title, mime: next.mime, data: next.data, link: next.link }; put_('meta', 'meme', JSON.stringify(cur)); break; }
+      }
+    }
+    put_('meta', 'memeQ', JSON.stringify(keep));
+    if (removed.length) {
+      put_('meta', 'memeOwed', String(removed.length)); put_('meta', 'memeNew', '[]');
+      for (let i = 0; i < removed.length; i++) { put_('meta', 'memeTry', '0'); memeRefillStep_(); }
+    }
+    cur = memeLoad_();
+    return { removed: removed, today: cur && cur.title, stock: memeJ_('memeQ', []).map(key => (memeJ_(key, {}) || {}).title) };
+  });
 }
 function rpcDailyMeme() {
   ensureStore_();
@@ -1210,7 +1245,7 @@ const RPC_ = {
   rpcImportIcal: rpcImportIcal,
   rpcListMyRes: rpcListMyRes, rpcSaveRes: rpcSaveRes, rpcDeleteRes: rpcDeleteRes, rpcResyncRes: rpcResyncRes, rpcGetPdf: rpcGetPdf,
   rpcGetLibrary: rpcGetLibrary, rpcImportRes: rpcImportRes, rpcGetResources: rpcGetResources,
-  rpcRoles: rpcRoles, rpcModerate: rpcModerate, rpcSocial: rpcSocial, rpcSuggest: rpcSuggest, rpcAnnounce: rpcAnnounce,
+  rpcRoles: rpcRoles, rpcModerate: rpcModerate, rpcSocial: rpcSocial, rpcSuggest: rpcSuggest, rpcAnnounce: rpcAnnounce, rpcMemeDrop: rpcMemeDrop,
   rpcLoadGame: rpcLoadGame, rpcSaveGame: rpcSaveGame, rpcLoadGuestGame: rpcLoadGuestGame, rpcSaveGuestGame: rpcSaveGuestGame,
   rpcRedeemGuest: rpcRedeemGuest, rpcRoom: rpcRoom
 };
