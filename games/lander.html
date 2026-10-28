@@ -390,6 +390,8 @@
       sky: ["#141416", "#2c2c30", "#46403e"], flatSky: "#2c2c30", ground: { fill: "#3a3a3e", rock: [0, 0, 24] }, maxR: 0.2, orbitR: 0.16 },
     { id: "heaven", name: "Elysium", appear: 0, orbit: 10000, grav: 0.003, pads: [70, 77, 84], starHide: 1,
       sky: ["#fff3cf", "#ffe7a8", "#fffdf4"], flatSky: "#fff5d6", ground: { fill: "#f4efe4", rock: [44, 40, 86] }, maxR: 0.24, orbitR: 0.18 },
+    { id: "hell", name: "Inferno", appear: 0, orbit: 0, grav: 0.004, pads: [36, 46, 66], starHide: 1,
+      sky: ["#1a0202", "#5a0a06", "#b3260e"], ground: { fill: "#2a0d0a", rock: [4, 60, 18] }, maxR: 0.2, orbitR: 0.16 },
     // The inner route, flown after coming back to Earth: Venus, then Mercury
     { id: "venus", name: "Venus", appear: 12000, orbit: 20000, grav: 0.0034, pads: [8, 12, 16], starHide: 1,
       sky: ["#6b3c12", "#c27a2a", "#efbf73"], ground: { fill: "#99582c", rock: [22, 42, 34] }, maxR: 0.2, orbitR: 0.16 },
@@ -467,7 +469,7 @@
   // galaxy fades in behind the stars (fully by EXIT_TO) and the little orrery fades out
   var OORT_FROM = ACTIVE_MILESTONES.oort[0], OORT_TO = ACTIVE_MILESTONES.oort[1];
   var EXIT_FROM = ACTIVE_MILESTONES.exit[0], EXIT_TO = ACTIVE_MILESTONES.exit[1];
-  var EXTRA_IDS = ["nomad", "rogue", "ignis", "heaven"];
+  var EXTRA_IDS = ["nomad", "rogue", "ignis", "heaven", "hell"];
   var EDGE_FT = 46500000;
 
   // ---- Session progress: landings per body, bases built, belt deaths ----
@@ -2160,6 +2162,7 @@
       return [b[0] - swirl * 6, b[1], b[2] + light * 10 - swirl * 6 + rnd(-1, 1)];
     },
     ignis: function (mx, my, light) { var b = bandColor([[0, 0, 22], [0, 0, 27], [0, 0, 20], [0, 0, 25], [0, 0, 23]], my); return [b[0], b[1], b[2] + light * 8]; },
+    hell: function (mx, my, light) { var b = bandColor([[4, 70, 18], [8, 80, 24], [2, 60, 14], [10, 85, 28]], my); return [b[0], b[1], b[2] + light * 6]; },
     heaven: function (mx, my, light) { var b = bandColor([[46, 100, 92], [44, 90, 86], [48, 100, 95], [44, 80, 89]], my); return [b[0], b[1], b[2] + light * 4]; },
     rogue: function (mx, my, light) { var b = bandColor([[100, 50, 40], [92, 55, 48], [104, 48, 34], [88, 60, 52], [98, 52, 44]], my); return [b[0], b[1], b[2] + light * 10]; },
     pluto: function (mx, my, light) {
@@ -2212,7 +2215,7 @@
     return null;
   }
   // Facets for a disc (or a lumpy potato for small moons), colored and smoothed
-  var STRIPED = { jupiter: true, saturn: true, uranus: true, neptune: true, venus: true, nomad: true, rogue: true, ignis: true, heaven: true };
+  var STRIPED = { jupiter: true, saturn: true, uranus: true, neptune: true, venus: true, nomad: true, rogue: true, ignis: true, heaven: true, hell: true };
   function buildFacets(id, lumpy, small) {
     var rings = small
       ? (id === "earth" ? [[{ x: 0, y: 0, ang: 0 }], ringPoints(7, 0.45, 0.1), ringPoints(13, 0.8, 0.08), ringPoints(16, 1, 0.05)]
@@ -2263,6 +2266,7 @@
       if (id === "jupiter") facets.spots = [{ x: 0.3, y: 0.36, rx: 0.24, ry: 0.12, c: hsl(16, 50, 52) }];
       if (id === "rogue") facets.spots = [{ x: 0.28, y: 0.3, rx: 0.22, ry: 0.1, c: hsl(72, 80, 52) }, { x: -0.4, y: -0.35, rx: 0.14, ry: 0.06, c: hsl(80, 70, 60) }];
       if (id === "ignis") facets.spots = [{ x: -0.3, y: 0.22, rx: 0.2, ry: 0.09, c: hsl(22, 100, 52) }, { x: 0.36, y: -0.3, rx: 0.13, ry: 0.06, c: hsl(36, 100, 58) }, { x: 0.1, y: 0.6, rx: 0.1, ry: 0.04, c: hsl(16, 100, 48) }];
+      if (id === "hell") facets.spots = [{ x: 0.2, y: 0.25, rx: 0.24, ry: 0.1, c: hsl(16, 100, 50) }, { x: -0.35, y: -0.3, rx: 0.12, ry: 0.05, c: hsl(30, 100, 55) }];
       if (id === "heaven") facets.spots = [{ x: -0.25, y: -0.3, rx: 0.2, ry: 0.08, c: hsl(48, 100, 97) }];
     }
     var avg = [0, 1, 2].map(function (c) { return next.reduce(function (t, v) { return t + v[c]; }, 0) / next.length; });
@@ -2420,7 +2424,7 @@
   var TRAIL = {
     earth: ["#9cc4f0", "#2f5f9e"], moon: ["#d8d8d8", "#6e6e72"], mars: ["#e09a70", "#7a3018"],
     jupiter: ["#ead2b0", "#8a6440"], saturn: ["#f0e2b8", "#9a8456"], uranus: ["#c8eef0", "#5a9aa4"],
-    neptune: ["#8aa8f0", "#1e3c90"], pluto: ["#e8d8c0", "#8a7458"], rogue: ["#b8f070", "#3c7a1e"], nomad: ["#e6c49a", "#8a5e38"], ignis: ["#6a6a70", "#2a2a2e"], heaven: ["#fffbe8", "#e8c860"]
+    neptune: ["#8aa8f0", "#1e3c90"], pluto: ["#e8d8c0", "#8a7458"], rogue: ["#b8f070", "#3c7a1e"], nomad: ["#e6c49a", "#8a5e38"], ignis: ["#6a6a70", "#2a2a2e"], heaven: ["#fffbe8", "#e8c860"], hell: ["#c0301a", "#3a0806"]
   };
   var TRAIL_MOONS = {
     earth: [{ id: "moon", a: 2.3, r: 0.27, w: 0.00035 }],
@@ -2433,7 +2437,7 @@
   var trailFacets = {};
   function buildTrailFacets() {
     trailFacets = {};
-    ["mercury", "venus", "earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "nomad", "rogue", "ignis", "heaven",
+    ["mercury", "venus", "earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "nomad", "rogue", "ignis", "heaven", "hell",
      "phobos", "deimos", "io", "europa", "titan", "enceladus", "mimas", "rhea", "sun"].forEach(function (id) {
       trailFacets[id] = buildFacets(id, id === "phobos" || id === "deimos", true);
     });
@@ -3607,6 +3611,7 @@
     var L = lander, k = dt / TICK;
     // Resting on a base pad after a respawn: nothing moves until thrust
     if (L.parked) { if (!L.engine) return; L.parked = false; }
+    if (L.frozen) return;
     if (L.grab) return;
     L.pos.y += k * L.vel.y;
     var touching = inGround(ground.path, L.pos.x, L.pos.y + LH / 2);
@@ -4041,6 +4046,56 @@
       ctx.strokeStyle = "rgba(255, 236, 200, 0.9)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(h.x, h.y, 16.5, sp, sp + Math.PI * 1.4); ctx.stroke();
       ctx.restore();
     });
+  }
+  // ---- Past Elysium (lightning) or past the Sun (the sky turns red): the way to Inferno ----
+  var hellGate = null, GATE_FT = 30000, GATE_TEXT = "ABANDON ALL HOPE, YE WHO ENTER HERE";
+  function startGate(kind) {
+    hellGate = { kind: kind, phase: kind === "bolt" ? "bolt" : "red", at: elapsed, bolt: null };
+    if (kind === "bolt") { lander.frozen = true; lander.engine = lander.left = lander.right = false; controlsOff(); }
+  }
+  function drawGate() {
+    if (!hellGate) return;
+    var L = lander, G = hellGate, t = elapsed - G.at;
+    if (G.phase === "bolt") {
+      // a jagged bolt across the sky, ending on the lander, with a white flash
+      if (!G.bolt) {
+        var pts = [[rnd(0, W), -10]], n = 9;
+        for (var i = 1; i <= n; i++) { var f = i / n; pts.push([mix(pts[0][0], L.shown.x, f) + (i < n ? rnd(-60, 60) : 0), mix(-10, L.shown.y, f)]); }
+        G.bolt = pts;
+      }
+      ctx.save(); ctx.lineJoin = "miter";
+      [[9, "rgba(206, 180, 255, 0.5)"], [3.5, "#ffffff"]].forEach(function (st) {
+        ctx.strokeStyle = st[1]; ctx.lineWidth = st[0]; ctx.beginPath();
+        G.bolt.forEach(function (q, i) { if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.stroke();
+      });
+      if (t > 250 && t < 520) { ctx.globalAlpha = 1 - (t - 250) / 270; ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H); }
+      ctx.restore();
+      if (t > 650) { G.phase = "black"; G.at = elapsed; }
+      return;
+    }
+    if (G.phase === "red") {
+      // the sky past the Sun turns red, smoothly but quickly
+      ctx.save(); ctx.globalAlpha = sine(clamp01(0, 1600, t)) * 0.92; ctx.fillStyle = "#4a0303"; ctx.fillRect(0, 0, W, H); ctx.restore();
+      if (t > 1700) { G.phase = "text"; G.at = elapsed; L.frozen = true; L.engine = L.left = L.right = false; controlsOff(); }
+      return;
+    }
+    ctx.fillStyle = G.kind === "bolt" ? "#000" : "#2a0101"; ctx.fillRect(0, 0, W, H);
+    if (G.phase === "black") { if (t > 800) { G.phase = "text"; G.at = elapsed; } return; }
+    // the message: red, shaking, split, flickering
+    var a = Math.min(1, t / 500) * (1 - clamp01(3200, 3700, t));
+    ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "800 " + (W < 600 ? 16 : 24) + "px " + FONT; ctx.letterSpacing = "4px";
+    var jx = rnd(-3, 3), jy = rnd(-2, 2);
+    if (Math.random() < 0.9) {
+      ctx.globalAlpha = a * 0.6; ctx.fillStyle = "#00e5ff"; ctx.fillText(GATE_TEXT, W / 2 + jx - 4, H / 2 + jy);
+      ctx.globalAlpha = a; ctx.fillStyle = "#ff1a1a"; ctx.fillText(GATE_TEXT, W / 2 + jx, H / 2 + jy);
+    }
+    ctx.restore();
+    if (Math.random() < 0.5) glitchSlices(4, 18);
+    if (t > 3800) {
+      hellGate = null; L.frozen = false;
+      enterSurface(idxOf("hell"));
+      controlsLive = true;
+    }
   }
   // ---- The edge. Nothing here is written down anywhere ----
   var edge = null, heavenCourse = null;
@@ -4867,7 +4922,7 @@
       if (!nbz && dz > EDGE_FT - 5000) { edge = null; heavenCourse = null; enterSurface(idxOf("heaven")); return; }
     }
     if (TEST_MODE && k === "j" && !lander.result) {
-      var nb = nextBody(), to = scene === "orbit" ? orbit.idx : homebound() ? 0 : nb ? idxOf(nb.id) : -1;
+      var nb = nextBody(), to = scene === "orbit" ? orbit.idx : homebound() ? 0 : nb ? idxOf(nb.id) : (BODIES[sceneIdx].id === "heaven" || BODIES[sceneIdx].id === "sun") ? idxOf("hell") : -1;
       if (to >= 0) enterSurface(to);
       return;
     }
@@ -5572,7 +5627,7 @@
       var n = progress.landings[b.id] || 0; total += n;
       if ((b.id === "venus" || b.id === "mercury" || b.id === "sun") && !progress.innerUnlocked && !n) return;
       // only the chosen course's bodies (Earth is on both); the worlds past Pluto are on the outer one
-      if ((inner ? ROUTES.inner : ROUTES.outer.concat(["heaven"])).indexOf(b.id) < 0) return;
+      if ((inner ? ROUTES.inner : ROUTES.outer.concat(["heaven", "hell"])).indexOf(b.id) < 0) return;
       var extra = EXTRA_IDS.indexOf(b.id) >= 0;
       if (extra !== (!inner && !!progress.logExtra)) return;
       if (extra && !n && !(progress.reached || {})[b.id]) {
@@ -6794,7 +6849,7 @@
         return { intro: [], loop: [v1, v2, v3, v4, v5, v6, v7] };
       }
     };
-    var BODY_THEME = { earth: "epic", venus: "venus", mercury: "mercury", moon: "mercury", mars: "mars", jupiter: "jupiter", saturn: "saturn", uranus: "uranus", neptune: "neptune", pluto: "venus", nomad: "jupiter", rogue: "neptune", ignis: "mars", heaven: "epic", sun: "epic" };
+    var BODY_THEME = { earth: "epic", venus: "venus", mercury: "mercury", moon: "mercury", mars: "mars", jupiter: "jupiter", saturn: "saturn", uranus: "uranus", neptune: "neptune", pluto: "venus", nomad: "jupiter", rogue: "neptune", ignis: "mars", heaven: "epic", hell: "mars", sun: "epic" };
     // ---- Track 2: epic trailer theme, D minor (original) ----
     // Loop of 36 bars, 4/4: open (4) grand impact over the organ ostinato;
     // build (8) i-bVI-bIII-bVII, taiko and spiccato strings rising, choir hits;
@@ -7222,7 +7277,7 @@
     // completing bases (single use, kept until a crash spends them)
     upShieldsLeft = upLevel("shields");
     boostsLeft = upLevel("boost"); fixesLeft = upLevel("corrector"); fixing = false; downAt = null; clearTimeout(downTimer);
-    genesis = null; lander.boostUntil = 0; lander.drone = false; lander.grab = null; mother = null; holes = []; holeNextAt = 0; edge = null; heavenCourse = null; gShift = 0;
+    genesis = null; hellGate = null; lander.frozen = false; lander.boostUntil = 0; lander.drone = false; lander.grab = null; mother = null; holes = []; holeNextAt = 0; edge = null; heavenCourse = null; gShift = 0;
     shields = upShieldsLeft + (progress.shieldBank || 0); shieldEarned = {}; discovered = {}; kuiperAt = oortAt = exitAt = null;
     progress.flights = (progress.flights || 0) + 1;
     // From Earth the course is the one chosen (inner once unlocked); from a base, outward
@@ -7288,6 +7343,7 @@
     if (edge) return;
     // A body's sky thins out into space as the lander climbs away from it
     var air = here.sky ? 1 - clamp01(0, -H * (here.id === "venus" ? VENUS_TOP : 2), L.pos.y) : 0;
+    if (here.id === "heaven") air = 1;
     ctx.fillStyle = skyGradient;
     ctx.fillRect(0, 0, W, H);
     if (here.id === "venus") drawVenusAir(L.pos.y);
@@ -7328,6 +7384,8 @@
         // the acid is in the green haze only: above it, it is gone
         if (air > 0) { acid = Math.min(1, acid + dt / TOXIC_MS); if (acid >= 1) startDoom("acid"); }
         else acid = 0;
+      } else if (here.id === "hell" && air <= 0) {
+        heat = 1; startDoom("heat");
       } else if (here.id === "ignis") {
         // volcanic heat: fast near the ground, slower higher up, and it bleeds off above the ash
         if (air > 0) {
@@ -7460,6 +7518,8 @@
     drawHeatHud();
     drawZoneLabel();
     drawGenesis();
+    if (!hellGate && !L.result && !L.doom && scene === "surface" && (here.id === "heaven" || here.id === "sun") && distNow() - sceneBase > GATE_FT) startGate(here.id === "heaven" ? "bolt" : "red");
+    drawGate();
 
     if (fadeIn !== null) {
       var a = 1 - clamp01(fadeIn, fadeIn + FADE_MS, elapsed);
