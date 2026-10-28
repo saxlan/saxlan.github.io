@@ -4034,6 +4034,9 @@
       b.forEach(function (ln) { ctx.fillText(ln, W / 2, y); y += lineH; });
       y += lineH * 0.8;
     });
+    // the source, once the last verse is in
+    ctx.globalAlpha = 0.6 * clamp01(1200 + (GENESIS.length - 1) * 4200 + 800, 1200 + GENESIS.length * 4200, t) * (1 - clamp01(end, end + 900, t));
+    ctx.font = "700 11px " + FONT; ctx.letterSpacing = "3px"; ctx.fillText("GENESIS 1:1 TO 1:3, KING JAMES VERSION", W / 2, y + lineH * 0.4);
     ctx.restore();
     if (t > end + 1000 && !genesis.done) { genesis.done = true; var r = genesis.r; genesis = null; roundOver(r); }
   }
