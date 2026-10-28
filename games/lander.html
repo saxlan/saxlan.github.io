@@ -734,7 +734,8 @@
   function pingPong(a, b, c) { var p = frac(a, b, c) % 1; return Math.floor(c / b) % 2 ? Math.abs(p - 1) : p; }
   function jitter(p) { return { x: p.x + rnd(-1, 1), y: p.y + rnd(-1, 1) }; }
   function tiltDeg(a) { var d = Math.abs(a * 180 / Math.PI) % 360; return d > 180 ? Math.abs(d - 360) : d; }
-  function tiltDegSigned(a) { var d = Math.abs(a * 180 / Math.PI) % 360; return d > 180 ? d - 360 : d; }
+  // signed tilt from upright, -180 to 180, right for any number of turns either way
+  function tiltDegSigned(a) { var d = (a * 180 / Math.PI) % 360; return ((d + 540) % 360) - 180; }
   function slopeDeg(p, q) { return Math.atan2(q.y - p.y, q.x - p.x) * 180 / Math.PI; }
 
   var numFmts = {};
@@ -2825,8 +2826,10 @@
     L.engine = L.left = L.right = false;
     L.vel = { x: 0, y: 0 }; L.spinVel = 0;
     L.hitKind = kind;
-    L.doom = { kind: kind, at: elapsed, drips: [] };
-    if (kind === "heat" || kind === "acid") for (var i = 0; i < 9; i++) L.doom.drips.push({ u: rnd(-0.9, 0.9), t0: rnd(0.05, 0.75), r: rnd(2.4, 4.2), sp: rnd(0.8, 1.3) });
+    L.doom = { kind: kind, at: elapsed, drips: [], seed: [], holes: [] };
+    for (var si = 0; si < 48; si++) L.doom.seed.push(Math.random());
+    if (kind === "acid") for (var hi = 0; hi < 9; hi++) L.doom.holes.push({ x: rnd(-8, 8) * (L.drone ? 2 : 1), y: rnd(-28, 16) * (L.drone ? 0.35 : 1), r: rnd(3, 7), t0: rnd(0.1, 0.65) });
+    for (var i = 0; i < 9; i++) L.doom.drips.push({ u: rnd(-0.9, 0.9), t0: rnd(0.05, 0.75), r: rnd(2.4, 4.2), sp: rnd(0.8, 1.3) });
   }
   // The ship outline in screen space: the box and its pointed nose
   function shipOutline(x, y, angle) {
@@ -2840,88 +2843,148 @@
     for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
     ctx.closePath();
   }
+  // Death by heat, acid or cold, for the lander and the drone alike. The craft is drawn into a small offscreen
+  // layer, tinted there (and eaten through, for acid), then slumped and dressed with its effects on screen.
+  var doomLayer = null, DOOM_S = 150;
+  function craftLayer(L, tint, tintA, holes) {
+    if (!doomLayer) doomLayer = makeLayer(DOOM_S, DOOM_S);
+    var g = doomLayer.g, d = doomLayer.c.width / DOOM_S, keep = ctx, c = DOOM_S / 2;
+    g.save(); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, DOOM_S, DOOM_S);
+    ctx = g;
+    try { if (L.drone) drawDroneAt(c, c, L.angle); else drawShipAt(c, c, L.angle, 1, false); } finally { ctx = keep; }
+    g.globalCompositeOperation = "source-atop"; g.globalAlpha = tintA; g.fillStyle = tint; g.fillRect(0, 0, DOOM_S, DOOM_S);
+    if (holes && holes.length) {
+      g.globalCompositeOperation = "destination-out"; g.globalAlpha = 1; g.fillStyle = "#000";
+      holes.forEach(function (h) { if (h.r > 0.3) { g.beginPath(); g.arc(c + h.x, c + h.y, h.r, 0, Math.PI * 2); g.fill(); } });
+    }
+    g.restore();
+    return doomLayer.c;
+  }
+  function blitCraft(img, x, y, foot, sx, sy, alpha) {
+    ctx.save(); ctx.globalAlpha *= alpha;
+    ctx.translate(x, foot); ctx.scale(sx, sy); ctx.translate(-x, -foot);
+    ctx.drawImage(img, x - DOOM_S / 2, y - DOOM_S / 2, DOOM_S, DOOM_S);
+    ctx.restore();
+  }
   function drawDoomShip(L) {
     var D = L.doom, p = clamp01(0, DOOM_MS, elapsed - D.at), x = L.shown.x, y = L.shown.y;
-    if (L.drone && D.kind !== "hole") {
-      // the drone itself melts (or freezes): it slumps onto its feet, tinted, shedding drops
-      var foot = y + LH / 2, sag = Math.pow(p, 1.3), tint = D.kind === "acid" ? [96, 80, 46] : D.kind === "freeze" ? [198, 80, 80] : [24, 100, 52];
-      ctx.save(); ctx.translate(x, foot); ctx.scale(1 + sag * 0.6, 1 - sag * 0.65); ctx.translate(-x, -foot);
-      drawDroneAt(x, y, L.angle);
-      ctx.globalAlpha = Math.min(1, p * 1.5) * 0.75; ctx.fillStyle = hsl(tint[0], tint[1], tint[2]);
-      ctx.beginPath(); ctx.roundRect(x - 21, foot - 22, 42, 22, 6); ctx.fill();
-      ctx.restore();
-      if (D.kind !== "freeze") D.drips.forEach(function (d) {
-        var q = (p - d.t0 * 0.7) / 0.3;
-        if (q <= 0) return;
-        var dx = x + d.u * 16 * (1 + sag * 0.6), fall = Math.max(0, q - 0.5) * 2, dy = foot + fall * fall * 120 * d.sp;
-        ctx.fillStyle = hsl(tint[0], tint[1], tint[2] + 10);
-        ctx.beginPath(); ctx.arc(dx, dy, d.r * 0.7, 0, Math.PI * 2); ctx.fill();
-      });
-      return;
-    }
-    var pts = shipOutline(x, y, L.angle);
+    var foot = y + LH / 2, sd = D.seed, now = elapsed - D.at, w = L.drone ? 22 : LW / 2 + 2, hgt = L.drone ? 14 : LH * 1.5;
     if (D.kind === "hole") {
       // stretched thin and swallowed
       var e2 = sine(Math.min(1, p * 1.3)), sx = mix(x, D.hx, e2), sy = mix(y, D.hy, e2);
       ctx.save(); ctx.translate(sx, sy); ctx.rotate(Math.atan2(D.hy - y, D.hx - x) + Math.PI / 2); ctx.scale(Math.max(0.05, 1 - e2) * 0.6, 1 + e2 * 2.5);
-      ctx.globalAlpha = 1 - clamp01(0.75, 1, p); drawShipAt(0, 0, 0, 1, false); ctx.restore();
+      ctx.globalAlpha = 1 - clamp01(0.75, 1, p);
+      if (L.drone) drawDroneAt(0, 0, 0); else drawShipAt(0, 0, 0, 1, false);
+      ctx.restore();
       return;
     }
-    if (D.kind === "heat" || D.kind === "acid") {
-      // Sagging: everything slumps toward the lowest point and spreads out (acid: the same, eaten away in green)
-      var ac = D.kind === "acid";
-      var low = Math.max.apply(null, pts.map(function (q) { return q[1]; })), tall = LH * 1.5, sag = Math.pow(p, 1.4);
-      var soft = [];
-      pts.forEach(function (q, i) {
-        var nq = pts[(i + 1) % pts.length];
-        soft.push(q, [(q[0] + nq[0]) / 2, (q[1] + nq[1]) / 2]);
-      });
-      soft = soft.map(function (q, i) {
-        var up = clamp01(0, tall, low - q[1]);
-        return [x + (q[0] - x) * (1 + sag * 0.8 * (1 - up)) + Math.sin(elapsed / 90 + i) * sag * 1.5,
-                q[1] + (low - q[1]) * sag * 0.58];
-      });
-      ctx.save();
-      shipPath(soft); ctx.fillStyle = bodyGradient; ctx.fill();
-      ctx.globalAlpha = Math.min(1, p * 1.6) * 0.85; ctx.fillStyle = ac ? hsl(96, 80, 44) : hsl(22, 100, 52); ctx.fill();
-      ctx.globalAlpha = Math.min(1, p * 1.6) * 0.6;
-      var core = soft.map(function (q) { return [x + (q[0] - x) * 0.55, low - (low - q[1]) * 0.55]; });
-      shipPath(core); ctx.fillStyle = ac ? hsl(80, 90, 60) : hsl(44, 100, 64); ctx.fill();
-      ctx.globalAlpha = 1;
-      // Drips: a bead grows at the lower edge, stretches and falls
-      D.drips.forEach(function (d) {
-        var q = (p - d.t0 * 0.7) / 0.3;
-        if (q <= 0) return;
-        var dx = x + d.u * LW * (0.5 + sag * 0.7), stretch = Math.min(1, q * 2) * 9 * d.sp, fall = Math.max(0, q - 0.5) * 2;
-        var dy = low + fall * fall * 140 * d.sp;
-        ctx.fillStyle = ac ? (q > 0.5 ? hsl(80, 90, 60) : hsl(96, 80, 46)) : q > 0.5 ? hsl(46, 100, 62) : hsl(30, 100, 56);
-        ctx.beginPath(); ctx.moveTo(dx - d.r * 0.5, dy - stretch); ctx.lineTo(dx + d.r * 0.5, dy - stretch);
-        ctx.lineTo(dx + d.r, dy); ctx.lineTo(dx, dy + d.r * 1.4); ctx.lineTo(dx - d.r, dy); ctx.closePath(); ctx.fill();
-      });
+    var i, q;
+    if (D.kind === "heat") {
+      // Melting: the hull glows red, then orange, then white-hot, sags into a puddle, sheds drips and embers
+      var hot = clamp01(0.05, 0.85, p), hue = mix(0, 48, hot), lt = mix(40, 68, hot), sag = Math.pow(clamp01(0.3, 1, p), 1.3);
+      var glow = ctx.createRadialGradient(x, foot - hgt * 0.4, 0, x, foot - hgt * 0.4, 46 + 34 * p);
+      glow.addColorStop(0, "hsla(" + hue + ", 100%, 60%, " + (0.4 * hot) + ")"); glow.addColorStop(1, "hsla(" + hue + ", 100%, 50%, 0)");
+      ctx.fillStyle = glow; ctx.fillRect(x - 90, foot - 130, 180, 180);
+      // heat shimmer above
+      ctx.save(); ctx.strokeStyle = "rgba(255, 210, 140, " + (0.3 * hot) + ")"; ctx.lineWidth = 1.5;
+      for (i = 0; i < 3; i++) {
+        ctx.beginPath();
+        for (var yy = 0; yy < 40; yy += 4) { var xx = x - 10 + i * 10 + Math.sin(now / 90 + yy / 6 + i) * 3; if (yy) ctx.lineTo(xx, foot - hgt - 6 - yy); else ctx.moveTo(xx, foot - hgt - 6); }
+        ctx.stroke();
+      }
       ctx.restore();
-    } else {
-      // Freezing: the hull frosts over while a block of ice grows up around it
-      drawShipAt(x, y, L.angle, 1, false);
+      // the hull, slumping onto its base
+      var img = craftLayer(L, "hsl(" + hue + ", 100%, " + lt + "%)", Math.min(1, p * 1.4) * 0.88);
+      blitCraft(img, x + Math.sin(now / 70) * sag * 1.5, y, foot, 1 + sag * 0.8, 1 - sag * 0.7, 1);
+      // a molten puddle spreading under it
+      if (p > 0.4) { ctx.fillStyle = "hsla(" + mix(16, 44, hot) + ", 100%, 58%, " + (0.9 * clamp01(0.4, 0.7, p)) + ")"; ctx.beginPath(); ctx.ellipse(x, foot, w * (0.6 + 1.4 * clamp01(0.4, 1, p)), 3 + 2 * p, 0, 0, Math.PI * 2); ctx.fill(); }
+      // embers rising
+      for (i = 0; i < 16; i++) {
+        q = (now / 1100 + sd[i]) % 1; if (p < sd[i + 16] * 0.4) continue;
+        ctx.fillStyle = "hsla(" + (30 + sd[i + 32] * 20) + ", 100%, 62%, " + (1 - q) + ")";
+        ctx.fillRect(x + (sd[i + 32] - 0.5) * w * 2.4 + Math.sin(now / 200 + i) * 4, foot - hgt * 0.3 - q * 80, 2, 2);
+      }
+      // drips falling from the base
+      D.drips.forEach(function (dd) {
+        var qq = (p - dd.t0 * 0.7) / 0.3; if (qq <= 0) return;
+        var dx = x + dd.u * w * (1 + sag * 0.7), fall = Math.max(0, qq - 0.5) * 2, dy = foot + fall * fall * 140 * dd.sp, st = Math.min(1, qq * 2) * 8 * dd.sp;
+        ctx.fillStyle = qq > 0.5 ? hsl(46, 100, 62) : hsl(28, 100, 56);
+        ctx.beginPath(); ctx.moveTo(dx - dd.r * 0.5, dy - st); ctx.lineTo(dx + dd.r * 0.5, dy - st); ctx.lineTo(dx + dd.r, dy); ctx.lineTo(dx, dy + dd.r * 1.4); ctx.lineTo(dx - dd.r, dy); ctx.closePath(); ctx.fill();
+      });
+      // smoke at the end
+      for (i = 0; i < 6 && p > 0.55; i++) {
+        q = clamp01(0.55 + i * 0.05, 1, p);
+        ctx.fillStyle = "rgba(70, 64, 60, " + (0.3 * (1 - q)) + ")";
+        ctx.beginPath(); ctx.arc(x + (sd[40 + i] - 0.5) * 30, foot - hgt * 0.6 - q * 70, 8 + q * 22, 0, Math.PI * 2); ctx.fill();
+      }
+      return;
+    }
+    if (D.kind === "acid") {
+      // Acid: the hull turns green, holes eat through it, it bubbles and fumes, then dissolves away
+      var holes = D.holes.map(function (h) { return { x: h.x, y: h.y, r: h.r * clamp01(h.t0, h.t0 + 0.4, p) * (1 + clamp01(0.7, 1, p) * 1.5) }; });
+      var img2 = craftLayer(L, "hsl(96, 80%, 44%)", Math.min(0.8, p * 1.1), holes), sg = Math.pow(clamp01(0.45, 1, p), 1.4);
+      blitCraft(img2, x, y, foot, 1 + sg * 0.35, 1 - sg * 0.45, 1 - clamp01(0.78, 1, p));
+      // the green pool it leaves
+      if (p > 0.35) { ctx.fillStyle = "rgba(137, 226, 25, " + (0.85 * clamp01(0.35, 0.6, p)) + ")"; ctx.beginPath(); ctx.ellipse(x, foot, w * (0.5 + 1.3 * clamp01(0.35, 1, p)), 3 + 2 * p, 0, 0, Math.PI * 2); ctx.fill(); }
+      // bubbles rising and popping
+      for (i = 0; i < 18; i++) {
+        if (p < sd[i] * 0.5) continue;
+        q = (now / 700 + sd[i + 18]) % 1;
+        var bx = x + (sd[i + 18] - 0.5) * w * 2.2 + Math.sin(now / 160 + i) * 2, by = foot - hgt * sd[i] - q * 34, br = 1.5 + sd[i] * 3;
+        ctx.strokeStyle = "rgba(200, 255, 150, " + (0.9 * (1 - q)) + ")"; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(bx, by, br * (q > 0.85 ? 1.6 : 1), 0, Math.PI * 2); ctx.stroke();
+      }
+      // fumes
+      for (i = 0; i < 5 && p > 0.3; i++) {
+        q = (now / 1600 + sd[30 + i]) % 1;
+        ctx.fillStyle = "rgba(150, 230, 90, " + (0.18 * (1 - q) * clamp01(0.3, 0.5, p)) + ")";
+        ctx.beginPath(); ctx.arc(x + (sd[35 + i] - 0.5) * 30 + q * 10, foot - hgt * 0.8 - q * 60, 7 + q * 16, 0, Math.PI * 2); ctx.fill();
+      }
+      // green drips
+      D.drips.forEach(function (dd) {
+        var qq = (p - dd.t0 * 0.7) / 0.3; if (qq <= 0) return;
+        var fall = Math.max(0, qq - 0.4) * 1.7;
+        ctx.fillStyle = hsl(90, 85, 52); ctx.beginPath(); ctx.arc(x + dd.u * w, foot - hgt * 0.2 + fall * fall * 120 * dd.sp, dd.r * 0.6, 0, Math.PI * 2); ctx.fill();
+      });
+      return;
+    }
+    // Freezing: the craft shivers, frost spreads over it, ice spikes grow off the hull, snow swirls,
+    // and a block of ice closes around it before it cracks
+    var shiver = (1 - clamp01(0.3, 0.6, p)) * Math.sin(now / 18) * 1.2;
+    var img3 = craftLayer(L, "hsl(200, 70%, 88%)", 0.85 * sine(Math.min(1, p * 1.4)));
+    blitCraft(img3, x + shiver, y, foot, 1, 1, 1);
+    // spikes of frost growing out of the hull
+    for (i = 0; i < 14; i++) {
+      var g0 = sd[i] * 0.5, grow = clamp01(g0, g0 + 0.45, p); if (grow <= 0) continue;
+      var a = sd[i + 14] * Math.PI * 2, ex = Math.cos(a) * (w + 2), ey = Math.sin(a) * (L.drone ? 10 : LH * 0.7);
+      var bx2 = x + ex, by2 = foot - hgt * 0.5 + ey, len = (6 + sd[i + 28] * 12) * grow, ca = Math.cos(a), sa = Math.sin(a);
+      ctx.fillStyle = "rgba(225, 245, 255, 0.9)";
+      ctx.beginPath(); ctx.moveTo(bx2 - sa * 2.5, by2 + ca * 2.5); ctx.lineTo(bx2 + ca * len, by2 + sa * len); ctx.lineTo(bx2 + sa * 2.5, by2 - ca * 2.5); ctx.closePath(); ctx.fill();
+    }
+    // snow swirling in
+    for (i = 0; i < 20; i++) {
+      q = (now / 1300 + sd[i + 20]) % 1; var sa2 = sd[i] * Math.PI * 2 + now / 600, rr = 60 * (1 - q) + 8;
+      ctx.fillStyle = "rgba(240, 250, 255, " + (0.8 * Math.min(1, p * 2)) + ")";
+      ctx.fillRect(x + Math.cos(sa2) * rr, foot - hgt * 0.5 + Math.sin(sa2) * rr * 0.7, 2, 2);
+    }
+    // the block of ice, growing up from the ground
+    var gb = sine(clamp01(0.35, 0.95, p)), bw = (L.drone ? 30 : LW * 1.6) + 10, top = foot - hgt - 10, bot = foot + 6, bh = (bot - top) * gb;
+    if (bh > 0) {
       ctx.save();
-      shipPath(pts); ctx.globalAlpha = 0.75 * sine(Math.min(1, p * 1.4)); ctx.fillStyle = hsl(200, 70, 86); ctx.fill();
-      ctx.globalAlpha = 1;
-      var g = sine(Math.min(1, p / 0.75)), bw = LW * 1.6 + 10, top = y - LH * 0.95 - 8, bot = y + LH * 0.6 + 6, bh = (bot - top) * g;
-      if (bh > 0) {
-        ctx.beginPath(); ctx.rect(x - bw, bot - bh, bw * 2, bh); ctx.clip();
-        var bx0 = x - bw / 2 - 4, bx1 = x + bw / 2 + 4, mx = x + 3, my = (top + bot) / 2;
-        var block = [[bx0 + 3, top + 2], [x - 2, top - 3], [bx1 - 2, top + 3], [bx1, my - 6], [bx1 - 3, bot], [x + 2, bot + 2], [bx0, bot - 2], [bx0 - 2, my + 4]];
-        ctx.globalAlpha = 0.72;
-        for (var i = 0; i < block.length; i++) {
-          var j = (i + 1) % block.length, lt = Math.cos(i / block.length * Math.PI * 2 + 2.2);
-          fpolySeal(ctx, [block[i], block[j], [mx, my]], hsl(198 + lt * 6, 80, 74 + lt * 10));
-        }
-        ctx.globalAlpha = 0.9;
-        fpolySeal(ctx, [[bx0 + 5, top + 6], [bx0 + 9, top + 5], [bx0 + 4, my + 6], [bx0 + 1, my + 4]], hsl(195, 80, 95));
-        if (p > 0.85 && Math.floor(elapsed / 60) % 2) {
-          ctx.globalAlpha = 0.9; ctx.strokeStyle = hsl(200, 60, 97); ctx.lineWidth = 1.5;
-          ctx.beginPath(); ctx.moveTo(x - 2, top); ctx.lineTo(x + 3, my - 8); ctx.lineTo(x - 4, my + 4); ctx.lineTo(x + 2, bot);
-          ctx.moveTo(x + 3, my - 8); ctx.lineTo(bx1, my - 2); ctx.stroke();
-        }
+      ctx.beginPath(); ctx.rect(x - bw, bot - bh, bw * 2, bh); ctx.clip();
+      var bx0 = x - bw / 2 - 4, bx1 = x + bw / 2 + 4, mx = x + 3, my = (top + bot) / 2;
+      var block = [[bx0 + 3, top + 2], [x - 2, top - 3], [bx1 - 2, top + 3], [bx1, my - 6], [bx1 - 3, bot], [x + 2, bot + 2], [bx0, bot - 2], [bx0 - 2, my + 4]];
+      ctx.globalAlpha = 0.7;
+      for (i = 0; i < block.length; i++) {
+        var j = (i + 1) % block.length, lt2 = Math.cos(i / block.length * Math.PI * 2 + 2.2);
+        fpolySeal(ctx, [block[i], block[j], [mx, my]], hsl(198 + lt2 * 6, 80, 74 + lt2 * 10));
+      }
+      ctx.globalAlpha = 0.9;
+      fpolySeal(ctx, [[bx0 + 5, top + 6], [bx0 + 9, top + 5], [bx0 + 4, my + 6], [bx0 + 1, my + 4]], hsl(195, 80, 95));
+      if (p > 0.85 && Math.floor(elapsed / 60) % 2) {
+        ctx.strokeStyle = hsl(200, 60, 97); ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(x - 2, top); ctx.lineTo(x + 3, my - 8); ctx.lineTo(x - 4, my + 4); ctx.lineTo(x + 2, bot);
+        ctx.moveTo(x + 3, my - 8); ctx.lineTo(bx1, my - 2); ctx.stroke();
       }
       ctx.restore();
     }
@@ -3993,7 +4056,25 @@
   // ---- The mothership over Ignis: the drone docks with it (inside the dotted ring) to leave ----
   var mother = null, MAG_R = 72;
   function DRONE_TOP() { return -H * 0.42; }
-  function motherAt(drop) { return { x: W * 0.7 + Math.sin(elapsed / 1100) * W * 0.03, y: 92 + Math.sin(elapsed / 700) * 6 + drop }; }
+  function motherAt(drop) {
+    var wy = mother.rise ? mix(mother.rise.from, mother.rise.to, sine(clamp01(mother.rise.at, mother.rise.at + 1400, elapsed))) : mother.wy;
+    return { x: mother.wx + Math.sin(elapsed / 1100) * 8, y: wy + Math.sin(elapsed / 700) * 5 + drop };
+  }
+  // the height (world y) below which the lander lets the drone go; it must climb back above EJECT_RESET to arm again
+  function EJECT_Y() { return groundLevel - H * 0.42; }
+  function EJECT_RESET() { return groundLevel - H * 0.55; }
+  var ejectArmed = true;
+  function checkEject() {
+    var L = lander, here = BODIES[sceneIdx];
+    if (!here.drone || L.drone || mother || L.result || L.doom || scene !== "surface") return;
+    if (!ejectArmed) { if (L.pos.y < EJECT_RESET()) ejectArmed = true; return; }
+    if (L.pos.y > EJECT_Y() && L.vel.y >= 0) {
+      // the drone drops out; the lander holds right here
+      mother = { wx: L.pos.x, wy: L.pos.y, rise: { from: L.pos.y, to: Math.max(70, L.pos.y - H * 0.2), at: elapsed } };
+      L.drone = true; L.engine = false; L.vel = { x: L.vel.x * 0.3, y: 0.5 }; L.angle = Math.PI * 2; L.spinVel = 0;
+      L.flipParty.push(confetti(8, L.shown, { x: 0, y: 0 }));
+    }
+  }
   function stepMother(drop) {
     var L = lander;
     if (!mother) return;
@@ -4005,7 +4086,10 @@
     }
     drawShipAt(m.x, m.y, 0, 1, false);
     if (!L.drone || L.result || L.doom) return;
-    if (!L.grab && Math.hypot(L.shown.x - m.x, L.shown.y - m.y) < MAG_R) {
+    // the drone starts inside the ring: docking waits until it has been out of it
+    var dist = Math.hypot(L.shown.x - m.x, L.shown.y - m.y);
+    if (!mother.ready) { if (dist > MAG_R + 12) mother.ready = true; }
+    else if (!L.grab && dist < MAG_R) {
       L.grab = { at: elapsed, x: L.pos.x, y: L.pos.y, a: L.angle }; L.engine = L.left = L.right = false; L.vel = { x: 0, y: 0 }; L.spinVel = 0;
     }
     if (L.grab) {
@@ -4015,7 +4099,7 @@
       ctx.save(); ctx.strokeStyle = "rgba(132, 216, 255, " + (0.8 * (1 - p)) + ")"; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(m.x, m.y, MAG_R * (1 - e * 0.7), 0, Math.PI * 2); ctx.stroke(); ctx.restore();
       if (p >= 1) {
-        L.drone = false; L.grab = null; mother = null;
+        L.drone = false; L.grab = null; mother = null; ejectArmed = false;
         L.pos.x = m.x; L.pos.y = m.y - drop; L.angle = 0; L.spinVel = 0; L.vel = { x: 0, y: -0.6 };
         L.flipParty.push(confetti(12, L.shown, { x: 0, y: 0 }));
       }
@@ -4767,7 +4851,8 @@
     groundLevel = ground.avg - LH + LH / 2;
     placeLander(L, true);
     L.flipParty = [];
-    L.drone = !!body.drone; L.grab = null; mother = body.drone ? {} : null;
+    L.drone = !!body.drone; L.grab = null; ejectArmed = false;
+    mother = body.drone ? { wx: W * 0.7, wy: 92 } : null;
     if (L.drone) L.pos.y = Math.max(L.pos.y, H * 0.42);
     // The engine stays exactly as the keys are: firing only while thrust is
     // held, carried straight through the scene switch.
@@ -7343,7 +7428,7 @@
     if (edge) return;
     // A body's sky thins out into space as the lander climbs away from it
     var air = here.sky ? 1 - clamp01(0, -H * (here.id === "venus" ? VENUS_TOP : 2), L.pos.y) : 0;
-    if (here.id === "heaven") air = 1;
+    if (here.id === "heaven" || here.id === "hell") air = 1;
     ctx.fillStyle = skyGradient;
     ctx.fillRect(0, 0, W, H);
     if (here.id === "venus") drawVenusAir(L.pos.y);
@@ -7384,7 +7469,7 @@
         // the acid is in the green haze only: above it, it is gone
         if (air > 0) { acid = Math.min(1, acid + dt / TOXIC_MS); if (acid >= 1) startDoom("acid"); }
         else acid = 0;
-      } else if (here.id === "hell" && air <= 0) {
+      } else if (here.id === "hell" && L.pos.y < -H * 2) {
         heat = 1; startDoom("heat");
       } else if (here.id === "ignis") {
         // volcanic heat: fast near the ground, slower higher up, and it bleeds off above the ash
@@ -7489,8 +7574,8 @@
       var belt = outer && d >= BELT_FROM && d <= BELT_TO, wide = W / 800, dens = belt ? beltDensity() : 0;
       // The Kuiper belt: icy bodies, a little sparser than the asteroid belt
       var kd = inKuiper ? kuiperDensity() : inOort ? oortDensity() * 0.75 : 0, ice = (inKuiper || inOort) && kd > 0;
-      if (d >= fb.orbit && Math.round(rnd(0, (ice ? mix(100, 5, kd) : mix(100, 10, dens)) / wide)) === 0) spaceRocks.push(SpaceRock(ice));
-      if (d >= fb.orbit && Math.round(rnd(0, (ice ? mix(700, 30, kd) : mix(700, 60, dens)) / wide)) === 0) bigRocks.push(BigRock("space", ice));
+      if (d >= fb.orbit && Math.round(rnd(0, (ice ? mix(100, 22, kd) : mix(100, 10, dens)) / wide)) === 0) spaceRocks.push(SpaceRock(ice));
+      if (d >= fb.orbit && Math.round(rnd(0, (ice ? mix(700, 150, kd) : mix(700, 60, dens)) / wide)) === 0) bigRocks.push(BigRock("space", ice));
       if (Math.round(rnd(0, 2200 / wide)) === 0) bigRocks.push(Satellite());
       // black holes from just past Viridian on
       if (outer && d > BODIES[idxOf("rogue")].orbit + 5000 && here.id !== "heaven") {
@@ -7510,6 +7595,7 @@
     ctx.restore();
 
     extraConfetti.forEach(function (c) { c.draw(dt); });
+    checkEject();
     stepMother(drop);
     drawLander(elapsed, dt);
     dither();
