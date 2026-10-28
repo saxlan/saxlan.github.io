@@ -1776,7 +1776,7 @@ function normalizeCourse(input){
   /* ---------- the daily meme: picked on the server from meme-api.com (r/wholesomememes) once a day ----------
      Only safe posts: not nsfw, not a spoiler, a still image or gif (no video), and no title words that do not belong at
      school. Best voted first; the image is downloaded on the server and handed to the page as a data URL. */
-  SX.MEME_API = 'https:' + '/' + '/meme-api.com/gimme/wholesomememes/10';
+  SX.MEME_API = 'https:' + '/' + '/meme-api.com/gimme/wholesomememes/30';
   SX.MEME_MAX = 1500000;
   SX.MEME_BAD = /\b(sex\w*|porn\w*|nude\w*|naked|nsfw|kill\w*|suicid\w*|die[ds]?|dying|death|dead|funeral|grave|cancer|drunk|beer|vodka|wine|alcohol|weed|drugs?|stoned|gun\w*|shoot\w*|blood\w*|depress\w*|abuse\w*|damn|hell|wtf|f\W?ck\w*|shit\w*|bitch\w*|ass|crap|boob\w*|horny|thicc|onlyfans|politic\w*|trump|biden|religio\w*|war|gf|bf|girlfriend|boyfriend|wife|husband|shower\w*|bed|kiss\w*|crush|dating|date|marri\w*|divorc\w*|pregnan\w*|baby mama|love\w*|lover|romanc\w*|romantic|valentine\w*|hot|sexy|babe)\b/i;
   SX.memeTitle = function (t) { return String(t || '').replace(/\[[^\]]{0,12}\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140); };

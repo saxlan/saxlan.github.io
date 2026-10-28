@@ -325,11 +325,15 @@ function rpcAnnounce(secret, text, force) {
 // bundled pictures. Retries after a failure at most every 30 minutes.
 function memeToday_() { return Utilities.formatDate(new Date(), 'America/New_York', 'yyyy-MM-dd'); }
 function memeLoad_() { try { return JSON.parse(get_('meta', 'meme') || 'null'); } catch (e) { return null; } }
-function memeFetch_() {
+// Memes come from r/wholesomememes in a stock of saved ones: each day (midnight Eastern) takes the next, and when
+// the stock is down to its last one, 6 more are fetched (one per request, so no visitor waits long) and the owner
+// gets an inbox message listing them. Links already used are skipped.
+function memeFetch_(skip, n) {
   const r = UrlFetchApp.fetch(SX.MEME_API, { muteHttpExceptions: true, followRedirects: true, headers: { Accept: 'application/json' } });
   if (r.getResponseCode() !== 200) throw new Error('meme api ' + r.getResponseCode());
-  const picks = SX.memePick(JSON.parse(r.getContentText()));
-  for (let i = 0; i < picks.length && i < 6; i++) {
+  const picks = SX.memePick(JSON.parse(r.getContentText())), out = [];
+  for (let i = 0; i < picks.length && out.length < (n || 1); i++) {
+    if (skip && skip.indexOf(picks[i].link) >= 0) continue;
     const urls = picks[i].urls;
     for (let j = 0; j < urls.length; j++) {
       try {
@@ -337,29 +341,67 @@ function memeFetch_() {
         if (g.getResponseCode() !== 200) continue;
         const b = g.getContent(), mime = SX.memeMime(b);
         if (!mime || b.length > SX.MEME_MAX) continue;
-        return { title: picks[i].title, mime: mime, data: Utilities.base64Encode(b), link: picks[i].link };
+        out.push({ title: picks[i].title, mime: mime, data: Utilities.base64Encode(b), link: picks[i].link });
+        break;
       } catch (e) { /* try the next one */ }
     }
   }
-  throw new Error('no meme');
+  if (!out.length) throw new Error('no meme');
+  return n ? out : out[0];
+}
+const memeJ_ = (k, d) => { try { return JSON.parse(get_('meta', k) || 'null') || d; } catch (e) { return d; } };
+// one more meme into the stock while a refill is owed; the owner hears about the batch when it is complete
+function memeRefillStep_() {
+  let owed = Number(get_('meta', 'memeOwed') || 0);
+  const q = memeJ_('memeQ', []);
+  if (!owed && q.length <= 1) { owed = q.length ? 6 : 7; put_('meta', 'memeOwed', String(owed)); put_('meta', 'memeNew', '[]'); }
+  if (!owed || Date.now() - Number(get_('meta', 'memeTry') || 0) < 60000) return;
+  const seen = memeJ_('memeSeen', []), fresh = memeJ_('memeNew', []);
+  try {
+    const f = memeFetch_(seen, 1)[0], key = 'mq_' + Utilities.getUuid().replace(/-/g, '').slice(0, 12);
+    put_('meta', key, JSON.stringify(f));
+    q.push(key); put_('meta', 'memeQ', JSON.stringify(q));
+    seen.push(f.link); put_('meta', 'memeSeen', JSON.stringify(seen.slice(-80)));
+    fresh.push(f.title || '(untitled)'); put_('meta', 'memeNew', JSON.stringify(fresh));
+    owed--; put_('meta', 'memeOwed', String(owed));
+    if (!owed) {
+      const owner = PROPS.getProperty('owner');
+      if (owner) try {
+        SX.inboxAdd(socIO_(), owner, fresh.length + ' new memes are saved for the days ahead: ' +
+          fresh.map((t, i) => (i + 1) + ') ' + String(t).slice(0, 60)).join('; '), SITE_NAME_);
+      } catch (e) {}
+    }
+  } catch (e) { put_('meta', 'memeTry', String(Date.now())); console.error('meme', e && e.message); }
 }
 function rpcDailyMeme() {
   ensureStore_();
   const day = memeToday_();
   let m = memeLoad_();
-  const tried = Number(get_('meta', 'memeTry') || 0);
-  if ((!m || m.date !== day) && Date.now() - tried > 30 * 60000) {
+  if (!m || m.date !== day) {
     m = withLock_(() => {
       let cur = memeLoad_();
       if (cur && cur.date === day) return cur;
+      const q = memeJ_('memeQ', []);
+      if (q.length) {
+        // the next saved meme becomes today's
+        const key = q.shift(), next = memeJ_(key, null);
+        put_('meta', 'memeQ', JSON.stringify(q));
+        try { del_('meta', key); } catch (e) {}
+        if (next && next.data) { cur = { date: day, title: next.title, mime: next.mime, data: next.data, link: next.link }; put_('meta', 'meme', JSON.stringify(cur)); return cur; }
+      }
+      // nothing saved: fetch one straight away
       if (Date.now() - Number(get_('meta', 'memeTry') || 0) < 30 * 60000) return cur;
       try {
-        const f = memeFetch_();
+        const f = memeFetch_(memeJ_('memeSeen', []));
         cur = { date: day, title: f.title, mime: f.mime, data: f.data, link: f.link };
         put_('meta', 'meme', JSON.stringify(cur));
+        const seen = memeJ_('memeSeen', []); seen.push(f.link); put_('meta', 'memeSeen', JSON.stringify(seen.slice(-80)));
       } catch (e) { put_('meta', 'memeTry', String(Date.now())); console.error('meme', e && e.message); }
       return cur;
     });
+  } else {
+    // a quiet moment: top up the stock when it is running low
+    try { withLock_(() => memeRefillStep_()); } catch (e) {}
   }
   if (!m || !m.data) return null;
   return { date: m.date, title: m.title || '', link: m.link || '', dataUrl: 'data:' + m.mime + ';base64,' + m.data };
