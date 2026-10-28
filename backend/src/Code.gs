@@ -634,7 +634,7 @@ function rpcRedeemGuest(k, g) {
 // account roles: stored on the user record. The owner and game-admins are administrators; moderators approve resources
 const ROLES_ = ['game-admin', 'moderator'];
 const roles_ = name => { const r = rec_(name); return r && Array.isArray(r.roles) ? r.roles.filter(x => ROLES_.indexOf(x) >= 0) : []; };
-const userOut_ = name => { const r = rec_(name) || {}; return { name: name, created: r.c || 0, pic: !!(r.pic && r.pic.h), owner: isOwner_(name), roles: roles_(name) }; };
+const userOut_ = name => { const r = rec_(name) || {}; return { name: name, av: avMap_()[name] || '', created: r.c || 0, pic: !!(r.pic && r.pic.h), owner: isOwner_(name), roles: roles_(name) }; };
 
 // ---------- multiplayer rooms (games reach this only through the page's room bridge) ----------
 // Rooms live in the script cache. Only the seq increment (with the event or room change it carries) takes the lock;
@@ -1040,7 +1040,7 @@ function cleanSettings_(s) {
   Object.keys(s.colors && typeof s.colors === 'object' ? s.colors : {}).slice(0, 40).forEach(k => { const v = s.colors[k]; if (/^[a-z0-9]{1,16}$/.test(k) && /^#[0-9a-f]{6}$/i.test(v)) colors[k] = v; });
   Object.keys(s.periods && typeof s.periods === 'object' ? s.periods : {}).slice(0, 40).forEach(k => { const p = Number(s.periods[k]); if (/^[a-z0-9]{1,16}$/.test(k) && p >= 1 && p <= 8 && p === Math.floor(p)) periods[k] = p; });
   const ical = cleanStr_(s.ical, 600);
-  return { colors: colors, periods: periods, advisoryCourse: cleanStr_(s.advisoryCourse, 16), courses: courses, coursesSet: true, fullNames: !!s.fullNames, hideGames: !!s.hideGames, hideChat: !!s.hideChat, faqNew: !!s.faqNew, gamesIntro: !!s.gamesIntro, gameStar: (Array.isArray(s.gameStar) ? s.gameStar : []).filter(x => typeof x === 'string' && /^[a-z0-9-]{1,40}$/.test(x)).slice(0, 60), tutorialNew: !!s.tutorialNew, lunch: ['5', '6'].reduce((o, p) => { const v = s.lunch && s.lunch[p]; if (/^[ABCD]$/.test(v)) o[p] = v; return o; }, {}),
+  return { colors: colors, periods: periods, advisoryCourse: cleanStr_(s.advisoryCourse, 16), courses: courses, coursesSet: true, fullNames: !!s.fullNames, hideGames: !!s.hideGames, hideChat: !!s.hideChat, faqNew: !!s.faqNew, gamesIntro: !!s.gamesIntro, hidePages: (Array.isArray(s.hidePages) ? s.hidePages : []).filter(x => typeof x === 'string' && /^[a-z]{3,12}$/.test(x)).slice(0, 12), gameStar: (Array.isArray(s.gameStar) ? s.gameStar : []).filter(x => typeof x === 'string' && /^[a-z0-9-]{1,40}$/.test(x)).slice(0, 60), tutorialNew: !!s.tutorialNew, lunch: ['5', '6'].reduce((o, p) => { const v = s.lunch && s.lunch[p]; if (/^[ABCD]$/.test(v)) o[p] = v; return o; }, {}),
     ical: /^(https|webcal):\/\/[^\s"'<>]+$/i.test(ical) ? ical : '' };
 }
 // a class list that slid against its ids (a class keeps its id but now has the name of another saved class whose id
@@ -1347,12 +1347,21 @@ const SITE_NAME_ = 'Saxlan';
 // a suggestion marked done: its sender gets a message in their inbox
 const suggDoneNotify_ = id => { const v = get_('sugg', String(id)); if (!v) return;
   try { SX.suggDoneNotify(socIO_(), JSON.parse(v), SITE_NAME_); } catch (e) {} };
+// avatars: one map of account name to avatar id ('m0'..'m15' modern, 'a0'..'a15' antiques); chat replies carry it
+const avMap_ = () => { try { return JSON.parse(get_('meta', 'avatars') || '{}') || {}; } catch (e) { return {}; } };
+function rpcAvatar(k, id) {
+  const me = auth_(k);
+  id = typeof id === 'string' && /^[ma]([0-9]|1[0-5])$/.test(id) ? id : '';
+  return withLock_(() => { const m = avMap_(); if (id) m[me] = id; else delete m[me]; put_('meta', 'avatars', JSON.stringify(m)); return { ok: true, av: id }; });
+}
 function rpcSocial(k, op, args) {
   const me = auth_(k);
   op = String(op || '');
   const run = () => { try { return SX.social(socIO_(), me, op, args); } catch (e) { if (e && e.social) return { error: e.social }; throw e; } };
   /* plain reads skip the lock; reading a conversation marks it read, so it takes the lock like any write */
-  return op === 'state' ? run() : withLock_(run);
+  const r = op === 'state' ? run() : withLock_(run);
+  if (r && typeof r === 'object' && !r.error) r.avs = avMap_();
+  return r;
 }
 // ---------- suggestions and bug reports: work signed out too; a session, if any, names the sender ----------
 function rpcSuggest(k, input) {
@@ -1374,7 +1383,7 @@ function rpcSuggest(k, input) {
 const RPC_ = {
   rpcPing: rpcPing, rpcDailyMeme: rpcDailyMeme,
   rpcLevelShare: rpcLevelShare, rpcLevelGet: rpcLevelGet,
-  rpcSignup: rpcSignup, rpcLogin: rpcLogin, rpcLogout: rpcLogout, rpcPicSet: rpcPicSet, rpcPwChange: rpcPwChange, rpcTfa: rpcTfa, rpcSecurity: rpcSecurity, rpcPwInfo: rpcPwInfo, rpcPwCheck: rpcPwCheck, rpcPwReset: rpcPwReset,
+  rpcSignup: rpcSignup, rpcLogin: rpcLogin, rpcLogout: rpcLogout, rpcPicSet: rpcPicSet, rpcAvatar: rpcAvatar, rpcPwChange: rpcPwChange, rpcTfa: rpcTfa, rpcSecurity: rpcSecurity, rpcPwInfo: rpcPwInfo, rpcPwCheck: rpcPwCheck, rpcPwReset: rpcPwReset,
   rpcGetData: rpcGetData, rpcSaveTask: rpcSaveTask, rpcDeleteTask: rpcDeleteTask, rpcSaveSettings: rpcSaveSettings,
   rpcSaveNote: rpcSaveNote, rpcDeleteNote: rpcDeleteNote, rpcSaveEvent: rpcSaveEvent, rpcDeleteEvent: rpcDeleteEvent,
   rpcImportIcal: rpcImportIcal,
