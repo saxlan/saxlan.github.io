@@ -382,11 +382,12 @@ function rpcDailyMeme() {
       let cur = memeLoad_();
       if (cur && cur.date === day) return cur;
       const q = memeJ_('memeQ', []);
-      if (q.length) {
-        // the next saved meme becomes today's
+      while (q.length) {
+        // the next saved meme becomes today's (never the same one twice in a row)
         const key = q.shift(), next = memeJ_(key, null);
         put_('meta', 'memeQ', JSON.stringify(q));
         try { del_('meta', key); } catch (e) {}
+        if (next && next.data && cur && next.link && next.link === cur.link) continue;
         if (next && next.data) { cur = { date: day, title: next.title, mime: next.mime, data: next.data, link: next.link }; put_('meta', 'meme', JSON.stringify(cur)); return cur; }
       }
       // nothing saved: fetch one straight away
