@@ -3068,11 +3068,15 @@
       blastAt = Date.now();
       blast = burst(pos, { x: v.x * 0.5, y: v.y * 0.2 }, col, size / 4, Math.floor(size / 2), mode === "ground");
     }
-    function paint(y) {
+    var tailAng = null;
+    function paint(y, mvx, mvy) {
       if (comet) {
-        // Faint tail streaming away from the Sun (upper left), in two facets
+        // Faint tail streaming out behind the comet, opposite its motion on screen (eased so it never snaps)
+        var want = Math.atan2(-mvy, -mvx);
+        if (tailAng === null || Math.hypot(mvx, mvy) < 0.02) tailAng = tailAng === null ? want : tailAng;
+        else tailAng += Math.atan2(Math.sin(want - tailAng), Math.cos(want - tailAng)) * 0.15;
         ctx.save(); ctx.translate(pos.x, y);
-        var tl = size * 5, ang = Math.atan2(0.55, 1);
+        var tl = size * 5, ang = tailAng;
         ctx.rotate(ang);
         ctx.globalAlpha = 0.16; ctx.fillStyle = "#dbe8ff";
         ctx.beginPath(); ctx.moveTo(0, -size * 0.38); ctx.lineTo(tl, -size * 0.1); ctx.lineTo(tl * 0.9, size * 0.3); ctx.lineTo(0, size * 0.38); ctx.closePath(); ctx.fill();
@@ -3117,7 +3121,7 @@
           explode(vel);
           return;
         }
-        paint(screenY);
+        paint(screenY, vel.x, mode === "ground" ? vel.y : vel.y - lander.vel.y);
       }
     };
   }
@@ -4684,6 +4688,14 @@
     }
     if (mode !== "game") return;
     if (k === "k") { killAndHome(); return; }
+    // Testing mode: H inside a planet's region puts the lander straight into orbit around it (the planet ahead once
+    // it shows in the sky, else the one whose air the lander is in). Anywhere else H still leaves the game
+    if (TEST_MODE && k === "h" && !e.metaKey && !e.ctrlKey && !lander.result && !lander.doom && scene === "surface" && !edge) {
+      var nbh = nextBody(), dh = distNow(), toH = -1;
+      if (nbh && dh >= nbh.appear) toH = idxOf(nbh.id);
+      else if (sceneIdx > 0 && lander.pos.y > -H * 2) toH = sceneIdx;
+      if (toH >= 0) { e.preventDefault(); e.stopImmediatePropagation(); lander.drone = false; mother = null; enterOrbit(toH); return; }
+    }
     if (TEST_MODE && k === "j" && !lander.result && route === "outer" && scene !== "orbit" && !homebound()) {
       // Stops between here and the next body, in order: the asteroid belt, the Kuiper belt, the Oort cloud
       // and the edge of the solar system (the bodies, Viridian last, come from the course as before)
@@ -5410,8 +5422,10 @@
     BODIES.forEach(function (b) {
       var n = progress.landings[b.id] || 0; total += n;
       if ((b.id === "venus" || b.id === "mercury" || b.id === "sun") && !progress.innerUnlocked && !n) return;
+      // only the chosen course's bodies (Earth is on both); the worlds past Pluto are on the outer one
+      if ((inner ? ROUTES.inner : ROUTES.outer.concat(["heaven"])).indexOf(b.id) < 0) return;
       var extra = EXTRA_IDS.indexOf(b.id) >= 0;
-      if (extra !== !!progress.logExtra) return;
+      if (extra !== (!inner && !!progress.logExtra)) return;
       if (extra && !n && !(progress.reached || {})[b.id]) {
         html += '<div class="lrow dim"><span class="nm">???</span><span class="n">0</span><span class="bs na">-</span></div>';
         return;
@@ -5422,6 +5436,7 @@
     });
     $("hRows").innerHTML = html;
     $("hExtra").textContent = progress.logExtra ? "Main planets" : "Additional planets";
+    $("hExtra").parentNode.style.display = inner ? "none" : "";
     $("hTotal").textContent = total + (total === 1 ? " landing" : " landings");
     renderShop();
   }
