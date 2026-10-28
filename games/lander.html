@@ -7574,8 +7574,8 @@
       var belt = outer && d >= BELT_FROM && d <= BELT_TO, wide = W / 800, dens = belt ? beltDensity() : 0;
       // The Kuiper belt: icy bodies, a little sparser than the asteroid belt
       var kd = inKuiper ? kuiperDensity() : inOort ? oortDensity() * 0.75 : 0, ice = (inKuiper || inOort) && kd > 0;
-      if (d >= fb.orbit && Math.round(rnd(0, (ice ? mix(100, 22, kd) : mix(100, 10, dens)) / wide)) === 0) spaceRocks.push(SpaceRock(ice));
-      if (d >= fb.orbit && Math.round(rnd(0, (ice ? mix(700, 150, kd) : mix(700, 60, dens)) / wide)) === 0) bigRocks.push(BigRock("space", ice));
+      if (d >= fb.orbit && Math.round(rnd(0, (ice ? mix(100, inKuiper ? 9 : 5, kd) : mix(100, 10, dens)) / wide)) === 0) spaceRocks.push(SpaceRock(ice));
+      if (d >= fb.orbit && Math.round(rnd(0, (ice ? mix(700, inKuiper ? 55 : 30, kd) : mix(700, 60, dens)) / wide)) === 0) bigRocks.push(BigRock("space", ice));
       if (Math.round(rnd(0, 2200 / wide)) === 0) bigRocks.push(Satellite());
       // black holes from just past Viridian on
       if (outer && d > BODIES[idxOf("rogue")].orbit + 5000 && here.id !== "heaven") {
