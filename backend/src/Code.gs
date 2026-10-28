@@ -262,8 +262,85 @@ function rpcLogin(name, pw) {
   if (!rec) return { error: 'nouser' };
   // a wrong password only slows that one attempt down; no lockout, so nobody can lock someone else out
   if (!checkPw_(pw, rec)) { Utilities.sleep(1500); return { error: 'wrong' }; }
-  const out = withLock_(() => ({ token: session_(name, rec_(name)), user: userOut_(name) }));
+  const out = withLock_(() => { const r = rec_(name); if (r.pic && r.pic.n) r.pic.n = 0; return { token: session_(name, r), user: userOut_(name) }; });
   return withData_(name, out);
+}
+// ---------- forgot password: an account proves it is its own with its Schoology calendar link plus one assignment
+// from that calendar (spelling and capitals exact), or with its picture password (3 of 12 pictures in order; 6 wrong
+// tries lock the pictures until the account logs in with its password again). Either gives a one-time ticket, good
+// for 15 minutes, that sets a new password and signs the account out everywhere.
+const PIC_N_ = 12, PIC_TRIES_ = 6;
+const picSeq_ = a => Array.isArray(a) && a.length === 3 && a.every(x => x === Math.floor(x) && x >= 0 && x < PIC_N_) && a[0] !== a[1] && a[1] !== a[2] && a[0] !== a[2] ? a.slice() : null;
+const picHash_ = (seq, salt) => hex_(sha_(unhex_(salt).concat(bytes_('pic|' + seq.join(',')))));
+const icalNorm_ = u => String(u || '').trim().replace(/^webcal:/i, 'https:').replace(/\/+$/, '').toLowerCase();
+function rpcPicSet(k, seq) {
+  const me = auth_(k);
+  return withLock_(() => {
+    const r = rec_(me);
+    if (seq === null) delete r.pic;
+    else { const q = picSeq_(seq); if (!q) return { error: 'pic' }; const salt = hex_(random_(16)); r.pic = { s: salt, h: picHash_(q, salt), n: 0 }; }
+    put_('users', me, JSON.stringify(r));
+    return { ok: true, pic: !!r.pic };
+  });
+}
+function rpcPwInfo(name) {
+  ensureStore_();
+  name = normName_(name);
+  const r = name && NAME_RE.test(name) ? rec_(name) : null;
+  if (!r) return { error: 'nouser' };
+  return { ok: true, pic: !!(r.pic && r.pic.h), picLocked: !!(r.pic && (r.pic.n || 0) >= PIC_TRIES_) };
+}
+function pwTicket_(name, r) {
+  const t = hex_(random_(24));
+  r.rt = [hex_(sha_(bytes_(t))), Date.now() + 15 * 60000];
+  put_('users', name, JSON.stringify(r));
+  return t;
+}
+function rpcPwCheck(name, how, a, b) {
+  ensureStore_();
+  name = normName_(name);
+  if (!name || !NAME_RE.test(name) || !rec_(name)) return { error: 'nouser' };
+  if (how === 'pic') return withLock_(() => {
+    const r = rec_(name), p = r.pic;
+    if (!p || !p.h) return { error: 'nopic' };
+    if ((p.n || 0) >= PIC_TRIES_) return { error: 'piclocked' };
+    const q = picSeq_(a);
+    if (!q || picHash_(q, p.s) !== p.h) {
+      p.n = (p.n || 0) + 1; put_('users', name, JSON.stringify(r));
+      return { error: p.n >= PIC_TRIES_ ? 'piclocked' : 'picwrong', left: PIC_TRIES_ - p.n };
+    }
+    p.n = 0;
+    return { ok: true, ticket: pwTicket_(name, r) };
+  });
+  if (how === 'school') {
+    const link = icalNorm_(a), title = typeof b === 'string' ? b.trim() : '';
+    if (!link || !title) return { error: 'empty' };
+    const d = loadUser_(name), saved = icalNorm_(d.settings && d.settings.ical);
+    if (!saved) return { error: 'nolink' };
+    const titles = {};
+    [d.tasks || {}, d.events || {}].forEach(m => Object.keys(m).forEach(id => {
+      const t = m[id]; if (!t || !(t.ikey || t.source === 'ical')) return;
+      if (t.title) titles[String(t.title).trim()] = 1;
+      if (t.ikey) titles[String(t.ikey).split('|').pop().trim()] = 1;
+    }));
+    if (link !== saved || !titles[title]) { Utilities.sleep(1500); return { error: 'nomatch' }; }
+    return withLock_(() => ({ ok: true, ticket: pwTicket_(name, rec_(name)) }));
+  }
+  return { error: 'bad' };
+}
+function rpcPwReset(name, ticket, pw) {
+  ensureStore_();
+  name = normName_(name); pw = typeof pw === 'string' ? pw : '';
+  if (pw.length < 6) return { error: 'short' };
+  if (pw.length > 200) return { error: 'long' };
+  return withLock_(() => {
+    const r = name && NAME_RE.test(name) ? rec_(name) : null;
+    if (!r || !r.rt || typeof ticket !== 'string' || hex_(sha_(bytes_(ticket))) !== r.rt[0] || Date.now() > r.rt[1]) return { error: 'expired' };
+    delete r.rt; newPwRec_(pw, r); r.k = [];
+    if (r.pic) r.pic.n = 0;
+    put_('users', name, JSON.stringify(r));
+    return { ok: true };
+  });
 }
 function rpcLogout(token) {
   let me; try { me = auth_(token); } catch (e) { return { ok: true }; }
@@ -305,6 +382,16 @@ function rpcPing() { ensureStore_(); return { ok: true }; }
 // ---------- update notes: one short message to every account's inbox, from the site. Only callable with the secret
 // kept on the owner's computer (backend/announce-token, never committed); the same text is not sent twice.
 const ANNOUNCE_H_ = '9eda495126dc17c140db9f08add6b15efce0835a40a34c42ca9cd6b21c0b7faf';
+// owner only (the announce secret): the suggestion list, and removing finished ones
+function rpcSuggOwner(secret, done) {
+  if (typeof secret !== 'string' || hex_(sha_(bytes_(secret))) !== ANNOUNCE_H_) throw new Error('owner only');
+  ensureStore_();
+  return withLock_(() => {
+    (Array.isArray(done) ? done : []).forEach(id => { if (get_('sugg', String(id))) { suggDoneNotify_(id); del_('sugg', String(id)); } });
+    const sg = all_('sugg');
+    return Object.keys(sg).map(x => { try { return JSON.parse(sg[x]); } catch (e) { return null; } }).filter(Boolean);
+  });
+}
 function rpcMemeDrop(secret, match) {
   if (typeof secret !== 'string' || hex_(sha_(bytes_(secret))) !== ANNOUNCE_H_) throw new Error('owner only');
   ensureStore_();
@@ -499,7 +586,7 @@ function rpcRedeemGuest(k, g) {
 // account roles: stored on the user record. The owner and game-admins are administrators; moderators approve resources
 const ROLES_ = ['game-admin', 'moderator'];
 const roles_ = name => { const r = rec_(name); return r && Array.isArray(r.roles) ? r.roles.filter(x => ROLES_.indexOf(x) >= 0) : []; };
-const userOut_ = name => ({ name: name, owner: isOwner_(name), roles: roles_(name) });
+const userOut_ = name => { const r = rec_(name) || {}; return { name: name, created: r.c || 0, pic: !!(r.pic && r.pic.h), owner: isOwner_(name), roles: roles_(name) }; };
 
 // ---------- multiplayer rooms (games reach this only through the page's room bridge) ----------
 // Rooms live in the script cache. Only the seq increment (with the event or room change it carries) takes the lock;
@@ -905,7 +992,7 @@ function cleanSettings_(s) {
   Object.keys(s.colors && typeof s.colors === 'object' ? s.colors : {}).slice(0, 40).forEach(k => { const v = s.colors[k]; if (/^[a-z0-9]{1,16}$/.test(k) && /^#[0-9a-f]{6}$/i.test(v)) colors[k] = v; });
   Object.keys(s.periods && typeof s.periods === 'object' ? s.periods : {}).slice(0, 40).forEach(k => { const p = Number(s.periods[k]); if (/^[a-z0-9]{1,16}$/.test(k) && p >= 1 && p <= 8 && p === Math.floor(p)) periods[k] = p; });
   const ical = cleanStr_(s.ical, 600);
-  return { colors: colors, periods: periods, advisoryCourse: cleanStr_(s.advisoryCourse, 16), courses: courses, coursesSet: true, fullNames: !!s.fullNames, hideGames: !!s.hideGames, hideChat: !!s.hideChat, faqNew: !!s.faqNew, gamesIntro: !!s.gamesIntro, tutorialNew: !!s.tutorialNew, lunch: ['5', '6'].reduce((o, p) => { const v = s.lunch && s.lunch[p]; if (/^[ABCD]$/.test(v)) o[p] = v; return o; }, {}),
+  return { colors: colors, periods: periods, advisoryCourse: cleanStr_(s.advisoryCourse, 16), courses: courses, coursesSet: true, fullNames: !!s.fullNames, hideGames: !!s.hideGames, hideChat: !!s.hideChat, faqNew: !!s.faqNew, gamesIntro: !!s.gamesIntro, gameStar: (Array.isArray(s.gameStar) ? s.gameStar : []).filter(x => typeof x === 'string' && /^[a-z0-9-]{1,40}$/.test(x)).slice(0, 60), tutorialNew: !!s.tutorialNew, lunch: ['5', '6'].reduce((o, p) => { const v = s.lunch && s.lunch[p]; if (/^[ABCD]$/.test(v)) o[p] = v; return o; }, {}),
     ical: /^(https|webcal):\/\/[^\s"'<>]+$/i.test(ical) ? ical : '' };
 }
 // a class list that slid against its ids (a class keeps its id but now has the name of another saved class whose id
@@ -1239,13 +1326,13 @@ function rpcSuggest(k, input) {
 const RPC_ = {
   rpcPing: rpcPing, rpcDailyMeme: rpcDailyMeme,
   rpcLevelShare: rpcLevelShare, rpcLevelGet: rpcLevelGet,
-  rpcSignup: rpcSignup, rpcLogin: rpcLogin, rpcLogout: rpcLogout,
+  rpcSignup: rpcSignup, rpcLogin: rpcLogin, rpcLogout: rpcLogout, rpcPicSet: rpcPicSet, rpcPwInfo: rpcPwInfo, rpcPwCheck: rpcPwCheck, rpcPwReset: rpcPwReset,
   rpcGetData: rpcGetData, rpcSaveTask: rpcSaveTask, rpcDeleteTask: rpcDeleteTask, rpcSaveSettings: rpcSaveSettings,
   rpcSaveNote: rpcSaveNote, rpcDeleteNote: rpcDeleteNote, rpcSaveEvent: rpcSaveEvent, rpcDeleteEvent: rpcDeleteEvent,
   rpcImportIcal: rpcImportIcal,
   rpcListMyRes: rpcListMyRes, rpcSaveRes: rpcSaveRes, rpcDeleteRes: rpcDeleteRes, rpcResyncRes: rpcResyncRes, rpcGetPdf: rpcGetPdf,
   rpcGetLibrary: rpcGetLibrary, rpcImportRes: rpcImportRes, rpcGetResources: rpcGetResources,
-  rpcRoles: rpcRoles, rpcModerate: rpcModerate, rpcSocial: rpcSocial, rpcSuggest: rpcSuggest, rpcAnnounce: rpcAnnounce, rpcMemeDrop: rpcMemeDrop,
+  rpcRoles: rpcRoles, rpcModerate: rpcModerate, rpcSocial: rpcSocial, rpcSuggest: rpcSuggest, rpcAnnounce: rpcAnnounce, rpcMemeDrop: rpcMemeDrop, rpcSuggOwner: rpcSuggOwner,
   rpcLoadGame: rpcLoadGame, rpcSaveGame: rpcSaveGame, rpcLoadGuestGame: rpcLoadGuestGame, rpcSaveGuestGame: rpcSaveGuestGame,
   rpcRedeemGuest: rpcRedeemGuest, rpcRoom: rpcRoom
 };
