@@ -333,7 +333,8 @@ function rpcPwInfo(name) {
   name = normName_(name);
   const r = name && NAME_RE.test(name) ? rec_(name) : null;
   if (!r) return { error: 'nouser' };
-  return { ok: true, pic: !!(r.pic && r.pic.h), picLocked: !!(r.pic && (r.pic.n || 0) >= PIC_TRIES_) };
+  let school = false; try { const d = loadUser_(name); school = !!(d.settings && d.settings.ical); } catch (e) {}
+  return { ok: true, school: school, pic: !!(r.pic && r.pic.h), picLocked: !!(r.pic && (r.pic.n || 0) >= PIC_TRIES_) };
 }
 function pwTicket_(name, r, how) {
   const t = hex_(random_(24));
