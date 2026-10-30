@@ -101,6 +101,14 @@ function del_(kind, key) {
   delete IDX_[kind];
   delete VAL_[kind + '\u0001' + key];
 }
+// a short wait for the lock: when the site is busy, a request that can wait its turn later (a game save) answers busy
+// at once instead of holding an execution for up to 20 s
+function tryLock_(ms, fn) {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(ms)) return { busy: true };
+  resetCache_();
+  try { return fn(); } finally { SpreadsheetApp.flush(); lock.releaseLock(); }
+}
 function withLock_(fn) {
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -589,8 +597,7 @@ function rpcSaveGame(k, id, data) {
   if (typeof data !== 'string' || data.length > 150000) throw new Error('bad data');
   const o = JSON.parse(data);
   if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('bad data');
-  withLock_(() => put_('games', key, data));
-  return { ok: true };
+  return tryLock_(5000, () => { put_('games', key, data); return { ok: true }; });
 }
 // guests (not signed in) save under a random guest code their browser makes. Signed in, they can redeem the
 // code once: its saves move to the account and the code stops working, so progress can't be passed around
@@ -610,7 +617,7 @@ function rpcSaveGuestGame(g, id, data) {
   const o = JSON.parse(data);
   if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('bad data');
   const key = guestKey_(id, g);
-  return withLock_(() => { if (guestUsed_(g)) return { used: true }; put_('games', key, data); return { ok: true }; });
+  return tryLock_(5000, () => { if (guestUsed_(g)) return { used: true }; put_('games', key, data); return { ok: true }; });
 }
 function rpcRedeemGuest(k, g) {
   const me = auth_(k);
@@ -1349,18 +1356,31 @@ const SITE_NAME_ = 'Saxlan';
 const suggDoneNotify_ = id => { const v = get_('sugg', String(id)); if (!v) return;
   try { SX.suggDoneNotify(socIO_(), JSON.parse(v), SITE_NAME_); } catch (e) {} };
 // avatars: one map of account name to avatar id ('m0'..'m15' modern, 'a0'..'a15' antiques); chat replies carry it
-const avMap_ = () => { try { return JSON.parse(get_('meta', 'avatars') || '{}') || {}; } catch (e) { return {}; } };
+const avMapRead_ = () => { try { return JSON.parse(get_('meta', 'avatars') || '{}') || {}; } catch (e) { return {}; } };
+// every chat check sends the avatars, so they come from the cache (10 min; rpcAvatar refreshes it) instead of the sheet
+const avMap_ = () => {
+  const c = CacheService.getScriptCache(), hit = c.get('avmap');
+  if (hit) try { return JSON.parse(hit); } catch (e) {}
+  const m = avMapRead_(); try { c.put('avmap', JSON.stringify(m), 600); } catch (e) {}
+  return m;
+};
 function rpcAvatar(k, id) {
   const me = auth_(k);
   id = typeof id === 'string' && /^[ma]([0-9]|1[0-5])$/.test(id) ? id : '';
-  return withLock_(() => { const m = avMap_(); if (id) m[me] = id; else delete m[me]; put_('meta', 'avatars', JSON.stringify(m)); return { ok: true, av: id }; });
+  return withLock_(() => { const m = avMapRead_(); if (id) m[me] = id; else delete m[me]; put_('meta', 'avatars', JSON.stringify(m)); try { CacheService.getScriptCache().put('avmap', JSON.stringify(m), 600); } catch (e) {} return { ok: true, av: id }; });
 }
 function rpcSocial(k, op, args) {
   const me = auth_(k);
   op = String(op || '');
-  const run = () => { try { return SX.social(socIO_(), me, op, args); } catch (e) { if (e && e.social) return { error: e.social }; throw e; } };
-  /* plain reads skip the lock; reading a conversation marks it read, so it takes the lock like any write */
-  const r = op === 'state' ? run() : withLock_(run);
+  const run = io => { try { return SX.social(io, me, op, args); } catch (e) { if (e && e.social) return { error: e.social }; throw e; } };
+  /* Chat checks (state, sync, messages) usually change nothing, so they run without the lock: one lock for the whole
+     site made every open tab's check wait in line, and the waiting executions piled up. A check that does need to write
+     (marking a conversation read) stops at its first write and runs again under the lock. Everything else takes the lock. */
+  let r;
+  if (op === 'state' || op === 'sync' || op === 'messages') {
+    const NEED = { needLock: true }, ro = Object.assign({}, socIO_(), { put: () => { throw NEED; } });
+    try { r = run(ro); } catch (e) { if (e !== NEED) throw e; r = withLock_(() => run(socIO_())); }
+  } else r = withLock_(() => run(socIO_()));
   if (r && typeof r === 'object' && !r.error) r.avs = avMap_();
   return r;
 }
