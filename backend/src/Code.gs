@@ -478,7 +478,7 @@ function memeLoad_() { try { return JSON.parse(get_('meta', 'meme') || 'null'); 
 // the stock is down to its last one, 6 more are fetched (one per request, so no visitor waits long) and the owner
 // gets an inbox message listing them. Links already used are skipped.
 function memeFetch_(skip, n) {
-  const r = UrlFetchApp.fetch(SX.MEME_API, { muteHttpExceptions: true, followRedirects: true, headers: { Accept: 'application/json' } });
+  const r = UrlFetchApp.fetch(SX.memeApi(), { muteHttpExceptions: true, followRedirects: true, headers: { Accept: 'application/json' } });
   if (r.getResponseCode() !== 200) throw new Error('meme api ' + r.getResponseCode());
   const picks = SX.memePick(JSON.parse(r.getContentText())), out = [];
   for (let i = 0; i < picks.length && out.length < (n || 1); i++) {
@@ -503,7 +503,7 @@ const memeJ_ = (k, d) => { try { return JSON.parse(get_('meta', k) || 'null') ||
 function memeRefillStep_() {
   let owed = Number(get_('meta', 'memeOwed') || 0);
   const q = memeJ_('memeQ', []);
-  if (!owed && q.length <= 1) { owed = q.length ? 6 : 7; put_('meta', 'memeOwed', String(owed)); put_('meta', 'memeNew', '[]'); }
+  if (!owed && q.length <= SX.MEME_PER_DAY) { owed = 3 * SX.MEME_PER_DAY - q.length; put_('meta', 'memeOwed', String(owed)); put_('meta', 'memeNew', '[]'); }
   if (!owed || Date.now() - Number(get_('meta', 'memeTry') || 0) < 60000) return;
   const seen = memeJ_('memeSeen', []), fresh = memeJ_('memeNew', []);
   try {
@@ -552,9 +552,18 @@ function memeDrop_(match) {
     return { removed: removed, today: cur && cur.title, stock: memeJ_('memeQ', []).map(key => (memeJ_(key, {}) || {}).title) };
   });
 }
-function rpcDailyMeme() {
+// today's extra memes (2nd and 3rd), stored as meme1 and meme2 for the same date
+function memeExtra_(i) { try { return JSON.parse(get_('meta', 'meme' + i) || 'null'); } catch (e) { return null; } }
+function memeOut_(m, i, day) {
+  if (!m || !m.data) return null;
+  let n = 1; for (let j = 1; j < SX.MEME_PER_DAY; j++) { const x = memeExtra_(j); if (x && x.date === day && x.data) n = j + 1; else break; }
+  return { date: m.date, title: m.title || '', link: m.link || '', i: i, n: n, dataUrl: 'data:' + m.mime + ';base64,' + m.data };
+}
+function rpcDailyMeme(i) {
   ensureStore_();
   const day = memeToday_();
+  i = Math.floor(Number(i) || 0);
+  if (i > 0 && i < SX.MEME_PER_DAY) { const x = memeExtra_(i); return x && x.date === day ? memeOut_(x, i, day) : null; }
   let m = memeLoad_();
   if (!m || m.date !== day) {
     m = withLock_(() => {
@@ -567,7 +576,7 @@ function rpcDailyMeme() {
         put_('meta', 'memeQ', JSON.stringify(q));
         try { del_('meta', key); } catch (e) {}
         if (next && next.data && cur && next.link && next.link === cur.link) continue;
-        if (next && next.data) { cur = { date: day, title: next.title, mime: next.mime, data: next.data, link: next.link }; put_('meta', 'meme', JSON.stringify(cur)); return cur; }
+        if (next && next.data) { cur = { date: day, title: next.title, mime: next.mime, data: next.data, link: next.link }; put_('meta', 'meme', JSON.stringify(cur)); memeExtras_(day, q); return cur; }
       }
       // nothing saved: fetch one straight away
       if (Date.now() - Number(get_('meta', 'memeTry') || 0) < 30 * 60000) return cur;
@@ -580,11 +589,24 @@ function rpcDailyMeme() {
       return cur;
     });
   } else {
-    // a quiet moment: top up the stock when it is running low
-    try { withLock_(() => memeRefillStep_()); } catch (e) {}
+    // a quiet moment: top up the stock when it is running low. The check is cached, so most visits skip the lock
+    const c = CacheService.getScriptCache();
+    if (!c.get('memeStockOk')) {
+      const owed = Number(get_('meta', 'memeOwed') || 0), q = memeJ_('memeQ', []);
+      if (!owed && q.length > SX.MEME_PER_DAY) c.put('memeStockOk', '1', 600);
+      else if (Date.now() - Number(get_('meta', 'memeTry') || 0) >= 60000) try { tryLock_(3000, () => memeRefillStep_()); } catch (e) {}
+    }
   }
-  if (!m || !m.data) return null;
-  return { date: m.date, title: m.title || '', link: m.link || '', dataUrl: 'data:' + m.mime + ';base64,' + m.data };
+  return memeOut_(m, 0, day);
+}
+// a new day: the next saved memes after the first become today's 2nd and 3rd
+function memeExtras_(day, q) {
+  for (let j = 1; j < SX.MEME_PER_DAY; j++) {
+    let got = null;
+    while (q.length && !got) { const key = q.shift(), next = memeJ_(key, null); try { del_('meta', key); } catch (e) {} if (next && next.data) got = next; }
+    put_('meta', 'meme' + j, JSON.stringify(got ? { date: day, title: got.title, mime: got.mime, data: got.data, link: got.link } : { date: '' }));
+  }
+  put_('meta', 'memeQ', JSON.stringify(q));
 }
 // ---------- game progress: a small JSON blob per game per account, size-capped and validated ----------
 function gameKey_(id, name) {
@@ -716,11 +738,11 @@ const ROOM_SLOTS = 12;
 // creating or joining a room of a Multiplayer game needs a signed-in account
 function roomGate_(op, args, k) {
   if ((op !== 'create' && op !== 'join') || !args || typeof args !== 'object' || SX.MP_GAMES.indexOf(args.game) < 0) return;
-  try { auth_(k); } catch (e) { if (e && e.message === 'setup') throw e; throw roomErr_('signin'); }
+  try { return auth_(k); } catch (e) { if (e && e.message === 'setup') throw e; throw roomErr_('signin'); }
 }
 function rpcRoom(op, args, k) {
   try {
-    roomGate_(String(op || ''), args, k);
+    const me = roomGate_(String(op || ''), args, k);
     const io = roomIO_();
     if (op === 'poll' && args && typeof args === 'object' && args.wait) {
       const it = roomLongPoll_(io, args);
@@ -728,9 +750,24 @@ function rpcRoom(op, args, k) {
       while (!r.done) { Utilities.sleep(r.value); r = it.next(); }
       return { ok: true, result: r.value };
     }
-    return { ok: true, result: roomCore_(io, String(op || ''), args) };
+    const result = roomCore_(io, String(op || ''), args);
+    // chess rooms remember which account each player is, for ratings (shared.js chessCall)
+    if (me && args.game === 'chess' && result && result.code) SX.chessBind(io, result.code, result.playerId, me);
+    return { ok: true, result: result };
   }
   catch (e) { if (e && e.room) return { ok: false, error: e.room }; console.error('room', e && e.stack || e); return { ok: false, error: 'conn' }; }
+}
+// chess ratings (Elo): op 'me' (needs the session), 'info' and 'report' (room token); the rules are in shared.js chessCall
+function rpcChess(k, op, args) {
+  try {
+    ensureStore_();
+    let me = '';
+    if (k) try { me = auth_(k); } catch (e) {}
+    const io = roomIO_();
+    return SX.chessCall({ getAll: io.getAll, put: io.put, now: () => Date.now(), me: me, lock: fn => withLock_(fn),
+      load: () => { try { return JSON.parse(get_('games', 'elo_chess') || '{}') || {}; } catch (e) { return {}; } },
+      save: db => put_('games', 'elo_chess', JSON.stringify(db)) }, String(op || ''), args);
+  } catch (e) { console.error('chess', e && e.stack || e); return { ok: false, error: 'conn' }; }
 }
 
 // ROOM-CORE-BEGIN
@@ -1048,7 +1085,7 @@ function cleanSettings_(s) {
   Object.keys(s.colors && typeof s.colors === 'object' ? s.colors : {}).slice(0, 40).forEach(k => { const v = s.colors[k]; if (/^[a-z0-9]{1,16}$/.test(k) && /^#[0-9a-f]{6}$/i.test(v)) colors[k] = v; });
   Object.keys(s.periods && typeof s.periods === 'object' ? s.periods : {}).slice(0, 40).forEach(k => { const p = Number(s.periods[k]); if (/^[a-z0-9]{1,16}$/.test(k) && p >= 1 && p <= 8 && p === Math.floor(p)) periods[k] = p; });
   const ical = cleanStr_(s.ical, 600);
-  return { colors: colors, periods: periods, advisoryCourse: cleanStr_(s.advisoryCourse, 16), courses: courses, coursesSet: true, fullNames: !!s.fullNames, hideGames: !!s.hideGames, hideChat: !!s.hideChat, faqNew: !!s.faqNew, gamesIntro: !!s.gamesIntro, hidePages: (Array.isArray(s.hidePages) ? s.hidePages : []).filter(x => typeof x === 'string' && /^[a-z]{3,12}$/.test(x)).slice(0, 12), gameStar: (Array.isArray(s.gameStar) ? s.gameStar : []).filter(x => typeof x === 'string' && /^[a-z0-9-]{1,40}$/.test(x)).slice(0, 60), tutorialNew: !!s.tutorialNew, lunch: ['5', '6'].reduce((o, p) => { const v = s.lunch && s.lunch[p]; if (/^[ABCD]$/.test(v)) o[p] = v; return o; }, {}),
+  return { colors: colors, periods: periods, advisoryCourse: cleanStr_(s.advisoryCourse, 16), courses: courses, coursesSet: true, fullNames: !!s.fullNames, hideGames: !!s.hideGames, hideChat: !!s.hideChat, faqNew: !!s.faqNew, gamesIntro: !!s.gamesIntro, hidePages: (Array.isArray(s.hidePages) ? s.hidePages : []).filter(x => typeof x === 'string' && /^[a-z]{3,12}$/.test(x)).slice(0, 12), gameStar: (Array.isArray(s.gameStar) ? s.gameStar : []).filter(x => typeof x === 'string' && /^[a-z0-9-]{1,40}$/.test(x)).slice(0, 60), tutorialNew: !!s.tutorialNew, rel: Object.keys(s.rel && typeof s.rel === 'object' ? s.rel : {}).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d) && (s.rel[d] === 'early' || s.rel[d] === 'regular')).sort().slice(-60).reduce((o, d) => { o[d] = s.rel[d]; return o; }, {}), lunch: ['5', '6'].reduce((o, p) => { const v = s.lunch && s.lunch[p]; if (/^[ABCD]$/.test(v)) o[p] = v; return o; }, {}), gpa: SX.cleanGpa(s.gpa),
     ical: /^(https|webcal):\/\/[^\s"'<>]+$/i.test(ical) ? ical : '' };
 }
 // a class list that slid against its ids (a class keeps its id but now has the name of another saved class whose id
@@ -1073,6 +1110,7 @@ function rpcSaveSettings(k, s) {
       c.courses = prev.courses;
       ['colors', 'periods', 'lunch'].forEach(x => { if (prev[x] && !Object.keys(c[x] || {}).length) c[x] = prev[x]; });
       ['advisoryCourse', 'ical'].forEach(x => { if (prev[x] && !c[x]) c[x] = prev[x]; });
+      if ((prev.gpa || []).length && !(c.gpa || []).length) c.gpa = prev.gpa;
     }
     d.settings = c; return { ok: true, rerouted: SX.rerouteIcal(d) };
   });
@@ -1412,5 +1450,5 @@ const RPC_ = {
   rpcGetLibrary: rpcGetLibrary, rpcImportRes: rpcImportRes, rpcGetResources: rpcGetResources,
   rpcRoles: rpcRoles, rpcModerate: rpcModerate, rpcSocial: rpcSocial, rpcSuggest: rpcSuggest, rpcAnnounce: rpcAnnounce, rpcMemeDrop: rpcMemeDrop, rpcSuggOwner: rpcSuggOwner,
   rpcLoadGame: rpcLoadGame, rpcSaveGame: rpcSaveGame, rpcLoadGuestGame: rpcLoadGuestGame, rpcSaveGuestGame: rpcSaveGuestGame,
-  rpcRedeemGuest: rpcRedeemGuest, rpcRoom: rpcRoom
+  rpcRedeemGuest: rpcRedeemGuest, rpcRoom: rpcRoom, rpcChess: rpcChess
 };

@@ -1777,6 +1777,11 @@ function normalizeCourse(input){
      Only safe posts: not nsfw, not a spoiler, a still image or gif (no video), and no title words that do not belong at
      school. Best voted first; the image is downloaded on the server and handed to the page as a data URL. */
   SX.MEME_API = 'https:' + '/' + '/meme-api.com/gimme/wholesomememes/30';
+  /* school-friendly subreddits, one picked at random per fetch, so the days vary; well liked posts go first */
+  SX.MEME_SUBS = ['wholesomememes', 'wholesomememes', 'HistoryMemes', 'mathmemes', 'physicsmemes', 'sciencememes', 'ProgrammerHumor', 'AnimalsBeingDerps'];
+  SX.MEME_PER_DAY = 3;
+  SX.MEME_MIN_UPS = 800;
+  SX.memeApi = function (r) { var subs = SX.MEME_SUBS; return 'https:' + '/' + '/meme-api.com/gimme/' + subs[Math.floor((r === undefined ? Math.random() : r) * subs.length) % subs.length] + '/30'; };
   SX.MEME_MAX = 1500000;
   SX.MEME_BAD = /\b(sex\w*|porn\w*|nude\w*|naked|nsfw|kill\w*|suicid\w*|die[ds]?|dying|death|dead|funeral|grave|cancer|drunk|beer|vodka|wine|alcohol|weed|drugs?|stoned|gun\w*|shoot\w*|blood\w*|depress\w*|abuse\w*|damn|hell|wtf|f\W?ck\w*|shit\w*|bitch\w*|ass|crap|boob\w*|horny|thicc|onlyfans|politic\w*|trump|biden|religio\w*|war|gf|bf|girlfriend|boyfriend|wife|husband|shower\w*|bed|kiss\w*|crush|dating|date|marri\w*|divorc\w*|pregnan\w*|baby mama|love\w*|lover|romanc\w*|romantic|valentine\w*|hot|sexy|babe)\b/i;
   SX.memeTitle = function (t) { return String(t || '').replace(/\[[^\]]{0,12}\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140); };
@@ -1787,6 +1792,8 @@ function normalizeCourse(input){
         !SX.MEME_BAD.test(String(p.title || '')) && SX.memeTitle(p.title).length > 0;
     });
     ok.sort(function (a, b) { return (Number(b.ups) || 0) - (Number(a.ups) || 0); });
+    var liked = ok.filter(function (p) { return (Number(p.ups) || 0) >= SX.MEME_MIN_UPS; });
+    if (liked.length) ok = liked;
     return ok.map(function (p) {
       /* a preview up to 960 wide is plenty for the card and much smaller, so it is tried before the full image */
       var prev = (Array.isArray(p.preview) ? p.preview : []).filter(function (u) { return typeof u === 'string' && /^https:/.test(u); });
@@ -1804,6 +1811,138 @@ function normalizeCourse(input){
     if (u(0) === 0x47 && u(1) === 0x49 && u(2) === 0x46) return 'image/gif';
     if (u(0) === 0x52 && u(1) === 0x49 && u(2) === 0x46 && u(3) === 0x46 && u(8) === 0x57 && u(9) === 0x45 && u(10) === 0x42 && u(11) === 0x50) return 'image/webp';
     return '';
+  };
+
+  /* ---------- chess ratings (Elo) ----------
+     Every account starts at 1400. A rated game is an online chess room game between two different signed-in accounts
+     with at least two moves. Each room player is tied to the account that created or joined with it (chessBind, at the
+     room's create and join, key rm_<CODE>_u<id>). At the end each side reports the result with its room token; a result
+     counts when both reports agree, when the reporter says it lost, or when the other player has been gone from the room
+     for ELO_AWAY (abandoned). Reports that disagree are never rated, and a side can report '*' to refuse a result it
+     could not check. The update is the standard one with K = 32.
+     env: getAll(keys) -> {key: string} and put(key, str) on the room cache, now() ms, lock(fn) around the ratings,
+     load() -> the ratings record {u: {account: {r, n, w, l, d}}, done: {game key: {...}}}, save(record), me: the
+     signed-in account or ''. */
+  SX.ELO_START = 1400;
+  SX.ELO_K = 32;
+  SX.ELO_FLOOR = 100;
+  SX.ELO_AWAY = 45000;
+  /* GPA calculator: FCPS grade points, Honors +0.5, AP AV DE IB +1 (an F gets no bonus) */
+  SX.GPA_LEVELS = [['reg', 'Regular', 0], ['hn', 'HN', 0.5], ['ap', 'AP', 1], ['av', 'AV', 1], ['de', 'DE', 1], ['ib', 'IB', 1]];
+  SX.GPA_GRADES = [['A', 4], ['A-', 3.7], ['B+', 3.3], ['B', 3], ['B-', 2.7], ['C+', 2.3], ['C', 2], ['C-', 1.7], ['D+', 1.3], ['D', 1], ['F', 0], ['P', null]];
+  SX.cleanGpa = function (a) {
+    var lv = {}, gr = {};
+    SX.GPA_LEVELS.forEach(function (l) { lv[l[0]] = l[2]; }); SX.GPA_GRADES.forEach(function (g) { gr[g[0]] = g[1]; });
+    return (Array.isArray(a) ? a.slice(0, 120) : []).map(function (r) {
+      if (!r || typeof r !== 'object') return null;
+      return { n: String(r.n || '').replace(/[\u0000-\u001f<>]/g, '').slice(0, 80), lv: lv.hasOwnProperty(r.lv) ? r.lv : 'reg', cr: Number(r.cr) === 0.5 ? 0.5 : 1,
+        g: gr.hasOwnProperty(r.g) ? r.g : '', x: r.x === 'exp' || r.x === 'pf' ? r.x : '' };
+    }).filter(function (r) { return r && (r.n.trim() || r.g); });
+  };
+  /* weighted and unweighted GPA over the counted credits; expunged rows and passes are left out, a pass/fail F counts as 0 */
+  SX.gpaCalc = function (rows) {
+    var lv = {}, gr = {}, w = 0, u = 0, c = 0;
+    SX.GPA_LEVELS.forEach(function (l) { lv[l[0]] = l[2]; }); SX.GPA_GRADES.forEach(function (g) { gr[g[0]] = g[1]; });
+    (rows || []).forEach(function (r) {
+      if (!r || !r.g || r.x === 'exp' || gr[r.g] == null) return;
+      if (r.x === 'pf' && r.g !== 'F') return;
+      var cr = Number(r.cr) === 0.5 ? 0.5 : 1, b = gr[r.g], bonus = r.g === 'F' ? 0 : (lv[r.lv] || 0);
+      w += (b + bonus) * cr; u += b * cr; c += cr;
+    });
+    return c ? { w: w / c, u: u / c, cr: c } : null;
+  };
+  SX.eloExpected = function (a, b) { return 1 / (1 + Math.pow(10, (b - a) / 400)); };
+  /* the change for white; black gets the opposite. sw: white's score (1, 0.5 or 0) */
+  /* a win is always worth at least 1 point (and a loss costs at least 1), even against a much lower rating */
+  SX.eloDelta = function (rw, rb, sw) {
+    var d = Math.round(SX.ELO_K * (sw - SX.eloExpected(rw, rb)));
+    if (sw === 1 && d < 1) d = 1;
+    if (sw === 0 && d > -1) d = -1;
+    return d;
+  };
+  SX.chessBind = function (env, code, id, me) { if (code && id && me) env.put('rm_' + code + '_u' + id, me); };
+  SX.chessCall = function (env, op, args) {
+    args = args && typeof args === 'object' && !Array.isArray(args) ? args : {};
+    var parse = function (s) { try { return s == null ? null : JSON.parse(s); } catch (e) { return null; } };
+    var fail = function (c) { return { ok: false, error: c }; };
+    var rating = function (db, name) {
+      var u = db && db.u && db.u[name];
+      return u && typeof u.r === 'number' ? { r: u.r, n: u.n || 0 } : { r: SX.ELO_START, n: 0 };
+    };
+    var load = function () { var db = env.load(); db = db && typeof db === 'object' ? db : {}; db.u = db.u || {}; db.done = db.done || {}; return db; };
+    if (op === 'me') {
+      if (!env.me) return fail('signin');
+      var mine = rating(load(), env.me);
+      return { ok: true, r: mine.r, n: mine.n };
+    }
+    if (op !== 'info' && op !== 'report') return fail('bad');
+    var code = typeof args.code === 'string' ? args.code.trim().toUpperCase() : '';
+    if (!/^[A-HJ-NP-Z]{4}$/.test(code) || typeof args.token !== 'string' || !/^[a-z0-9]{24}$/.test(args.token)) return fail('bad');
+    var K = function (s) { return 'rm_' + code + '_' + s; };
+    var got = env.getAll([K('m'), K('p'), K('t')]);
+    var m = parse(got[K('m')]), ps = parse(got[K('p')]), toks = parse(got[K('t')]);
+    if (!m || !Array.isArray(ps) || !toks) return fail('noroom');
+    if (m.g !== 'chess') return fail('bad');
+    var myId = toks[args.token];
+    if (!myId || !ps.some(function (x) { return x.id === myId; })) return fail('badtoken');
+    var opp = typeof args.opp === 'string' && /^p\d{1,6}$/.test(args.opp) && args.opp !== myId ? args.opp : '';
+    var ids = ps.map(function (x) { return x.id; });
+    if (opp && ids.indexOf(opp) < 0) ids.push(opp);
+    var acct = env.getAll(ids.map(function (i) { return K('u' + i); }));
+    var who = function (i) { var v = acct[K('u' + i)]; return typeof v === 'string' && v ? v : ''; };
+    if (op === 'info') {
+      var db0 = load(), out = {};
+      ids.forEach(function (i) { var a = who(i); if (a) out[i] = rating(db0, a); });
+      return { ok: true, me: myId, p: out };
+    }
+    /* report */
+    var me = who(myId), them = opp ? who(opp) : '';
+    var g = args.g, color = args.color, res = args.result, n = args.n;
+    if (typeof g !== 'number' || Math.floor(g) !== g || g < 1 || g > 1e6 || (color !== 'w' && color !== 'b') ||
+      ['1-0', '0-1', '1/2-1/2', '*'].indexOf(res) < 0 || typeof n !== 'number' || Math.floor(n) !== n || n < 0 || n > 2000) return fail('bad');
+    if (!me || !them || me === them || n < 2) return { ok: true, status: 'unrated' };
+    var gk = code + '_' + g + '_' + [me, them].sort().join('_');
+    var now = env.now();
+    var view = function (d) {
+      var w = d.w === me, mineD = w ? d.dw : -d.dw;
+      return { ok: true, status: 'applied', d: mineD, r: w ? d.rw : d.rb, od: -mineD, or: w ? d.rb : d.rw };
+    };
+    return env.lock(function () {
+      var db = load();
+      if (db.done[gk]) return view(db.done[gk]);
+      var ck = 'chr_' + gk, reps = parse(env.getAll([ck])[ck]) || {};
+      reps[me] = { c: color, res: res, n: n, at: now };
+      env.put(ck, JSON.stringify(reps));
+      /* '*': this side does not accept the result it was shown (the game never rates) */
+      if (res === '*') return { ok: true, status: 'disputed' };
+      var other = reps[them], lost = (res === '1-0' && color === 'b') || (res === '0-1' && color === 'w'), go = false;
+      if (other) {
+        if (other.c === color || other.res !== res) return { ok: true, status: 'disputed' };
+        go = true;
+      } else if (lost) go = true;
+      else {
+        var ak = K('a' + opp), seen = Number(env.getAll([ak])[ak]) || 0;
+        go = now - seen > SX.ELO_AWAY;
+      }
+      if (!go) return { ok: true, status: 'pending' };
+      var wa = color === 'w' ? me : them, ba = color === 'w' ? them : me;
+      var rw = rating(db, wa).r, rb = rating(db, ba).r, sw = res === '1-0' ? 1 : res === '0-1' ? 0 : 0.5, dw = SX.eloDelta(rw, rb, sw);
+      var bump = function (name, d, score) {
+        var u = db.u[name] || { r: SX.ELO_START, n: 0, w: 0, l: 0, d: 0 };
+        u.r = Math.max(SX.ELO_FLOOR, (typeof u.r === 'number' ? u.r : SX.ELO_START) + d);
+        u.n = (u.n || 0) + 1;
+        if (score === 1) u.w = (u.w || 0) + 1; else if (score === 0) u.l = (u.l || 0) + 1; else u.d = (u.d || 0) + 1;
+        u.t = now;
+        db.u[name] = u;
+        return u.r;
+      };
+      var done = { w: wa, b: ba, dw: dw, rw: bump(wa, dw, sw), rb: bump(ba, -dw, 1 - sw), res: res, at: now };
+      /* finished games are kept a week so a late report still gets its answer */
+      Object.keys(db.done).forEach(function (k) { if (!(now - (db.done[k].at || 0) < 7 * 864e5)) delete db.done[k]; });
+      db.done[gk] = done;
+      env.save(db);
+      return view(done);
+    });
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = SX;
