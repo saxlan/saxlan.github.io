@@ -1331,6 +1331,12 @@ function rpcRoles(k, o) {
     });
   }
   // suggestions and bug reports: administrators (owner and game-admin) only; done deletes them
+  if (o.op === 'stats') {
+    if (!isAdmin_(me)) return { error: 'not allowed' };
+    const u = all_('users'), list = [];
+    Object.keys(u).forEach(n => { try { const r = JSON.parse(u[n]); list.push({ c: r.c || 0, k: (r.k || []).map(x => x && x[1]) }); } catch (e) { } });
+    return SX.userStats(list, Date.now());
+  }
   if (o.op === 'suggestions' || o.op === 'suggDone') {
     if (!isAdmin_(me)) return { error: 'not allowed' };
     const list = () => { const sg = all_('sugg');

@@ -1827,6 +1827,23 @@ function normalizeCourse(input){
   SX.ELO_K = 32;
   SX.ELO_FLOOR = 100;
   SX.ELO_AWAY = 45000;
+  /* the owner's dashboard: accounts, new ones, and who logged in lately (u.c created, u.k login times), sign-ups per week for 12 weeks */
+  SX.userStats = function (list, now) {
+    var D = 864e5, out = { ok: true, total: list.length, new7: 0, new30: 0, active7: 0, active30: 0, weeks: [] }, i;
+    for (i = 0; i < 12; i++) out.weeks.push(0);
+    list.forEach(function (u) {
+      var c = Number(u.c) || 0, last = 0;
+      (u.k || []).forEach(function (t) { t = Number(t) || 0; if (t > last) last = t; });
+      if (c > last) last = c;
+      if (c && now - c < 7 * D) out.new7++;
+      if (c && now - c < 30 * D) out.new30++;
+      if (last && now - last < 7 * D) out.active7++;
+      if (last && now - last < 30 * D) out.active30++;
+      var w = Math.floor((now - c) / (7 * D));
+      if (c && w >= 0 && w < 12) out.weeks[11 - w]++;
+    });
+    return out;
+  };
   /* GPA calculator: FCPS grade points, Honors +0.5, AP AV DE IB +1 (an F gets no bonus) */
   SX.GPA_LEVELS = [['reg', 'Regular', 0], ['hn', 'HN', 0.5], ['ap', 'AP', 1], ['av', 'AV', 1], ['de', 'DE', 1], ['ib', 'IB', 1]];
   SX.GPA_GRADES = [['A', 4], ['A-', 3.7], ['B+', 3.3], ['B', 3], ['B-', 2.7], ['C+', 2.3], ['C', 2], ['C-', 1.7], ['D+', 1.3], ['D', 1], ['F', 0], ['P', null]];
