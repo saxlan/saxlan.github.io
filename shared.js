@@ -1844,6 +1844,49 @@ function normalizeCourse(input){
     });
     return out;
   };
+  /* Add by year: the year a GPA list is in, a class's subject, and Virginia's diploma credits (8VAC20-131-51) */
+  SX.cleanGpaYear = function (v) { v = String(v || ''); return /^(9|10|11|12)$/.test(v) ? v : ''; };
+  SX.GPA_SUBJ = [['eng', 'English'], ['math', 'Math'], ['sci', 'Lab science'], ['ss', 'History'], ['wl', 'World language'], ['art', 'Fine arts'],
+    ['cte', 'CTE'], ['hpe', 'Health and PE'], ['epf', 'Personal finance'], ['other', 'Elective']];
+  SX.gpaSubject = function (n) {
+    n = String(n || '');
+    if (/personal finance|\bEPF\b/i.test(n)) return 'epf';
+    var d = SX.courseDivision(n);
+    return ['eng', 'math', 'sci', 'ss', 'wl', 'art', 'cte', 'hpe'].indexOf(d) >= 0 ? d : 'other';
+  };
+  SX.DIPLOMAS = [
+    ['Standard Diploma', 22, 4, [['English', ['eng'], 4], ['Math', ['math'], 3], ['Lab science', ['sci'], 3], ['History and social science', ['ss'], 3],
+      ['Health and PE', ['hpe'], 2], ['World language, fine arts or CTE', ['wl', 'art', 'cte'], 2], ['Economics and personal finance', ['epf'], 1]]],
+    ['Advanced Studies Diploma', 26, 3, [['English', ['eng'], 4], ['Math', ['math'], 4], ['Lab science', ['sci'], 4], ['History and social science', ['ss'], 4],
+      ['World language', ['wl'], 3], ['Health and PE', ['hpe'], 2], ['Fine arts or CTE', ['art', 'cte'], 1], ['Economics and personal finance', ['epf'], 1]]]];
+  /* credits by subject, earned (past and current years with a passing grade) and planned (also later years, and current
+     classes without a grade yet); each requirement takes what it can, the rest are electives */
+  SX.gradReqs = function (rows, cur) {
+    var c = Number(cur) || 9, have = {}, plan = {};
+    (rows || []).forEach(function (r) {
+      if (!r || !(String(r.n || '').trim() || r.g) || r.x === 'exp' || r.g === 'F') return;
+      var cr = Number(r.cr) === 0.5 ? 0.5 : 1, s = r.s || SX.gpaSubject(r.n), fut = /^\d+$/.test(r.y || '') && Number(r.y) > c;
+      plan[s] = (plan[s] || 0) + cr;
+      if (!fut && r.g) have[s] = (have[s] || 0) + cr;
+    });
+    function alloc(pool, reqs, elec) {
+      var p = {}, k, sum = 0, rest = 0;
+      for (k in pool) { p[k] = pool[k]; sum += pool[k]; }
+      var got = reqs.map(function (q) {
+        var g = 0;
+        q[1].forEach(function (s) { var t = Math.min(q[2] - g, p[s] || 0); if (t > 0) { g += t; p[s] -= t; } });
+        return g;
+      });
+      for (k in p) rest += p[k];
+      got.push(Math.min(elec, rest));
+      return { got: got, sum: sum };
+    }
+    return SX.DIPLOMAS.map(function (d) {
+      var h = alloc(have, d[3], d[2]), pl = alloc(plan, d[3], d[2]);
+      return { name: d[0], need: d[1], have: h.sum, plan: pl.sum,
+        items: d[3].concat([['Electives', [], d[2]]]).map(function (q, i) { return { label: q[0], need: q[2], have: h.got[i], plan: pl.got[i] }; }) };
+    });
+  };
   /* GPA calculator: FCPS grade points, Honors +0.5, AP AV DE IB +1 (an F gets no bonus) */
   SX.GPA_LEVELS = [['reg', 'Regular', 0], ['hn', 'HN', 0.5], ['ap', 'AP', 1], ['av', 'AV', 1], ['de', 'DE', 1], ['ib', 'IB', 1]];
   SX.GPA_GRADES = [['A', 4], ['A-', 3.7], ['B+', 3.3], ['B', 3], ['B-', 2.7], ['C+', 2.3], ['C', 2], ['C-', 1.7], ['D+', 1.3], ['D', 1], ['F', 0], ['P', null]];
@@ -1853,7 +1896,8 @@ function normalizeCourse(input){
     return (Array.isArray(a) ? a.slice(0, 120) : []).map(function (r) {
       if (!r || typeof r !== 'object') return null;
       return { n: String(r.n || '').replace(/[\u0000-\u001f<>]/g, '').slice(0, 80), lv: lv.hasOwnProperty(r.lv) ? r.lv : 'reg', cr: Number(r.cr) === 0.5 ? 0.5 : 1,
-        g: gr.hasOwnProperty(r.g) ? r.g : '', x: r.x === 'exp' || r.x === 'pf' ? r.x : '' };
+        g: gr.hasOwnProperty(r.g) ? r.g : '', x: r.x === 'exp' || r.x === 'pf' ? r.x : '',
+        y: /^(ms|9|10|11|12)$/.test(r.y) ? r.y : '', s: SX.GPA_SUBJ.some(function (q) { return q[0] === r.s; }) ? r.s : '' };
     }).filter(function (r) { return r && (r.n.trim() || r.g); });
   };
   /* weighted and unweighted GPA over the counted credits; expunged rows and passes are left out, a pass/fail F counts as 0 */
