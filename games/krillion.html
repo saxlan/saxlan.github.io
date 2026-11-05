@@ -345,6 +345,10 @@ s();try{new MutationObserver(s).observe(parent.document.documentElement,{attribu
   .eframe { position: relative; border-radius: 16px; overflow: hidden; border: 2px solid var(--line); border-bottom-width: 4px; background: #0b1a33; }
   .eframe iframe { display: block; width: 100%; border: 0; opacity: 0; transition: opacity .3s; }
   .eframe iframe.on { opacity: 1; }
+  .eframe:fullscreen { border: 0; border-radius: 0; display: flex; }
+  .eframe:fullscreen iframe { height: 100% !important; flex: 1; }
+  .eframe:-webkit-full-screen { border: 0; border-radius: 0; display: flex; }
+  .eframe:-webkit-full-screen iframe { height: 100% !important; flex: 1; }
   .eload { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #fff; font: 800 15px/1.3 var(--sans); }
   .eload .pic { width: 64px; height: 64px; animation: bob 1.6s ease-in-out infinite; }
   .ecred { margin-top: 12px; font: 800 13px/1.5 var(--sans); color: var(--text-dim); }
@@ -3243,12 +3247,12 @@ function embedScreen(mode) {
   EMB.mode = mode; EMB.ok = false;
   var tabs = [['title', 'Start'], ['daily', 'Daily'], ['unlimited', 'Unlimited']];
   var h = '<div class="wrap ew"><div class="etabs"><div class="seg">' + tabs.map(function (x) { return '<button type="button" class="' + (x[0] === mode ? 'on' : '') + '" data-m="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>' +
-    '<div class="eacts"><span class="ktag">krillion.cc</span><button class="btn sm ghost" type="button" id="bEOurs">Switch version</button></div></div>' +
+    '<div class="eacts"><span class="ktag">krillion.cc</span><button class="btn sm ghost" type="button" id="bEFull">Full screen</button><button class="btn sm ghost" type="button" id="bEOurs">Switch version</button></div></div>' +
     '<div class="eframe" id="eframe"><div class="eload" id="eload">' + pufferArt(1) + '<span>Loading krillion.cc</span></div></div>' +
     '<div class="ecred">Daily and Unlimited here come from <b>krillion.cc</b>, an independent game in the style of Krillion. <a href="' + ORIG + '" target="_blank" rel="noopener">Play the original at krillion.io</a></div></div>';
   show(h);
   var f = document.createElement('iframe');
-  f.title = 'krillion.cc game'; f.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin'); f.setAttribute('allow', 'clipboard-write; web-share');
+  f.title = 'krillion.cc game'; f.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin'); f.setAttribute('allow', 'clipboard-write; web-share; fullscreen');
   f.src = CC + '/embed/' + (mode === 'title' ? '' : '?mode=' + mode);
   f.style.height = embedMinH() + 'px';
   f.onerror = function () { ccFail(); };
@@ -3256,7 +3260,21 @@ function embedScreen(mode) {
   EMB.t = setTimeout(function () { if (!EMB.ok && EMB.frame === f) ccFail(); }, 6000);
   Array.prototype.forEach.call(document.querySelectorAll('.etabs .seg button'), function (b) { b.onclick = function () { embedScreen(b.dataset.m); }; });
   document.getElementById('bEOurs').onclick = pickScreen;
+  document.getElementById('bEFull').onclick = embedFull;
 }
+/* full screen: the krillion.cc frame fills the screen; Esc or the button comes back */
+function embedFull() {
+  var box = document.getElementById('eframe'); if (!box) return;
+  var fs = document.fullscreenElement || document.webkitFullscreenElement;
+  if (fs) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+  var go = box.requestFullscreen || box.webkitRequestFullscreen;
+  if (go) { try { var r = go.call(box); if (r && r.catch) r.catch(function () {}); } catch (e) {} }
+}
+['fullscreenchange', 'webkitfullscreenchange'].forEach(function (ev) {
+  document.addEventListener(ev, function () {
+    var b = document.getElementById('bEFull'); if (b) b.textContent = (document.fullscreenElement || document.webkitFullscreenElement) ? 'Exit full screen' : 'Full screen';
+  });
+});
 function embedMinH() { var t = document.querySelector('.top'); return Math.max(520, window.innerHeight - (t ? t.offsetHeight : 64) - 150); }
 /* no 'ready' in 6 s: it looks blocked (a school filter) or offline; offer ours */
 function ccFail() {
