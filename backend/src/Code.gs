@@ -1335,7 +1335,10 @@ function rpcRoles(k, o) {
     if (!isAdmin_(me)) return { error: 'not allowed' };
     const u = all_('users'), list = [];
     Object.keys(u).forEach(n => { try { const r = JSON.parse(u[n]); list.push({ c: r.c || 0, k: (r.k || []).map(x => x && x[1]) }); } catch (e) { } });
-    return SX.userStats(list, Date.now());
+    const out = SX.userStats(list, Date.now());
+    out.tasks = taskStats_();
+    out.usage = memeJ_('usage', { c: {}, g: {} });
+    return out;
   }
   if (o.op === 'suggestions' || o.op === 'suggDone') {
     if (!isAdmin_(me)) return { error: 'not allowed' };
@@ -1349,6 +1352,44 @@ function rpcRoles(k, o) {
     return list();
   }
   return rolesList_(me);
+}
+// Dashboard: assignments crossed off across every account, and how many of those were finished by their due date
+// (only ones crossed off since doneAt was recorded can be judged). Cached 10 minutes: it reads every account.
+function taskStats_() {
+  const cache = CacheService.getScriptCache(), hit = cache.get('taskStats');
+  if (hit) { try { return JSON.parse(hit); } catch (e) { } }
+  const all = all_('data'), out = { done: 0, timed: 0, onTime: 0, open: 0 };
+  Object.keys(all).forEach(n => {
+    let d; try { d = unpack_(all[n]); } catch (e) { return; }
+    Object.keys((d && d.tasks) || {}).forEach(id => {
+      const t = d.tasks[id]; if (!t) return;
+      if (!t.done) { out.open++; return; }
+      out.done++;
+      const at = Number(t.doneAt) || 0, due = /^\d{4}-\d{2}-\d{2}/.test(String(t.date || '')) ? new Date(String(t.date).slice(0, 10) + 'T23:59:59').getTime() : 0;
+      if (at && due) { out.timed++; if (at <= due) out.onTime++; }
+    });
+  });
+  try { cache.put('taskStats', JSON.stringify(out), 600); } catch (e) { }
+  return out;
+}
+// usage counts from every visitor (buttons clicked, games opened), sent in small batches; kept as totals only
+function rpcTrack(k, o) {
+  o = o || {};
+  const clean = (m, keep) => { const r = {}; if (!m || typeof m !== 'object') return r;
+    Object.keys(m).slice(0, keep).forEach(x => { const key = cleanStr_(x, 48), v = Math.floor(Number(m[x]) || 0); if (key && v > 0) r[key] = Math.min(v, 500); }); return r; };
+  const c = clean(o.c, 60), g = clean(o.g, 20);
+  if (!Object.keys(c).length && !Object.keys(g).length) return { ok: true };
+  return tryLock_(5000, () => {
+    const u = memeJ_('usage', { c: {}, g: {} });
+    u.c = u.c || {}; u.g = u.g || {};
+    Object.keys(c).forEach(x => { u.c[x] = (u.c[x] || 0) + c[x]; });
+    Object.keys(g).forEach(x => { u.g[x] = (u.g[x] || 0) + g[x]; });
+    // keep the 300 most clicked so the record stays small
+    const keys = Object.keys(u.c);
+    if (keys.length > 300) { const top = {}; keys.sort((a, b) => u.c[b] - u.c[a]).slice(0, 300).forEach(x => { top[x] = u.c[x]; }); u.c = top; }
+    put_('meta', 'usage', JSON.stringify(u));
+    return { ok: true };
+  });
 }
 function rolesList_(me) {
   const u = all_('users'), admins = [], mods = [], recent = [], owner = PROPS.getProperty('owner') || '';
@@ -1454,7 +1495,7 @@ const RPC_ = {
   rpcImportIcal: rpcImportIcal,
   rpcListMyRes: rpcListMyRes, rpcSaveRes: rpcSaveRes, rpcDeleteRes: rpcDeleteRes, rpcResyncRes: rpcResyncRes, rpcGetPdf: rpcGetPdf,
   rpcGetLibrary: rpcGetLibrary, rpcImportRes: rpcImportRes, rpcGetResources: rpcGetResources,
-  rpcRoles: rpcRoles, rpcModerate: rpcModerate, rpcSocial: rpcSocial, rpcSuggest: rpcSuggest, rpcAnnounce: rpcAnnounce, rpcMemeDrop: rpcMemeDrop, rpcSuggOwner: rpcSuggOwner,
+  rpcRoles: rpcRoles, rpcModerate: rpcModerate, rpcSocial: rpcSocial, rpcSuggest: rpcSuggest, rpcTrack: rpcTrack, rpcAnnounce: rpcAnnounce, rpcMemeDrop: rpcMemeDrop, rpcSuggOwner: rpcSuggOwner,
   rpcLoadGame: rpcLoadGame, rpcSaveGame: rpcSaveGame, rpcLoadGuestGame: rpcLoadGuestGame, rpcSaveGuestGame: rpcSaveGuestGame,
   rpcRedeemGuest: rpcRedeemGuest, rpcRoom: rpcRoom, rpcChess: rpcChess
 };

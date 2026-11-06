@@ -1831,11 +1831,11 @@ function normalizeCourse(input){
   SX.ELO_AWAY = 45000;
   /* the owner's dashboard: accounts, new ones, and who logged in lately (u.c created, u.k login times), sign-ups per week for 12 weeks */
   SX.userStats = function (list, now) {
-    var D = 864e5, out = { ok: true, total: list.length, new7: 0, new30: 0, active7: 0, active30: 0, weeks: [] }, i;
+    var D = 864e5, out = { ok: true, total: list.length, new7: 0, new30: 0, active7: 0, active30: 0, weeks: [], logins: [] }, i;
     for (i = 0; i < 12; i++) out.weeks.push(0);
     list.forEach(function (u) {
       var c = Number(u.c) || 0, last = 0;
-      (u.k || []).forEach(function (t) { t = Number(t) || 0; if (t > last) last = t; });
+      (u.k || []).forEach(function (t) { t = Number(t) || 0; if (t > last) last = t; if (t && now - t < 7 * D) out.logins.push(t); });
       if (c > last) last = c;
       if (c && now - c < 7 * D) out.new7++;
       if (c && now - c < 30 * D) out.new30++;
@@ -1844,6 +1844,7 @@ function normalizeCourse(input){
       var w = Math.floor((now - c) / (7 * D));
       if (c && w >= 0 && w < 12) out.weeks[11 - w]++;
     });
+    out.logins.sort(function (a, b) { return a - b; });
     return out;
   };
   /* Add by year: the year a GPA list is in, a class's subject, and Virginia's diploma credits (8VAC20-131-51) */
