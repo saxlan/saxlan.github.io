@@ -1,4 +1,4 @@
-// Saxlan backend (Google Apps Script web app).
+// Lectern backend (Google Apps Script web app).
 // The site itself is static (GitHub Pages); the page talks to this script with fetch: POST, Content-Type text/plain,
 // body {fn, args}. doPost runs only the functions listed in RPC_ below and answers JSON {ok:true, result} or
 // {ok:false, error}. No triggers, no background work.
@@ -127,7 +127,7 @@ function setup() {
     let id = PROPS.getProperty('sheetId');
     if (id) { try { SpreadsheetApp.openById(id); } catch (e) { id = ''; } }
     if (!id) {
-      const ss = SpreadsheetApp.create('Saxlan storage');
+      const ss = SpreadsheetApp.create('Lectern storage');
       KINDS.forEach(k => ss.insertSheet(k));
       ss.getSheets().forEach(s => { if (KINDS.indexOf(s.getName()) < 0) ss.deleteSheet(s); });
       PROPS.setProperty('sheetId', ss.getId());
@@ -412,7 +412,7 @@ function rpcLogout(token) {
 function doGet() {
   let setup = false;
   try { setup = !!PROPS.getProperty('sheetId'); } catch (e) {}
-  return ContentService.createTextOutput(JSON.stringify({ ok: true, app: 'Saxlan', setup: setup })).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, app: 'Lectern', setup: setup })).setMimeType(ContentService.MimeType.JSON);
 }
 // POST {fn, args}: one allowlisted rpc. Every answer is JSON {ok:true, result} or {ok:false, error}.
 const POST_MAX_ = 3000000;
@@ -1197,7 +1197,7 @@ function builtInLib_() {
     courses.push({ id: id, name: name });
     res.courses[id] = { items: items.map(it => Object.assign({}, it, { public: true })) };
   }); } catch (e) {} });
-  return SX.builtInLibrary(res, courses, PROPS.getProperty('owner') || 'Saxlan');
+  return SX.builtInLibrary(res, courses, PROPS.getProperty('owner') || 'Lectern');
 }
 function libSource_(id) {
   const v = get_('res', id);
@@ -1436,7 +1436,7 @@ const socIO_ = () => ({
   exists: n => !!get_('users', n), now: () => Date.now(), rand: n => Utilities.getUuid().replace(/-/g, '').slice(0, n),
   isAdmin: n => isAdmin_(n), users: () => Object.keys(all_('users')), site: SITE_NAME_ });
 // the name the inbox shows as the sender of the site's own messages
-const SITE_NAME_ = 'Saxlan';
+const SITE_NAME_ = 'Lectern';
 // a suggestion marked done: its sender gets a message in their inbox
 const suggDoneNotify_ = id => { const v = get_('sugg', String(id)); if (!v) return;
   try { SX.suggDoneNotify(socIO_(), JSON.parse(v), SITE_NAME_); } catch (e) {} };

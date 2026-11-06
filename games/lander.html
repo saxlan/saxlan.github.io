@@ -260,7 +260,7 @@
   .fin-credits { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; text-transform: none; letter-spacing: 0; font-size: 13px; }
   .fin-credits b { color: var(--text); font-weight: 800; }
   #fin .btns .btn { flex: 1; }
-  /* Saxlan has no leaderboards: the button and the end screen link stay hidden */
+  /* Lectern has no leaderboards: the button and the end screen link stay hidden */
   #lbBtn, #finLb { display: none !important; }
 </style>
 </head>
@@ -5295,7 +5295,7 @@
     cb(m.res && typeof m.res === "object" ? m.res : { error: "conn" });
   });
   function lbQueue() {
-    return; // Saxlan has no leaderboards
+    return; // Lectern has no leaderboards
     clearTimeout(lbT);
     lbT = setTimeout(function () {
       var sc = lbScores(), key = JSON.stringify(sc);
