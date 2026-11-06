@@ -2441,6 +2441,16 @@ html.no-v-tools [data-v="tools"],html.no-v-tools #hm-tools{display:none!importan
 #games .gm-h{margin:0;display:flex;align-items:center;gap:14px;min-width:0;font-family:var(--display);font-weight:700;font-size:clamp(2.1rem,4.2vw,3rem);
   line-height:1;letter-spacing:-0.03em;text-transform:none;color:var(--pri)}
 #games .gm-h .gm-h-art{width:1.15em;height:1.15em}
+/* page headers centered: games and tools (search and close on the right), and the dashboard, administration, guide and suggestions pages */
+#games .gm-head{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;justify-content:normal}
+#games .gm-head .gm-h{grid-column:2;grid-row:1;justify-content:center}
+#games .gm-head .gm-x{grid-column:3;grid-row:1;justify-self:end}
+#games .gm-head .gm-q{grid-column:3;grid-row:1;justify-self:end;width:100%;max-width:300px;margin:0 62px 0 0}
+@media (max-width:760px){#games .gm-head .gm-q{grid-column:1 / -1;grid-row:2;max-width:none;margin:12px 0 0}}
+:is(#dash,#roles,#docs,#sugg) .res-head{grid-template-columns:minmax(0,1fr);grid-template-areas:"text" "ctl";justify-items:center;row-gap:14px}
+:is(#dash,#roles,#docs,#sugg) .res-head .rh-text{align-items:center;text-align:center;padding-left:56px;padding-right:56px}
+:is(#dash,#roles,#docs,#sugg) .res-head .rh-text:has(.rh-art){justify-content:center;text-align:left}
+:is(#dash,#roles,#docs,#sugg) .res-head .hgroup{margin:0}
 #games .gm-x,#games .gm-fwrap{position:static}
 #games .gm-x{flex:none;width:46px;height:46px;border:2px solid var(--line);border-bottom-width:4px;border-radius:var(--rs);background:var(--bg);color:var(--faint)}
 #games .gm-x:hover{background:var(--panel2);color:var(--fg2)}
