@@ -1879,6 +1879,7 @@ nav.tabs .mmenu .mcolors button.kbtn:hover{background:var(--panel);color:var(--f
 button.hm-site{appearance:none;cursor:pointer}
 .hm-sites.hm-gsites{margin-top:10px}
 .hm-cards{gap:16px;max-width:880px}
+.hm-card.hm-wide{grid-column:1 / -1}
 .hm-card{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:18px;min-height:0;padding:18px 20px;
   background:var(--panel);color:var(--fg);border:2px solid var(--line);border-bottom-width:4px;border-radius:var(--r);transition:none}
 .hm-card:hover{background:var(--panel2)}
@@ -3414,6 +3415,7 @@ async function loadData(pre){
     if(d.__v){if(pageV===null)pageV=d.__v;else if(pageV!==d.__v){location.reload();return;}}
     state.tasks=Object.values(d.tasks||{});
     state.advisory=Object.values(d.advisory||{});
+    setTimeout(weekSweep,0);
     state.events=Object.values(d.events||{});
     const st=d.settings||{};
     COURSES=(st.courses||[]).map(c=>({id:c.id,name:c.name,abbr:c.abbr||makeAbbr(c.name),raw:c.raw||'',keys:c.keys||[],fresh:!!c.fresh}));
@@ -3537,6 +3539,18 @@ async function removeTask(id){try{await api('/api/task/'+encodeURIComponent(id),
 async function saveSettings(){if(!settingsLoaded)return;try{await api('/api/settings',{method:'POST',body:JSON.stringify({colors:state.settings.colors,periods:state.settings.periods,
   advisoryCourse:state.settings.advisoryCourse||'',courses:COURSES,ical:state.settings.ical||'',fullNames:!!state.settings.fullNames,hideGames:!!state.settings.hideGames,hideChat:!!state.settings.hideChat,faqNew:!!state.settings.faqNew,oppStar:state.settings.oppStar||[],oppArch:state.settings.oppArch||[],gamesIntro:!!state.settings.gamesIntro,gameStar:state.settings.gameStar||[],hidePages:state.settings.hidePages||[],tutorialNew:!!state.settings.tutorialNew,rel:state.settings.rel||{},lunch:state.settings.lunch||{},gpa:SX.cleanGpa(state.settings.gpa),gpaYear:SX.cleanGpaYear(state.settings.gpaYear),gpaByYear:!!state.settings.gpaByYear})});}catch(e){console.warn('save failed',e);}}
 async function saveNote(n){if(STALE.has(n))return;try{await api('/api/advisory',{method:'POST',body:JSON.stringify(n)});}catch(e){console.warn('save failed',e);}}
+/* in-class assignments a week past their date, and sticky notes a week old, are removed by themselves */
+let sweepBusy=false;
+async function weekSweep(){
+  if(!state.user||sweepBusy)return;
+  const cut=addDays(todayStr(),-7),old=Date.now()-7*864e5;
+  const ts=state.tasks.filter(t=>t.kind==='inclass'&&t.date&&t.date<cut),ns=(state.advisory||[]).filter(n=>n.created&&n.created<old);
+  if(!ts.length&&!ns.length)return;
+  sweepBusy=true;
+  const ti=new Set(ts.map(t=>t.id)),ni=new Set(ns.map(n=>n.id));
+  state.tasks=state.tasks.filter(t=>!ti.has(t.id));state.advisory=state.advisory.filter(n=>!ni.has(n.id));render();
+  try{for(const t of ts)await removeTask(t.id);for(const n of ns)await removeNote(n.id);}finally{sweepBusy=false;}
+}
 async function removeNote(id){try{await api('/api/advisory/'+encodeURIComponent(id),{method:'DELETE'});}catch(e){console.warn('delete failed',e);}}
 async function saveEvent(ev){if(STALE.has(ev))return;try{await api('/api/event',{method:'POST',body:JSON.stringify(ev)});}catch(e){console.warn('save failed',e);}}
 /* ---------- actions waiting on the server ----------
@@ -4862,12 +4876,12 @@ function measureTabs(){
 }
 function scheduleMeasure(){if(measureQueued)return;measureQueued=true;
   requestAnimationFrame(()=>{measureQueued=false;measureTabs();fitTaskTags();fitPickers();fitHomeGuide();});}
-/* Home: with two cards per row the Guide card only shows when it evens out the rows (one per row: always) */
+/* Home: the Guide card always shows; with two cards per row it spans the whole last row when it would sit alone */
 function fitHomeGuide(){
   const grid=document.getElementById('hmcards'),gd=document.getElementById('hm-guide');if(!grid||!gd)return;
   const cols=getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length;
-  const others=[...grid.querySelectorAll('.hm-card')].filter(c=>c!==gd).length;
-  gd.hidden=cols>=2&&others%2===0;
+  const others=[...grid.querySelectorAll('.hm-card')].filter(c=>c!==gd&&!c.hidden).length;
+  gd.hidden=false;gd.classList.toggle('hm-wide',cols>=2&&others%2===0);
 }
 /* a task's label (Exam, In-Class, Parent Needed...) that doesn't fit after the class name moves to a second line */
 function fitTaskTags(){
