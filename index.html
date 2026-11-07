@@ -1647,8 +1647,7 @@ label.fl{font-size:12px;font-weight:800;letter-spacing:1px;text-transform:upperc
 .switch:checked::after{left:22px;background:#fff}
 /* checkboxes: a rounded box with a thick bottom edge, blue with a white tick */
 .hide-box,.lib-fx{width:22px;height:22px;border:2px solid var(--line);border-bottom-width:4px;border-radius:7px;background:var(--bg)}
-.hide-box::after,.lib-fi.on .lib-fx::after,.opp-si.opp-sx.on .lib-fx::after{left:5.5px;top:1px;width:5px;height:10px;border-color:#fff;border-width:0 2.5px 2.5px 0}
-.hide-cb:checked+.hide-box,.lib-fi.on .lib-fx,.opp-si.opp-sx.on .lib-fx{background:var(--pri);border-color:var(--pri-dark)}
+.hide-box::after,.lib-fi.on .lib-fx::after,.hide-cb:checked+.hide-box,.lib-fi.on .lib-fx,.opp-si.opp-sx.on .lib-fx{background:var(--pri);border-color:var(--pri-dark)}
 .hide-it:hover .hide-box{border-color:var(--line-hi)}
 .chp input[type=checkbox],#v-setup input[type=checkbox]{appearance:none;-webkit-appearance:none;width:24px;height:24px;margin:0;flex:none;border:2px solid var(--line);border-bottom-width:4px;border-radius:8px;
   background:var(--bg) no-repeat center/14px;cursor:pointer}
@@ -2981,6 +2980,44 @@ html.pfade:not(.splash-on) #games .gm-pick{background:transparent}
   #v-clock .ck-time{font-size:60px}
   #v-clock .ck-now{text-align:left}
 }
+
+/* Settings page sidebar layout (shared with Saxon Planner's Tasks page, which Saxlan doesn't have) */
+.opp-wrap{max-width:none;width:100%}
+/* Tasks: categories sidebar (pushes the list on wide screens, covers it on phones) */
+.opp-hd{display:flex;align-items:center;gap:12px}
+.opp-hd .display{margin:0}
+.opp-sidebtn{flex:none;width:44px;height:44px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:12px}
+.opp-sidebtn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.opp-hd{margin-bottom:14px}
+.opp-body{display:flex;gap:20px;align-items:flex-start}
+.opp-main{flex:1;min-width:0}
+.opp-side{flex:none;width:232px;box-sizing:border-box;position:sticky;top:12px;max-height:calc(100vh - 150px);overflow-y:auto;overscroll-behavior-y:auto;
+  background:var(--bg);border:2px solid var(--line);border-bottom-width:4px;border-radius:var(--r);padding:10px 8px;display:flex;flex-direction:column;gap:2px;scrollbar-width:thin}
+.opp-side[hidden]{display:none}
+.opp-sh{font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--faint);padding:4px 10px 8px;display:flex;align-items:center;justify-content:space-between;min-height:24px}
+.opp-sx{display:none;appearance:none;border:0;background:transparent;color:var(--faint);cursor:pointer;width:36px;height:36px;margin:-8px -4px -8px 0;border-radius:10px;align-items:center;justify-content:center}
+.opp-sx svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
+.opp-sx:focus-visible{outline:2px solid var(--blue-light)}
+.opp-cat{appearance:none;border:2px solid transparent;background:transparent;color:var(--fg);font:700 14.5px var(--font-ui);text-align:left;cursor:pointer;
+  display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;min-height:40px}
+.opp-cat span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.opp-cat b{flex:none;font-weight:800;font-size:12.5px;color:var(--faint);min-width:22px;text-align:right}
+.opp-cat:hover{background:var(--panel2)}
+.opp-cat:focus-visible{outline:none;border-color:var(--blue-light)}
+.opp-cat.on{background:var(--blue-wash);border-color:var(--blue-light);color:var(--blue-dark)}
+.opp-cat.on b{color:var(--blue-dark)}
+.opp-sdiv{height:2px;background:var(--line);margin:8px 6px;flex:none}
+.opp-cur{font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px;min-width:0}
+.opp-cur span{font-size:12.5px;color:var(--faint)}
+.opp-scrim{display:none}
+@media (max-width:700px){
+  .opp-side{position:fixed;left:0;top:0;bottom:0;max-height:none;overscroll-behavior-y:contain;width:min(290px,84vw);z-index:95;border-radius:0 var(--r) var(--r) 0;border-left:0;
+    padding:calc(14px + env(safe-area-inset-top)) 10px calc(14px + env(safe-area-inset-bottom));box-shadow:0 10px 40px rgba(0,0,0,.25)}
+  .opp-scrim{display:block;position:fixed;inset:0;z-index:94;background:rgba(0,0,0,.35);overscroll-behavior:none;touch-action:none}
+  .opp-cat{min-height:44px}.opp-sx{display:inline-flex}}
+/* (from Saxon Planner: the Settings page uses this sidebar layout) */
+.opp-wrap{max-width:none;width:100%}
+.opp-si.opp-sx.on .lib-fx::after{content:"";position:absolute;left:3.5px;top:0.5px;width:3px;height:7px;border:solid var(--accent-fg);border-width:0 2px 2px 0;transform:rotate(45deg)}
 </style>
 </head>
 <body>
