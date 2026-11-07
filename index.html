@@ -5195,7 +5195,7 @@ function settingsHTML(m,page){
       <div class="sx-redeem"><input type="text" id="${m}redeem" placeholder="Paste a guest code" autocomplete="off" spellcheck="false"><button class="kbtn" data-act-redeem="${m}">Move</button></div>
       <div class="sx-redeem-msg" id="${m}redeem-msg" role="status"></div></div>`+
     (page?'':state.user?`<div class="row"><span>Appearance</span><button class="kbtn wide hide-tog" data-act-appear>Open<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div>`:hideHTML())+
-    (page?'':state.user?`<div class="row"><span>Passwords</span><button class="kbtn wide hide-tog" data-act-sec>Open<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div>`:'')+
+    (page?'':state.user?`<div class="row"><span>Security</span><button class="kbtn wide hide-tog" data-act-sec>Open<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div>`:'')+
     (!page&&isModerator()?`<div class="row"><span>Administration</span><button class="kbtn wide hide-tog" data-act-roles>Open<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div>`:'');
 }
 /* ---------- FAQ: a pop-up from the Courses page; new accounts see the button blink until "I Can Read" ---------- */
@@ -6088,7 +6088,7 @@ function openTools(){
   const g=document.getElementById('games');roomLeaveAll();
   g.innerHTML=`<div class="gm-pick tl-pick"><div class="gm-head"><h1 class="gm-h"><span>tools</span></h1>
     <button class="gm-x" data-act-gclose aria-label="Close" title="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-    <section class="gm-sec"><div class="gm-grid">${TOOLS.filter(([id])=>!sensHidden(id)).map(([id,n,d])=>`<button class="gm-tile gm-plain tl-tile" data-tool="${id}">${art(TOOL_ART[id],'tl-art')}<span class="gm-big">${esc(n)}</span><span class="tl-desc">${esc(d)}</span><span class="hm-go" aria-hidden="true">${HM_ARROW}</span></button>`).join('')}</div></section>${sensOn()?`<div class="tl-sens sec-sw"><h3 class="ap-fh">Crashout</h3><input type="checkbox" class="switch" id="tl-sens" ${state.settings.sensTools?'checked':''} aria-label="Crashout"></div>`:''}</div>`;
+    <section class="gm-sec"><div class="gm-grid">${TOOLS.filter(([id])=>!sensHidden(id)).map(([id,n,d])=>`<button class="gm-tile gm-plain tl-tile" data-tool="${id}">${art(TOOL_ART[id],'tl-art')}<span class="gm-big">${esc(n)}</span><span class="tl-desc">${esc(d)}</span><span class="hm-go" aria-hidden="true">${HM_ARROW}</span></button>`).join('')}</div></section>${sensOn()?`<div class="gm-endbar"><button class="kbtn" data-tl-sens>${state.settings.sensTools?'Hide sensitive tools':'Show sensitive tools'}</button></div>`:''}</div>`;
   g.hidden=false;
 }
 document.addEventListener('click',e=>{
@@ -6831,7 +6831,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){e.preventDefault();e.stopPropagation();pwxClose();return;}
   if(e.key==='Enter'&&e.target.tagName==='INPUT'){e.preventDefault();const g=o.querySelector('.pwx-go');if(g&&!g.disabled)g.click();}
 },true);
-/* the Security page (Settings, Passwords): change the password, the picture password, two-step login, what's still
+/* the Security page (Settings, Security): change the password, the picture password, two-step login, what's still
    worth doing, and the account's security notices */
 let loginSeq=null;
 /* the login form: an account with two-step login is asked for its pictures; true when the form should wait */
@@ -6887,7 +6887,7 @@ document.addEventListener('change',async e=>{
 function secWarnHTML(){
   if(!state.user||state.settings.ical||state.user.pic)return '';
   return `<div class="sec-warn" role="note"><span class="sec-warn-i" aria-hidden="true">${art('lock')}</span><div class="sec-warn-t"><b>No way to reset your password</b>
-    <p>If you forget your password, there are only two ways back in: your Schoology link, or a picture password. Add your Schoology link in <b>Edit classes</b>, or set a picture password in <b>Settings</b>, <b>Passwords</b>.</p></div>
+    <p>If you forget your password, there are only two ways back in: your Schoology link, or a picture password. Add your Schoology link in <b>Edit classes</b>, or set a picture password in <b>Settings</b>, <b>Security</b>.</p></div>
     <div class="sec-warn-b"><button class="hbtn hb-box" data-act="classes">Add Schoology link</button><button class="hbtn hb-box" data-act-sec>Set picture password</button></div></div>`;
 }
 /* ---------- Appearance (Settings): hide any page, and pick the avatar shown next to your name in Chat (Modern: the
@@ -7031,10 +7031,11 @@ document.addEventListener('change',e=>{
 document.addEventListener('change',e=>{
   if(!state.user)return;const id=e.target.id;
   if(id==='ap-deco'){state.settings.decoOn=e.target.checked;pcApply();saveSettings();return;}
-  if(id==='tl-sens'){state.settings.sensTools=e.target.checked;saveSettings();
-    const y=document.querySelector('#games .gm-pick')?document.querySelector('#games .gm-pick').scrollTop:0;openTools();const p=document.querySelector('#games .gm-pick');if(p)p.scrollTop=y;return;}
   if(e.target.classList&&e.target.classList.contains('sens-sw')){state.settings.sensPics=e.target.checked;saveSettings();try{if(state.view==='home')render();}catch(_){}}
 });
+document.addEventListener('click',e=>{if(!e.target.closest||!e.target.closest('#games [data-tl-sens]')||!state.user)return;
+  state.settings.sensTools=!state.settings.sensTools;saveSettings();const p=document.querySelector('#games .gm-pick'),y=p?p.scrollTop:0;
+  openTools();const q=document.querySelector('#games .gm-pick');if(q)q.scrollTop=y;});
 document.addEventListener('click',e=>{if(!e.target.closest||!e.target.closest('#games [data-gm-sens]')||!state.user)return;
   state.settings.sensGames=!state.settings.sensGames;saveSettings();const p=document.querySelector('#games .gm-pick'),y=p?p.scrollTop:0;
   gmRenderPick();const q=document.querySelector('#games .gm-pick');if(q)q.scrollTop=y;});
@@ -7609,9 +7610,9 @@ const TUT_STEPS=[
   {v:'courses',s:'#v-courses [data-act="faq"]',t:'FAQ',p:'Stuck? The FAQ answers the common questions. It blinks until you’ve read it.'},
   {v:'courses',s:'#docsbtn',m:'#mmenu [data-act-docs]',t:'Guide',p:'The Guide in this menu explains every feature.'},
   {v:'courses',s:'#gearbtn',m:'#mgear',t:'Settings',
-    p:'Settings has Extended view, full course names, Edit classes, your Schoology link, a guest code for moving game progress, Appearance (hide any page, and pick your Chat avatar) and Passwords.'},
-  {v:'courses',set:1,s:tutUp('#setdd [data-act-sec]'),m:tutUp('#mcolors [data-act-sec]'),t:'Passwords',
-    p:'Passwords opens Security. Set a picture password there: pick 3 of the 12 pictures, in order, press Save and write them down. If you ever forget your password, press Forgot my password on the login page and pick the same 3. Security also changes your password, turns on two-step login and lists security notices.'},
+    p:'Settings has Extended view, full course names, Edit classes, your Schoology link, a guest code for moving game progress, Appearance (hide any page, and pick your Chat avatar) and Security.'},
+  {v:'courses',set:1,s:tutUp('#setdd [data-act-sec]'),m:tutUp('#mcolors [data-act-sec]'),t:'Security',
+    p:'Set a picture password in Security: pick 3 of the 12 pictures, in order, press Save and write them down. If you ever forget your password, press Forgot my password on the login page and pick the same 3. Security also changes your password, turns on two-step login and lists security notices.'},
   {v:'courses',s:'#suggbtn',m:'#msugg',t:'Suggestions',p:'Have an idea or found a bug? Send it here. That’s the tour!',pl:'Have an idea or found a bug? Send it here.'},
   {v:'courses',s:'#v-courses [data-act="classes"]',noIcal:1,t:'Your Schoology link',p:'Don’t forget your Schoology link. Without it nothing syncs. You can add it any time from Edit classes.'}];
 /* the steps for this tour; the Schoology reminder only while the account has no link */
@@ -8588,7 +8589,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 /* ---------- Settings: a page with a sidebar of categories (Classes, Appearance, Password, and Administration for the
    owner); the sidebar shows or hides like the one on Tasks. Appearance and Password draw their panels into the page,
    Administration's own page moves into it ---------- */
-const SET_CATS=()=>[['classes','Classes'],['appearance','Appearance'],['password','Password']].concat(state.user&&state.user.owner?[['admin','Administration']]:[]);
+const SET_CATS=()=>[['classes','Classes'],['appearance','Appearance'],['password','Security']].concat(state.user&&state.user.owner?[['admin','Administration']]:[]);
 let setSide=(()=>{try{return localStorage.getItem('sx-setside')!=='0';}catch(_){return true;}})();
 function goSettings(cat){if(!state.user)return;closeNavMenus();try{pgCloseAll('');}catch(_){}
   if(state.setup&&COURSES.length)state.setup=false;state.setCat=cat||state.setCat||'classes';
