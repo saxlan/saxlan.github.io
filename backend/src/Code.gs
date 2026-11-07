@@ -456,7 +456,7 @@ function rpcMemeDrop(secret, match) {
 }
 function rpcAnnounce(secret, text, force) {
   if (typeof secret !== 'string' || hex_(sha_(bytes_(secret))) !== ANNOUNCE_H_) throw new Error('owner only');
-  text = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+  text = String(text || '').replace(/\r/g, '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, 1000);
   if (!text) return { error: 'empty' };
   ensureStore_();
   return withLock_(() => {
