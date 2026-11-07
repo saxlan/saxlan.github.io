@@ -130,6 +130,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border:0;border-radiu
   <div class="panel" id="p-sound">
     <div class="ph"><span>Sound</span></div>
     <div class="chips" id="soundChips"></div>
+    <div class="autorow" id="mixRow" style="margin-top:14px;display:none">Add waves <button class="sw" id="mixSw" aria-label="Add waves"></button></div>
     <div class="vol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/></svg><input type="range" id="vol" min="0" max="1" step="0.01" value="0.6" aria-label="Volume"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4zM15.5 9a4 4 0 010 6M18 6.5a7.5 7.5 0 010 11"/></svg></div>
   </div>
 </div>
@@ -452,6 +453,8 @@ void main(){
  float a=.1*(1.-ess(ct/.9));
  float ang=PI*eio((ct-17.6)/3.2);
  vec2 q=rot(ang)*p;
+ vec2 lL=rot(ang)*vec2(-.6,.8);
+ float lx=clamp(lL.x*2.2,-1.,1.);
  float L=length(p*vec2(.8,.6));
  vec3 col=mix(vec3(.13,.085,.10),vec3(.018,.02,.04),sat(L*.75));
  col+=vec3(.55,.35,.2)*.1*exp(-L*2.);
@@ -462,7 +465,7 @@ void main(){
   float sx=k==0?-1.:1.;
   float dx=q.x-sx*.47;
   float pd=abs(dx)-.022;
-  if(abs(q.y)<1.02){float cy=sqrt(sat(1.-dx*dx/(.022*.022)));vec3 pc=vec3(.62,.46,.28)*(.35+.65*cy)+vec3(1.,.9,.7)*.3*pow(cy,8.)*sat(.5-dx*sx*20.);col=mix(col,pc,smoothstep(px*.5,-px*.5,pd));}
+  if(abs(q.y)<1.02){float cy=sqrt(sat(1.-dx*dx/(.022*.022)));vec3 pc=vec3(.62,.46,.28)*(.35+.65*cy)*(.8+.2*sat(.5+dx/.022*lx*.8))+vec3(1.,.9,.7)*.3*pow(cy,8.)*sat(.5+dx/.022*lx*1.5);col=mix(col,pc,smoothstep(px*.5,-px*.5,pd));}
  }
  float inGlass=s<1.?smoothstep(px,-px,abs(q.x)-w):0.;
  // sand regions
@@ -487,20 +490,21 @@ void main(){
   if(q.y<.02&&q.y>yb){float g=h21(floor(vec2(q.x*600.,q.y*110.+uT*45.)));stream=smoothstep(sw+px,sw-px,abs(q.x))*(.55+.6*g);}
  }
  vec3 gC=col;
- float cyl=sqrt(sat(1.-pow(q.x/max(w,.001),2.)));
+ float xw=q.x/max(w,.001);float cyl=sqrt(sat(1.-xw*xw));
  // glass back tint
  col=mix(col,col*.75+vec3(.04,.045,.06),inGlass*.8);
- float gn=h21(floor(q*vec2(420.)));
+ float gn=h21(floor(abs(q)*vec2(420.)));
  vec3 sC=sandC*(.55+.45*cyl)*(.88+.22*gn);
- if(q.y>0.){float top=a+.9*(1.-f)-.16*sin(PI*sat(f*1.15))*exp(-q.x*q.x*30.);sC*=1.+.25*exp(-(top-s)*40.);}
- else{float H=max(.9*f+.2*sin(PI*f)*(.5-abs(q.x)/.42),0.);sC*=1.+.3*exp(-(s-(1.-H))*40.);}
+ if(q.y>0.){float top=a+.9*(1.-f)-.16*sin(PI*sat(f*1.15))*exp(-q.x*q.x*30.);sC*=1.+.25*exp(-max(top-s,0.)*40.);}
+ else{float H=max(.9*f+.2*sin(PI*f)*(.5-abs(q.x)/.42),0.);sC*=1.+.3*exp(-max(s-(1.-H),0.)*40.);}
  col=mix(col,sC,sand);
  col=mix(col,sandC*1.05,sat(stream)*.95);
  // glass front highlights
  float e=w-abs(q.x);
  float rim=exp(-max(e,0.)*70.)*inGlass;
- float streak=exp(-pow((q.x/max(w,.001)+.55)*6.,2.))*inGlass;
- float streak2=exp(-pow((q.x/max(w,.001)-.72)*14.,2.))*inGlass;
+ float sa=(xw-.55*lx)*6.,sb=(xw+.72*lx)*14.;
+ float streak=exp(-sa*sa)*inGlass;
+ float streak2=exp(-sb*sb)*inGlass;
  col+=vec3(.85,.9,1.)*(rim*.28+streak*.16+streak2*.07);
  float outl=s<1.?smoothstep(px,0.,abs(abs(q.x)-w)-.004):0.;
  col+=vec3(.8,.85,1.)*outl*.22;
@@ -509,8 +513,10 @@ void main(){
  float cd=sdRR(cq,vec2(.53,.065),.035);
  float grain=fbm3(vec2(q.x*3.,abs(q.y)*60.+q.x*2.));
  vec3 wood=mix(vec3(.24,.13,.08),vec3(.42,.25,.14),grain);
- wood*=.75+.5*sat(cq.y/.065*.5+.5)*(q.y>0.?1.:.85);
- wood+=vec3(1.,.8,.6)*.12*exp(-abs(cq.y-.06)*60.);
+ float sg=q.y>0.?1.:-1.;
+ float up=(rot(-ang)*vec2(0.,sg)).y;
+ wood*=.8+.4*sat(cq.y/.065*.5*up+.5);
+ wood+=vec3(1.,.8,.6)*.12*exp(-abs(abs(cq.y)-.06)*60.)*max(up*sign(cq.y),0.);
  col=mix(col,wood,smoothstep(px,-px,cd));
  gl_FragColor=vec4(dith(col),1.);
 }`;
@@ -660,6 +666,12 @@ float iCap(vec3 ro,vec3 rd,vec3 pa,vec3 pb,float r){
  if(h>=0.){float t=(-b-sqrt(h))/a;float y=baoa+t*bard;if(y>0.&&y<baba)return t;vec3 oc=(y<=0.)?oa:ro-pb;b=dot(rd,oc);c=dot(oc,oc)-r*r;h=b*b-c;if(h>0.)return -b-sqrt(h);}
  return -1.;}
 vec3 nCap(vec3 p,vec3 a,vec3 b,float r){vec3 ba=b-a,pa=p-a;float h=sat(dot(pa,ba)/dot(ba,ba));return (pa-h*ba)/r;}
+float iBox(vec3 ro,vec3 rd,vec3 c,vec3 h,out vec3 n){
+ vec3 o=ro-c;vec3 m=1./rd;vec3 k=abs(m)*h;vec3 t1=-m*o-k,t2=-m*o+k;
+ float tN=max(max(t1.x,t1.y),t1.z),tF=min(min(t2.x,t2.y),t2.z);
+ if(tN>tF||tF<0.)return -1.;
+ n=-sign(rd)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);return tN;}
+float sdBox2(vec2 p,vec2 b){vec2 q=abs(p)-b;return length(max(q,0.))+min(max(q.x,q.y),0.);}
 vec2 raySeg(vec3 ro,vec3 rd,vec3 a,vec3 b){
  vec3 ba=b-a,oa=ro-a;float bb=dot(ba,ba),rb=dot(rd,ba),ob=dot(oa,ba),od=dot(oa,rd);
  float den=bb-rb*rb;float s=sat((ob-rb*od)/max(den,1e-5));
@@ -669,9 +681,9 @@ vec2 raySeg(vec3 ro,vec3 rd,vec3 a,vec3 b){
 void main(){
  vec2 uv=(gl_FragCoord.xy-.5*uR)/uR.y;
  float t=uT;float top=2.6;
- float ca=.62+.1*sin(t*.04);
- vec3 ro=vec3(sin(ca)*6.3,3.1,cos(ca)*6.3),ta=vec3(0.,1.2,0.);
- if(uR.x<uR.y)ro*=1.95;
+ float ca=.5+.08*sin(t*.04);
+ vec3 ro=vec3(sin(ca)*7.6,3.2,cos(ca)*7.6),ta=vec3(0.,1.,0.);
+ if(uR.x<uR.y)ro=vec3(ro.x,ro.y*1.5,ro.z)*1.75;
  vec3 ww=normalize(ta-ro),uu=normalize(cross(ww,vec3(0.,1.,0.))),vv=cross(uu,ww);
  float fl=2.;
  vec3 rd=normalize(uv.x*uu+uv.y*vv+fl*ww);
@@ -679,19 +691,23 @@ void main(){
  vec3 col=bg;float tm=1e9;float kind=0.;vec3 nr=vec3(0.,1.,0.);vec3 mat=vec3(0.);
  if(rd.y<0.){tm=-ro.y/rd.y;kind=1.;}
  for(int i=0;i<15;i++){vec3 bp=ballP(float(i),t);float ts=isph(ro,rd,bp,.092);if(ts>0.&&ts<tm){tm=ts;kind=2.;nr=normalize(ro+rd*ts-bp);mat=pal(float(i)/14.);}}
- vec3 b0=vec3(-1.62,top,0.),b1=vec3(1.62,top,0.),f0=vec3(-1.62,0.,0.),f1=vec3(1.62,0.,0.);
- float tc=iCap(ro,rd,b0,b1,.035);if(tc>0.&&tc<tm){tm=tc;kind=3.;nr=nCap(ro+rd*tc,b0,b1,.035);}
- tc=iCap(ro,rd,f0,b0,.03);if(tc>0.&&tc<tm){tm=tc;kind=3.;nr=nCap(ro+rd*tc,f0,b0,.03);}
- tc=iCap(ro,rd,f1,b1,.03);if(tc>0.&&tc<tm){tm=tc;kind=3.;nr=nCap(ro+rd*tc,f1,b1,.03);}
+ const float PX=1.8;
+ vec3 bn;float tc;
+ tc=iBox(ro,rd,vec3(0.,top+.045,0.),vec3(PX+.045,.045,.045),bn);if(tc>0.&&tc<tm){tm=tc;kind=3.;nr=bn;}
+ tc=iBox(ro,rd,vec3(-PX,(top+.09)*.5,0.),vec3(.045,(top+.09)*.5,.045),bn);if(tc>0.&&tc<tm){tm=tc;kind=3.;nr=bn;}
+ tc=iBox(ro,rd,vec3(PX,(top+.09)*.5,0.),vec3(.045,(top+.09)*.5,.045),bn);if(tc>0.&&tc<tm){tm=tc;kind=3.;nr=bn;}
+ tc=iBox(ro,rd,vec3(-PX,.03,0.),vec3(.075,.03,.62),bn);if(tc>0.&&tc<tm){tm=tc;kind=3.;nr=bn;}
+ tc=iBox(ro,rd,vec3(PX,.03,0.),vec3(.075,.03,.62),bn);if(tc>0.&&tc<tm){tm=tc;kind=3.;nr=bn;}
  vec3 L=normalize(vec3(-.4,1.,.55));
  vec3 p=ro+rd*tm;
  if(kind==1.){
   float sh=1.;
   for(int i=0;i<15;i++){vec3 b=ballP(float(i),t);vec2 d=p.xz-(b.xz-L.xz/L.y*b.y);float rad=.08+.05*b.y;sh*=1.-.6*exp(-dot(d,d)/(rad*rad))/(1.+.3*b.y);}
   float bz=-L.z/L.y*top,bx=-L.x/L.y*top;
-  sh*=1.-.35*exp(-pow((p.z-bz)/.09,2.))*smoothstep(1.75,1.6,abs(p.x-bx));
-  for(int k=0;k<2;k++){float sx=k==0?-1.62:1.62;vec2 a=vec2(sx,0.),bb=vec2(sx,0.)-L.xz/L.y*top;vec2 pa=p.xz-a,ba=bb-a;float hh=sat(dot(pa,ba)/dot(ba,ba));sh*=1.-.35*exp(-dot(pa-ba*hh,pa-ba*hh)/.006);}
-  vec3 fc=vec3(.075,.078,.11)*(.25+.75*exp(-dot(p.xz,p.xz)*.07));
+  sh*=1.-.4*exp(-(p.z-bz)*(p.z-bz)*100.)*smoothstep(PX+.15,PX,abs(p.x-bx));
+  for(int k=0;k<2;k++){float sx=k==0?-PX:PX;vec2 a=vec2(sx,0.),bb=vec2(sx,0.)-L.xz/L.y*top;vec2 pa=p.xz-a,ba=bb-a;float hh=sat(dot(pa,ba)/dot(ba,ba));sh*=1.-.4*exp(-dot(pa-ba*hh,pa-ba*hh)/.008);
+   float fd=sdBox2(p.xz-vec2(sx,0.),vec2(.075,.62));sh*=1.-.55*exp(-max(fd,0.)*14.);}
+  vec3 fc=vec3(.10,.104,.14)*(.3+.7*exp(-dot(p.xz,p.xz)*.06));
   col=fc*sh;
   col=mix(col,bg,smoothstep(5.,16.,tm));
  }else if(kind>1.){
@@ -704,8 +720,9 @@ void main(){
    col=mat*(dif*.95+amb*.22*occ+.04)+vec3(1.)*spe*.85+fre*.22*vec3(.6,.7,1.);
    col+=mat*.2*max(dot(nr,normalize(vec3(.8,.1,-.6))),0.);
   }else{
-   vec3 mc=vec3(.42,.43,.5);
-   col=mc*(dif*.6+amb*.2)+spe*.5+fre*.12;
+   vec3 mc=vec3(.30,.31,.36);
+   float ao=sat(.45+.55*p.y/1.2);
+   col=mc*(dif*.85+amb*.28*ao+.05)+vec3(.9,.92,1.)*pow(max(dot(rf,L),0.),30.)*.35+fre*.08;
   }
  }
  for(int i=0;i<15;i++){
@@ -977,6 +994,7 @@ function ac(){
   A.master=c.createGain();A.master.gain.value=.9;
   const comp=c.createDynamicsCompressor();comp.threshold.value=-18;comp.ratio.value=3;
   A.master.connect(comp);comp.connect(c.destination);
+  A.an=c.createAnalyser();A.an.fftSize=2048;comp.connect(A.an);
   const len=Math.floor(c.sampleRate*3.8),buf=c.createBuffer(2,len,c.sampleRate);
   for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.8);}
   A.rev=c.createConvolver();A.rev.buffer=buf;const rg=c.createGain();rg.gain.value=.45;A.rev.connect(rg);rg.connect(A.master);
@@ -1013,16 +1031,142 @@ function startNoise(){
  out.gain.setValueAtTime(0,now);out.gain.linearRampToValueAtTime(.8,now+4);
  return {out,nodes:[src,lfo]};
 }
+/* shared helpers for the newer layers */
+let pinkBuf=null;
+function pinkNoise(){
+ if(pinkBuf)return pinkBuf;
+ const c=A.ctx,len=c.sampleRate*8;pinkBuf=c.createBuffer(2,len,c.sampleRate);
+ for(let ch=0;ch<2;ch++){const d=pinkBuf.getChannelData(ch);let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+  for(let i=0;i<len;i++){const w=Math.random()*2-1;b0=.99886*b0+w*.0555179;b1=.99332*b1+w*.0750759;b2=.969*b2+w*.153852;b3=.8665*b3+w*.3104856;b4=.55*b4+w*.5329522;b5=-.7616*b5-w*.016898;d[i]=(b0+b1+b2+b3+b4+b5+b6+w*.5362)*.11;b6=w*.115926;}
+  const fl=Math.floor(c.sampleRate*.6);for(let i=0;i<fl;i++){const k=i/fl;d[len-fl+i]=d[len-fl+i]*(1-k)+d[i]*k;}}
+ return pinkBuf;
+}
+function mkOut(level,fadeIn,wet){
+ const c=A.ctx,now=c.currentTime,out=c.createGain();
+ out.gain.setValueAtTime(0,now);out.gain.linearRampToValueAtTime(level,now+fadeIn);
+ out.connect(A.ambBus);
+ if(wet){const s=c.createGain();s.gain.value=wet;out.connect(s);s.connect(A.rev);}
+ return out;
+}
+function panner(v){const c=A.ctx;if(c.createStereoPanner){const p=c.createStereoPanner();p.pan.value=v;return p;}return c.createGain();}
+/* schedules events ahead of time so background timer throttling never causes gaps */
+function scheduler(layer,fn,first){
+ let next=A.ctx.currentTime+(first||.5);
+ const tick=()=>{if(!A.ctx)return;const horizon=A.ctx.currentTime+2.5;let guard=0;while(next<horizon&&guard++<20){next+=Math.max(.05,fn(next));}};
+ tick();layer.timers.push(setInterval(tick,500));
+}
+/* Waves: surf swells from filtered pink noise */
+function startWaves(level){
+ const c=A.ctx;const out=mkOut(level==null?.7:level,4,.15);const layer={out,nodes:[],timers:[]};
+ [-.45,.45].forEach((pan,k)=>{
+  const src=c.createBufferSource();src.buffer=pinkNoise();src.loop=true;
+  const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=380;lp.Q.value=.5;
+  const g=c.createGain();g.gain.value=.12;
+  const pn=panner(pan);
+  src.connect(lp);lp.connect(g);g.connect(pn);pn.connect(out);
+  src.start(c.currentTime,Math.random()*6);layer.nodes.push(src);
+  scheduler(layer,t=>{
+   const rise=2.6+Math.random()*1.8,fall=4.5+Math.random()*2.5,peak=.55+Math.random()*.45;
+   g.gain.setValueAtTime(.12,t);g.gain.linearRampToValueAtTime(.12+peak,t+rise);g.gain.linearRampToValueAtTime(.12,t+rise+fall);
+   lp.frequency.setValueAtTime(380,t);lp.frequency.exponentialRampToValueAtTime(900+peak*900,t+rise);lp.frequency.exponentialRampToValueAtTime(380,t+rise+fall);
+   return rise+fall+Math.random()*1.5;
+  },.3+k*3.7);
+ });
+ return layer;
+}
+/* Chimes: soft pentatonic wind chimes */
+const PENTA=[523.25,587.33,659.25,783.99,880,1046.5,1174.66,1318.51];
+function chimeNote(dest,f,t,amp){
+ const c=A.ctx;const pn=panner(Math.random()*1.4-.7);pn.connect(dest);
+ [[1,1,7],[2.756,.28,3.5],[5.404,.09,1.8],[8.933,.03,.9]].forEach(([m,a,d])=>{
+  const o=c.createOscillator();o.type='sine';o.frequency.value=f*m*(1+(Math.random()-.5)*.002);
+  const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(amp*a,t+.006+Math.random()*.004);g.gain.setTargetAtTime(0,t+.01,d/5);
+  o.connect(g);g.connect(pn);o.start(t);o.stop(t+d+.2);});
+}
+function startChimes(){
+ const out=mkOut(1.5,1.2,.9);const layer={out,nodes:[],timers:[]};
+ scheduler(layer,t=>{
+  if(Math.random()<.3){let tt=t;const n=2+Math.floor(Math.random()*3);for(let i=0;i<n;i++){chimeNote(out,PENTA[Math.floor(Math.random()*PENTA.length)],tt,.035+Math.random()*.025);tt+=.12+Math.random()*.35;}return 2.5+Math.random()*3;}
+  chimeNote(out,PENTA[Math.floor(Math.random()*PENTA.length)],t,.03+Math.random()*.03);return 1+Math.random()*3.2;
+ },.2);
+ return layer;
+}
+/* Birds: sparse synthesized songbirds */
+function chirp(dest,t,f0,f1,dur,amp){
+ const c=A.ctx;const o=c.createOscillator();o.type='sine';
+ o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f1,t+dur);
+ const vib=c.createOscillator();vib.frequency.value=28+Math.random()*20;const vg=c.createGain();vg.gain.value=f0*.015;vib.connect(vg);vg.connect(o.frequency);
+ const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(amp,t+Math.min(.02,dur*.3));g.gain.setTargetAtTime(0,t+dur*.6,dur*.18);
+ o.connect(g);g.connect(dest);o.start(t);vib.start(t);o.stop(t+dur+.25);vib.stop(t+dur+.25);
+}
+function birdPhrase(dest,t){
+ const kind=Math.floor(Math.random()*4),a=.022+Math.random()*.018;let tt=t;
+ if(kind===0){const n=2+Math.floor(Math.random()*3);for(let i=0;i<n;i++){chirp(dest,tt,2600+Math.random()*300,3900+Math.random()*500,.11,a);tt+=.2+Math.random()*.08;}}
+ else if(kind===1){chirp(dest,tt,3400,3300,.28,a);tt+=.36;chirp(dest,tt,2700,2500,.32,a*.9);tt+=.4;}
+ else if(kind===2){const n=5+Math.floor(Math.random()*5),base=4200+Math.random()*600;for(let i=0;i<n;i++){chirp(dest,tt,base,base*.72,.055,a*.75);tt+=.075;}}
+ else{chirp(dest,tt,2200,3600,.16,a);tt+=.22;chirp(dest,tt,3600,2400,.2,a*.9);tt+=.26;chirp(dest,tt,2900,3100,.12,a*.7);tt+=.2;}
+ return tt-t;
+}
+function startBirds(){
+ const c=A.ctx;const out=mkOut(1.9,1.5,.55);const layer={out,nodes:[],timers:[]};
+ const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=6500;lp.connect(out);
+ const bus=[-.6,-.1,.5].map(v=>{const p=panner(v);p.connect(lp);return p;});
+ scheduler(layer,t=>{const d=birdPhrase(bus[Math.floor(Math.random()*bus.length)],t);return d+2.2+Math.random()*5.5;},.8);
+ return layer;
+}
+/* Reflections: singing bowls over a slow airy wash, with long tails */
+function startReflections(){
+ const c=A.ctx;const out=mkOut(1.9,4,1.1);const layer={out,nodes:[],timers:[]};
+ const dl=c.createDelay(2);dl.delayTime.value=.62;const fb=c.createGain();fb.gain.value=.5;const dlp=c.createBiquadFilter();dlp.type='lowpass';dlp.frequency.value=1800;
+ dl.connect(dlp);dlp.connect(fb);fb.connect(dl);const dOut=c.createGain();dOut.gain.value=.35;dlp.connect(dOut);dOut.connect(out);
+ const bowls=c.createGain();bowls.connect(out);bowls.connect(dl);
+ const air=c.createBufferSource();air.buffer=pinkNoise();air.loop=true;
+ const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=900;bp.Q.value=2.2;
+ const ag=c.createGain();ag.gain.value=.10;air.connect(bp);bp.connect(ag);ag.connect(out);air.start();
+ const lfo=c.createOscillator();lfo.frequency.value=.021;const lg=c.createGain();lg.gain.value=500;lfo.connect(lg);lg.connect(bp.frequency);lfo.start();
+ layer.nodes.push(air,lfo);
+ const roots=[146.83,174.61,196,220,261.63,293.66];
+ scheduler(layer,t=>{
+  const f=roots[Math.floor(Math.random()*roots.length)],amp=.05+Math.random()*.03,pn=panner(Math.random()*.8-.4);pn.connect(bowls);
+  [[1,1,16],[1.004,.6,14],[2.71,.3,9],[2.716,.2,8],[5.15,.07,4]].forEach(([m,a,d])=>{
+   const o=c.createOscillator();o.type='sine';o.frequency.value=f*m;
+   const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(amp*a,t+.08);g.gain.setTargetAtTime(0,t+.1,d/5);
+   o.connect(g);g.connect(pn);o.start(t);o.stop(t+d+.5);});
+  return 6+Math.random()*7;
+ },1.2);
+ return layer;
+}
 function stopAmb(){
- if(!A.amb||!A.ctx)return;const a=A.amb;A.amb=null;const now=A.ctx.currentTime;
- a.out.gain.cancelScheduledValues(now);a.out.gain.setValueAtTime(a.out.gain.value,now);a.out.gain.linearRampToValueAtTime(0,now+1.6);
- setTimeout(()=>{a.nodes.forEach(n=>{try{n.stop();}catch(e){}});try{a.out.disconnect();}catch(e){}},1900);
+ if(!A.amb||!A.ctx)return;const list=A.amb;A.amb=null;const now=A.ctx.currentTime;
+ list.forEach(a=>{
+  (a.timers||[]).forEach(clearInterval);
+  a.out.gain.cancelScheduledValues(now);a.out.gain.setValueAtTime(a.out.gain.value,now);a.out.gain.linearRampToValueAtTime(0,now+1.6);
+  setTimeout(()=>{a.nodes.forEach(n=>{try{n.stop();}catch(e){}});try{a.out.disconnect();}catch(e){}},2000);
+ });
+}
+const SOUNDS=[{v:'off',l:'Off'},{v:'pad',l:'Pad'},{v:'noise',l:'Noise'},{v:'waves',l:'Waves'},{v:'chimes',l:'Chimes'},{v:'birds',l:'Birds'},{v:'reflect',l:'Reflections'}];
+let addWaves=false;
+function buildLayers(type){
+ const L=[];
+ if(type==='pad')L.push(startPad());
+ else if(type==='noise')L.push(startNoise());
+ else if(type==='waves')L.push(startWaves());
+ else if(type==='chimes'){L.push(startChimes());if(addWaves)L.push(startWaves(.45));}
+ else if(type==='birds'){L.push(startBirds());if(addWaves)L.push(startWaves(.45));}
+ else if(type==='reflect')L.push(startReflections());
+ L.forEach(l=>{if(!l.timers)l.timers=[];});
+ return L;
 }
 function setSound(type){
  A.type=type;
  stopAmb();
- if(type!=='off'&&ac()){A.amb=type==='pad'?startPad():startNoise();}
- markChips($('soundChips'),type);refreshDockState();
+ if(type!=='off'&&ac()){A.amb=buildLayers(type);}
+ markChips($('soundChips'),type);updMix();refreshDockState();
+}
+function updMix(){
+ const can=A.type==='chimes'||A.type==='birds';
+ $('mixRow').style.display=can?'flex':'none';
+ $('mixSw').classList.toggle('on',addWaves);
 }
 function chime(f,when,amp){
  const c=ac();if(!c)return;const t0=c.currentTime+(when||0);amp=amp||.16;
@@ -1031,7 +1175,9 @@ function chime(f,when,amp){
   const g=c.createGain();g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(amp*a,t0+.015);g.gain.exponentialRampToValueAtTime(.0001,t0+d);
   o.connect(g);g.connect(A.master);g.connect(A.rev);o.start(t0);o.stop(t0+d+.1);});
 }
-chipRow($('soundChips'),[{v:'off',l:'Off'},{v:'pad',l:'Pad'},{v:'noise',l:'Noise'}],v=>setSound(v));
+chipRow($('soundChips'),SOUNDS,v=>setSound(v));
+$('mixSw').onclick=()=>{addWaves=!addWaves;if(A.type==='chimes'||A.type==='birds')setSound(A.type);else updMix();};
+updMix();
 markChips($('soundChips'),'off');
 $('vol').addEventListener('input',e=>{A.vol=+e.target.value;prefs.vol=A.vol;savePrefs();if(A.ambBus)A.ambBus.gain.setTargetAtTime(A.vol*A.vol,A.ctx.currentTime,.08);});
 const ICON_ON='<path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 010 6M18 6.5a7.5 7.5 0 010 11"/>';
@@ -1143,7 +1289,7 @@ window.addEventListener('keydown',e=>{
 window.addEventListener('resize',()=>{if(gl)resize();});
 
 /* test hook */
-window.__med={go:i=>go(i),setFade:v=>{fadeT=v;},state:()=>({cur,prev,fadeT,Q,G,idle,S:{...S},breath:breath.p}),lockQ:v=>{Q=v;qLocked=true;},time:(t)=>{stime[cur]=t;if(prev>=0)stime[prev]=t;},endNow:()=>{if(S.active){S.el=S.total;}}};
+window.__med={jump:()=>{if(!A.an)return 0;const d=new Float32Array(A.an.fftSize);A.an.getFloatTimeDomainData(d);let j=0;for(let i=1;i<d.length;i++)j=Math.max(j,Math.abs(d[i]-d[i-1]));return j;},rms:()=>{if(!A.an)return 0;const d=new Float32Array(A.an.fftSize);A.an.getFloatTimeDomainData(d);let m=0,pk=0;for(const v of d){m+=v*v;pk=Math.max(pk,Math.abs(v));}return [Math.sqrt(m/d.length),pk];},audio:()=>({type:A.type,state:A.ctx&&A.ctx.state,layers:A.amb?A.amb.length:0,nodes:A.amb?A.amb.reduce((n,l)=>n+l.nodes.length+l.timers.length,0):0}),go:i=>go(i),setFade:v=>{fadeT=v;},state:()=>({cur,prev,fadeT,Q,G,idle,S:{...S},breath:breath.p}),lockQ:v=>{Q=v;qLocked=true;},time:(t)=>{stime[cur]=t;if(prev>=0)stime[prev]=t;},endNow:()=>{if(S.active){S.el=S.total;}}};
 
 if(gl){precompile(cur);bgCompile();start();}
 })();
