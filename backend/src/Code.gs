@@ -776,7 +776,7 @@ function rpcChess(k, op, args) {
 // st state seq, tc last refresh}, _p players [{id, name, at}], _t tokens {token: id}, _s seq, _e<n> one event each,
 // _st state snapshot, _a<id> when that player last polled. Rate counters: rl_*.
 // the games on the site (same ids as GAMES in index.html); saves are keyed by them too
-const ROOM_GAMES = ['pipworks', 'lander', 'geohunter', 'chess', 'geodash', 'appel', 'metrica-wave', 'krillion'];
+const ROOM_GAMES = ['pipworks', 'lander', 'geohunter', 'chess', 'geodash', 'appel', 'metrica-wave', 'krillion', 'meditation', 'crashout'];
 const ROOM_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const ROOM_TTL = 21600;          // seconds (6 h, the cache maximum)
 const ROOM_MAX_DATA = 92160;     // 90 KB per message or snapshot (UTF-8 bytes of the JSON)
