@@ -1102,9 +1102,13 @@ function drawToolFx(f){
   }
   ctx.restore();
 }
+/* the drawn tool stands in for the mouse pointer; while it is hidden (a nuke falling, a swing playing) the normal
+   pointer shows so the mouse never disappears */
+function cursorShow(drawn){ var c = toolId === 'grab' ? (grabbed >= 0 ? 'grabbing' : 'grab') : drawn ? 'none' : 'default'; if (cv.style.cursor !== c) cv.style.cursor = c; }
 function drawCursorTool(){
-  if (!ptr.mouse || toolId === 'grab' || ptr.x < 0 || ptr.y < topH || ptr.y > H - dockH) return;
+  if (!ptr.mouse || toolId === 'grab' || ptr.x < 0 || ptr.y < topH || ptr.y > H - dockH) { cursorShow(false); return; }
   var busy = toolsFx.some(function(f){ return (f.k === toolId || f.type === toolId) && f.t < f.dur && f.k !== 'gun'; }) || (toolId === 'nuke' && (nukes.length > 0 || mushrooms.length > 0));
+  cursorShow(!busy);
   if (busy) return;
   ctx.save(); ctx.globalAlpha = .85;
   var x = ptr.x, y = ptr.y, side = ptr.x < (doll ? center().x : W / 2) ? -1 : 1;
