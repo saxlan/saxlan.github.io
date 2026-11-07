@@ -748,7 +748,7 @@ void main(){
  float a=TAU*ph;
  R0=ry(a);R1=rx(-a);R2=ry(a);R3=rx(-2.*a);R4=ry(a);
  gB=ry(.28*sin(uT*.06))*rx(-1.05);
- vec3 ro=vec3(0.,0.,3.7);
+ vec3 ro=vec3(0.,0.,4.2);
  vec3 rd=normalize(vec3(uv,-1.75));
  vec3 col=mix(vec3(.035,.04,.07),vec3(.006,.007,.014),sat(length(uv)*1.1));
  float b=dot(ro,rd);float hb=b*b-dot(ro,ro)+1.2*1.2;
@@ -1074,11 +1074,12 @@ function endSession(){
  chime(392,0,.16);chime(587.33,1.8,.1);
  stopAmb();markChips($('soundChips'),'off');A.type='off';
  Gt=.12;
+ $('breath').classList.add('hidden');
  setTimeout(()=>{$('clock').classList.add('hidden');},1200);
  setTimeout(()=>{if(ended)$('endcard').classList.remove('hidden');},1600);
  buildTimerChips();refreshDockState();
 }
-$('again').onclick=()=>{ended=false;$('endcard').classList.add('hidden');Gt=1;wake();};
+$('again').onclick=()=>{ended=false;$('endcard').classList.add('hidden');$('breath').classList.toggle('hidden',!breath.p);Gt=1;wake();};
 
 /* ---------------- breathing ---------------- */
 const PAT={calm:[4,4,6,0],box:[4,4,4,4],sleep:[4,7,8,0]};
@@ -1122,12 +1123,13 @@ function refreshDockState(){
 refreshDockState();
 
 /* ---------------- idle ---------------- */
-let lastAct=performance.now(),idle=false;
+let lastAct=performance.now(),idle=false,overUI=false;
+document.querySelectorAll('#dock,.panel').forEach(el=>{el.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse')overUI=true;});el.addEventListener('pointerleave',()=>{overUI=false;});});
 const IDLE_MS=3500;
 function wake(){lastAct=performance.now();if(idle){idle=false;document.body.classList.remove('idle');}}
 ['pointermove','pointerdown','touchstart','keydown','wheel'].forEach(ev=>window.addEventListener(ev,wake,{passive:true}));
 function tickIdle(now){
- if(!idle&&now-lastAct>IDLE_MS&&!ended){idle=true;document.body.classList.add('idle');if(openPanel)setPanel(null);}
+ if(!idle&&!overUI&&now-lastAct>IDLE_MS&&!ended){idle=true;document.body.classList.add('idle');if(openPanel)setPanel(null);}
 }
 
 /* brand / keys */
