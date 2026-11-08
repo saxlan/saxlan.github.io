@@ -388,6 +388,10 @@
     // meet the lander (floating overhead) to leave again. The hull heats up fast near the ground
     { id: "ignis", name: "Ignis", appear: 2150000, orbit: 2200000, grav: 0.004, pads: [44, 48, 52], starHide: 0.95, drone: true,
       sky: ["#141416", "#2c2c30", "#46403e"], flatSky: "#2c2c30", ground: { fill: "#3a3a3e", rock: [0, 0, 24] }, maxR: 0.2, orbitR: 0.16 },
+    // Aurora: a frozen world under curtains of light. In its air the lander flies as a helicopter: a rotor on top,
+    // the tilt springs back level when let go, and the air slows the climb and the fall. Its pads are helipads
+    { id: "aurora", name: "Aurora", appear: 4950000, orbit: 5000000, grav: 0.0032, pads: [48, 52, 56], starHide: 0.7, heli: true,
+      sky: ["#04101c", "#120c2c", "#0b2a34"], flatSky: "#0b1426", ground: { fill: "#1f3550", rock: [212, 26, 30], top: [200, 38, 88], band: 9 }, maxR: 0.2, orbitR: 0.16 },
     { id: "heaven", name: "Elysium", appear: 0, orbit: 10000, grav: 0.003, pads: [70, 77, 84], starHide: 1,
       sky: ["#fff3cf", "#ffe7a8", "#fffdf4"], flatSky: "#fff5d6", ground: { fill: "#f4efe4", rock: [44, 40, 86] }, maxR: 0.24, orbitR: 0.18 },
     { id: "hell", name: "Inferno", appear: 0, orbit: 0, grav: 0.004, pads: [36, 46, 66], starHide: 1,
@@ -405,7 +409,7 @@
       sky: ["#2a0602", "#8f2207", "#f0701a"], flatSky: "#d9480f", ground: { fill: "#ffa21f", rock: [30, 90, 50] }, maxR: 0.3, orbitR: 0.22 }
   ];
   // Courses through the bodies: outward from Earth, or inward toward the Sun
-  var ROUTES = { outer: ["earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "nomad", "rogue", "ignis"], inner: ["earth", "venus", "mercury", "sun"] };
+  var ROUTES = { outer: ["earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "nomad", "rogue", "ignis", "aurora"], inner: ["earth", "venus", "mercury", "sun"] };
   function idxOf(id) { for (var i = 0; i < BODIES.length; i++) if (BODIES[i].id === id) return i; return -1; }
   function routeDepth(id) { var a = ROUTES.outer.indexOf(id); return a >= 0 ? a : Math.max(0, ROUTES.inner.indexOf(id)); }
   // Coming back down to Earth from space: Earth shows up below at
@@ -450,11 +454,11 @@
   var MILESTONES = {
     real: { moon: [5000, 10000], mars: [18000, 28000], jupiter: [80000, 110000], saturn: [150000, 190000],
             uranus: [250000, 290000], neptune: [350000, 400000], pluto: [500000, 540000], belt: [40000, 60000], kuiper: [420000, 490000],
-            oort: [620000, 820000], exit: [880000, 900000], nomad: [960000, 1000000], rogue: [1450000, 1500000], ignis: [2150000, 2200000],
+            oort: [620000, 820000], exit: [880000, 900000], nomad: [960000, 1000000], rogue: [1450000, 1500000], ignis: [2150000, 2200000], aurora: [4950000, 5000000], worm: [5000000, 6000000, 8000000],
             venus: [12000, 20000], mercury: [30000, 42000], sun: [64000, 80000] },
     test: { moon: [1250, 2500], mars: [3750, 5000], jupiter: [7500, 10000], saturn: [11250, 12500],
             uranus: [13750, 15000], neptune: [16250, 17500], pluto: [18750, 20000], belt: [6000, 7000], kuiper: [17700, 18600],
-            oort: [20500, 21500], exit: [22000, 22600], nomad: [23750, 25000], rogue: [26250, 27500], ignis: [28750, 30000],
+            oort: [20500, 21500], exit: [22000, 22600], nomad: [23750, 25000], rogue: [26250, 27500], ignis: [28750, 30000], aurora: [31250, 32500], worm: [32500, 35000, 40000],
             venus: [1250, 2500], mercury: [3750, 5000], sun: [6250, 7500] }
   };
   var ACTIVE_MILESTONES = TEST_SPACING ? MILESTONES.test : MILESTONES.real;
@@ -469,7 +473,10 @@
   // galaxy fades in behind the stars (fully by EXIT_TO) and the little orrery fades out
   var OORT_FROM = ACTIVE_MILESTONES.oort[0], OORT_TO = ACTIVE_MILESTONES.oort[1];
   var EXIT_FROM = ACTIVE_MILESTONES.exit[0], EXIT_TO = ACTIVE_MILESTONES.exit[1];
-  var EXTRA_IDS = ["nomad", "rogue", "ignis", "heaven", "hell"];
+  // Wormholes: from WORM_FROM to WORM_TO past Aurora; each one throws the lander to a distance between
+  // WORM_FROM (plus a margin, so it lands in open space) and WORM_MAX, ahead or back
+  var WORM_FROM = ACTIVE_MILESTONES.worm[0], WORM_TO = ACTIVE_MILESTONES.worm[1], WORM_MAX = ACTIVE_MILESTONES.worm[2];
+  var EXTRA_IDS = ["nomad", "rogue", "ignis", "aurora", "heaven", "hell"];
   var EDGE_FT = 46500000;
 
   // ---- Session progress: landings per body, bases built, belt deaths ----
@@ -1795,6 +1802,94 @@
       ctx.save(); ctx.globalAlpha *= bk[2]; ctx.drawImage(b.img, 0, top, W, b.h); ctx.restore();
     });
   }
+  // Aurora's sky: the meditation room's "Aurora over a still lake" shader (curtains of light over dark hills and a
+  // still lake), drawn by WebGL into an offscreen canvas at a reduced size and copied onto the game canvas.
+  // It sinks slowly as the lander climbs. Without WebGL the flat sky color stands in
+  var auroraGL = null;
+  var AURORA_FS = [
+    "precision highp float;",
+    "uniform vec2 uR; uniform float uT; uniform float uO;",
+    "float sat(float x){return clamp(x,0.,1.);}",
+    "float h21(vec2 p){vec3 p3=fract(vec3(p.xyx)*.1031);p3+=dot(p3,p3.yzx+33.33);return fract((p3.x+p3.y)*p3.z);}",
+    "float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h21(i),h21(i+vec2(1.,0.)),f.x),mix(h21(i+vec2(0.,1.)),h21(i+vec2(1.,1.)),f.x),f.y);}",
+    "float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*vn(p);p=p*2.03+vec2(17.1,9.3);a*=.5;}return v;}",
+    "float fbm3(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*vn(p);p=p*2.03+vec2(17.1,9.3);a*=.5;}return v/.875;}",
+    "vec3 scene(vec2 p){",
+    " float t=uT;",
+    " vec3 col=mix(vec3(.03,.055,.09),vec3(.004,.007,.02),sat((p.y-.12)/.88));",
+    " vec2 sp=p*150.;vec2 id=floor(sp);vec2 f=fract(sp)-.5;float h=h21(id);",
+    " if(h>.972){vec2 o=(vec2(h21(id+3.1),h21(id+7.7))-.5)*.6;float d=length(f-o);float tw=.55+.45*sin(t*(.8+h*2.)+h*60.);col+=vec3(.85,.9,1.)*smoothstep(.13,0.,d)*tw*(h-.972)*30.*smoothstep(.2,.55,p.y);}",
+    " for(int k=0;k<3;k++){",
+    "  float fk=float(k);",
+    "  float x=p.x*(.85+fk*.25)+fk*2.7;",
+    "  float base=.47+fk*.075+.18*(fbm3(vec2(x*.5+t*.014,fk*5.3))-.5);",
+    "  float y=p.y-base;",
+    "  float warp=fbm3(vec2(x*1.4-t*.016,fk*3.1+t*.008));",
+    "  float rays=fbm(vec2(x*7.+warp*3.,t*.04+fk*9.));",
+    "  rays=.3+.7*smoothstep(.3,.75,rays);",
+    "  float sh=y>0.?exp(-y*(4.2-fk*.9)):exp(y*26.);",
+    "  float band=smoothstep(.25,.7,fbm3(vec2(x*.7+t*.02,fk*11.)));",
+    "  vec3 c=mix(vec3(.12,1.,.62),vec3(.6,.32,1.),sat(y*2.4+.05));",
+    "  c=mix(c,vec3(.2,.75,1.),fk*.28);",
+    "  col+=c*sh*rays*band*(1.-.2*fk)*(.85+.15*sin(t*.25+fk*2.));",
+    " }",
+    " col+=vec3(.05,.22,.18)*.25*exp(-(p.y-.28)*(p.y-.28)*40.);",
+    " float m=.13+.3*pow(fbm3(vec2(p.x*1.1+3.,1.)),2.2)+.025*fbm3(vec2(p.x*9.,4.));",
+    " float m2=.13+.035*fbm3(vec2(p.x*3.+11.,2.));",
+    " col=mix(col,vec3(.014,.024,.04)+col*.08+vec3(.03,.09,.08)*.4*exp(-(m-p.y)*60.),smoothstep(m+.002,m-.002,p.y));",
+    " col=mix(col,vec3(.005,.009,.018),smoothstep(m2+.002,m2-.002,p.y));",
+    " return col;",
+    "}",
+    "void main(){",
+    " vec2 uv=gl_FragCoord.xy/uR;float as=uR.x/uR.y;",
+    " vec2 p=vec2((uv.x-.5)*as,uv.y+uO);",
+    " float wl=.12;vec3 col;",
+    " if(p.y<wl){",
+    "  float dd=wl-p.y;",
+    "  vec2 q=vec2(p.x+.0035*sin(p.y*260.+uT*1.1)*sat(dd*10.),wl+dd*1.1);",
+    "  col=scene(q)*.5*vec3(.85,.95,1.);",
+    "  col=mix(col,vec3(.003,.006,.012),sat(dd*4.));",
+    "  col+=vec3(.6,.8,1.)*.04*smoothstep(.004,0.,abs(dd-.002));",
+    " }else col=scene(p);",
+    " col+=(h21(gl_FragCoord.xy+fract(uT*7.13)*91.7)-.5)/255.;",
+    " gl_FragColor=vec4(col,1.);",
+    "}"
+  ].join("\n");
+  function auroraSetup() {
+    var A = { cv: document.createElement("canvas"), ok: false, w: 0, h: 0 };
+    auroraGL = A;
+    try {
+      var gl = A.cv.getContext("webgl", { antialias: false, alpha: false, depth: false, stencil: false, premultipliedAlpha: false, preserveDrawingBuffer: false });
+      if (!gl) return A;
+      var mk = function (type, src) { var sh = gl.createShader(type); gl.shaderSource(sh, src); gl.compileShader(sh); return gl.getShaderParameter(sh, gl.COMPILE_STATUS) ? sh : null; };
+      var vs = mk(gl.VERTEX_SHADER, "attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}"), fs = mk(gl.FRAGMENT_SHADER, AURORA_FS);
+      if (!vs || !fs) return A;
+      var pr = gl.createProgram(); gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.bindAttribLocation(pr, 0, "a"); gl.linkProgram(pr);
+      if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return A;
+      var buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+      gl.useProgram(pr);
+      A.gl = gl; A.uR = gl.getUniformLocation(pr, "uR"); A.uT = gl.getUniformLocation(pr, "uT"); A.uO = gl.getUniformLocation(pr, "uO");
+      A.ok = true;
+      A.cv.addEventListener("webglcontextlost", function (e) { e.preventDefault(); A.ok = false; });
+    } catch (e) { A.ok = false; }
+    return A;
+  }
+  // Paints the sky at the given alpha; false when WebGL is not available
+  function drawAuroraSky(y, a) {
+    var A = auroraGL || auroraSetup();
+    if (!A.ok || A.gl.isContextLost()) return false;
+    // about 0.4 megapixels at most: the curtains are soft, so the copy is scaled up smoothly
+    var sc = Math.min(1, Math.sqrt(400000 / (W * H))), w = Math.max(2, Math.round(W * sc)), h = Math.max(2, Math.round(H * sc));
+    if (A.w !== w || A.h !== h) { A.cv.width = w; A.cv.height = h; A.w = w; A.h = h; }
+    var gl = A.gl;
+    gl.viewport(0, 0, w, h);
+    gl.uniform2f(A.uR, w, h); gl.uniform1f(A.uT, elapsed / 1000); gl.uniform1f(A.uO, Math.max(0, SPACE_Y - y) / H * 0.3);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    ctx.save(); ctx.globalAlpha = a; ctx.imageSmoothingEnabled = true; ctx.drawImage(A.cv, 0, 0, W, H); ctx.restore();
+    return true;
+  }
   // Soft cloud banks in a world's own light sky color, the same build as Venus's
   var AIR_BANKS = [[-0.35, 0.36, 0.5], [-1.15, 0.48, 0.42]], airBanks = {};
   function drawAirBanks(body, y) {
@@ -1982,6 +2077,21 @@
       fpoly(ctx, [[(x0 + x1) / 2, y], [x1, y], [x1 - 6, y + d], [(x0 + x1) / 2, y + d]], "#2c3038");
       for (var hx = x0 + 10; hx < x1 - 10; hx += 12) fpoly(ctx, [[hx, y + d - 4], [hx + 6, y + d - 4], [hx + 3, y + d - 1]], "#f6c400");
     });
+    // On Aurora every pad is a helipad: a low deck with an H on its face and a light at each end
+    if (BODIES[sceneIdx].heli) ground.pads.forEach(function (p) {
+      var x0 = p.x - 3, x1 = p.x + p.width + 3, y = p.y + lw / 2, d = 13, cx = (x0 + x1) / 2;
+      fpoly(ctx, [[x0, y], [x1, y], [x1 - 3, y + d], [x0 + 3, y + d]], "#3b4f66");
+      fpoly(ctx, [[cx, y], [x1, y], [x1 - 3, y + d], [cx, y + d]], "#2f4157");
+      fpoly(ctx, [[x0 + 3, y + d], [x1 - 3, y + d], [x1 - 3, y + d + 3], [x0 + 3, y + d + 3]], "#22303f");
+      ctx.save(); ctx.fillStyle = "#ffde59"; ctx.font = "900 10px " + FONT; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("H", cx, y + d / 2 + 0.5); ctx.restore();
+      [x0 + 2.5, x1 - 2.5].forEach(function (lx) {
+        var g = ctx.createRadialGradient(lx, y - 1, 0, lx, y - 1, 9);
+        g.addColorStop(0, "rgba(126, 240, 192, 0.85)"); g.addColorStop(1, "rgba(126, 240, 192, 0)");
+        ctx.fillStyle = g; ctx.fillRect(lx - 9, y - 10, 18, 18);
+        ctx.fillStyle = "#c8ffe8"; ctx.beginPath(); ctx.arc(lx, y - 1, 1.8, 0, Math.PI * 2); ctx.fill();
+      });
+    });
     ground.pads.forEach(function (p) {
       var label = "+" + p.value, x0 = p.x, x1 = p.x + p.width;
       ctx.save();
@@ -2162,6 +2272,7 @@
       var swirl = soft(Math.abs(Math.sin(mx * 6 + my * 9)), 0.18);
       return [b[0] - swirl * 6, b[1], b[2] + light * 10 - swirl * 6 + rnd(-1, 1)];
     },
+    aurora: function (mx, my, light) { var b = bandColor([[214, 46, 22], [200, 40, 30], [222, 44, 26], [190, 36, 34], [216, 42, 24]], my); return [b[0], b[1], b[2] + light * 8]; },
     ignis: function (mx, my, light) { var b = bandColor([[0, 0, 22], [0, 0, 27], [0, 0, 20], [0, 0, 25], [0, 0, 23]], my); return [b[0], b[1], b[2] + light * 8]; },
     hell: function (mx, my, light) { var b = bandColor([[4, 70, 18], [8, 80, 24], [2, 60, 14], [10, 85, 28]], my); return [b[0], b[1], b[2] + light * 6]; },
     heaven: function (mx, my, light) { var b = bandColor([[46, 100, 92], [44, 90, 86], [48, 100, 95], [44, 80, 89]], my); return [b[0], b[1], b[2] + light * 4]; },
@@ -2216,7 +2327,7 @@
     return null;
   }
   // Facets for a disc (or a lumpy potato for small moons), colored and smoothed
-  var STRIPED = { jupiter: true, saturn: true, uranus: true, neptune: true, venus: true, nomad: true, rogue: true, ignis: true, heaven: true, hell: true };
+  var STRIPED = { jupiter: true, saturn: true, uranus: true, neptune: true, venus: true, nomad: true, rogue: true, ignis: true, aurora: true, heaven: true, hell: true };
   function buildFacets(id, lumpy, small) {
     var rings = small
       ? (id === "earth" ? [[{ x: 0, y: 0, ang: 0 }], ringPoints(7, 0.45, 0.1), ringPoints(13, 0.8, 0.08), ringPoints(16, 1, 0.05)]
@@ -2267,6 +2378,7 @@
       if (id === "jupiter") facets.spots = [{ x: 0.3, y: 0.36, rx: 0.24, ry: 0.12, c: hsl(16, 50, 52) }];
       if (id === "rogue") facets.spots = [{ x: 0.28, y: 0.3, rx: 0.22, ry: 0.1, c: hsl(72, 80, 52) }, { x: -0.4, y: -0.35, rx: 0.14, ry: 0.06, c: hsl(80, 70, 60) }];
       if (id === "ignis") facets.spots = [{ x: -0.3, y: 0.22, rx: 0.2, ry: 0.09, c: hsl(22, 100, 52) }, { x: 0.36, y: -0.3, rx: 0.13, ry: 0.06, c: hsl(36, 100, 58) }, { x: 0.1, y: 0.6, rx: 0.1, ry: 0.04, c: hsl(16, 100, 48) }];
+      if (id === "aurora") facets.spots = [{ x: 0, y: -0.64, rx: 0.46, ry: 0.05, c: hsl(152, 66, 60) }, { x: 0.1, y: -0.53, rx: 0.3, ry: 0.03, c: hsl(268, 56, 70) }, { x: -0.05, y: 0.68, rx: 0.34, ry: 0.04, c: hsl(158, 66, 56) }];
       if (id === "hell") facets.spots = [{ x: 0.2, y: 0.25, rx: 0.24, ry: 0.1, c: hsl(16, 100, 50) }, { x: -0.35, y: -0.3, rx: 0.12, ry: 0.05, c: hsl(30, 100, 55) }];
       if (id === "heaven") facets.spots = [{ x: -0.25, y: -0.3, rx: 0.2, ry: 0.08, c: hsl(48, 100, 97) }];
     }
@@ -2425,7 +2537,7 @@
   var TRAIL = {
     earth: ["#9cc4f0", "#2f5f9e"], moon: ["#d8d8d8", "#6e6e72"], mars: ["#e09a70", "#7a3018"],
     jupiter: ["#ead2b0", "#8a6440"], saturn: ["#f0e2b8", "#9a8456"], uranus: ["#c8eef0", "#5a9aa4"],
-    neptune: ["#8aa8f0", "#1e3c90"], pluto: ["#e8d8c0", "#8a7458"], rogue: ["#b8f070", "#3c7a1e"], nomad: ["#e6c49a", "#8a5e38"], ignis: ["#6a6a70", "#2a2a2e"], heaven: ["#fffbe8", "#e8c860"], hell: ["#c0301a", "#3a0806"]
+    neptune: ["#8aa8f0", "#1e3c90"], pluto: ["#e8d8c0", "#8a7458"], rogue: ["#b8f070", "#3c7a1e"], nomad: ["#e6c49a", "#8a5e38"], ignis: ["#6a6a70", "#2a2a2e"], aurora: ["#7ef0c0", "#1f3550"], heaven: ["#fffbe8", "#e8c860"], hell: ["#c0301a", "#3a0806"]
   };
   var TRAIL_MOONS = {
     earth: [{ id: "moon", a: 2.3, r: 0.27, w: 0.00035 }],
@@ -2438,7 +2550,7 @@
   var trailFacets = {};
   function buildTrailFacets() {
     trailFacets = {};
-    ["mercury", "venus", "earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "nomad", "rogue", "ignis", "heaven", "hell",
+    ["mercury", "venus", "earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "nomad", "rogue", "ignis", "aurora", "heaven", "hell",
      "phobos", "deimos", "io", "europa", "titan", "enceladus", "mimas", "rhea", "sun"].forEach(function (id) {
       trailFacets[id] = buildFacets(id, id === "phobos" || id === "deimos", true);
     });
@@ -3686,9 +3798,16 @@
     var below = L.pos.y >= H;
     if (!touching && !below) {
       // the drone turns more gently and settles by itself
-      var turnK = L.drone ? 0.006 : 0.01;
-      if (L.right) L.spinVel += k * turnK;
-      if (L.left) L.spinVel -= k * turnK;
+      var turnK = L.drone ? 0.006 : 0.01, heli = heliNow();
+      if (heli) {
+        // Aurora's helicopter: left and right tilt the rotor up to HELI_TILT, and it springs back level when let go
+        var hTgt = L.right ? HELI_TILT : L.left ? -HELI_TILT : 0;
+        L.spinVel += ((hTgt - tiltDegSigned(L.angle)) * 0.05 - L.spinVel) * Math.min(1, k * 0.1);
+        if (fixing) { fixing = false; syncBoost(); }
+      } else {
+        if (L.right) L.spinVel += k * turnK;
+        if (L.left) L.spinVel -= k * turnK;
+      }
       if (L.drone && !L.left && !L.right) L.spinVel *= Math.pow(0.985, k);
       // Course corrector (held down): turn back upright, easing in, then stop by itself
       if (fixing) {
@@ -3715,7 +3834,14 @@
         L.vel.x += k * thrust * BOOST_POWER * Math.sin(L.angle);
         L.vel.y -= k * thrust * BOOST_POWER * Math.cos(L.angle);
       }
-      if (L.engine) {
+      if (heli) {
+        // the rotor always pulls toward its tilt; the engine key gives lift. The thick air slows the climb, the fall
+        // and the drift, and thins out toward the top of the sky
+        var thickH = 1 - clamp01(0, -H * 2, L.pos.y);
+        L.vel.x += k * thrust * 0.6 * Math.sin(L.angle);
+        if (L.engine) L.vel.y -= k * thrust * 0.7 * Math.cos(L.angle);
+        L.vel.x *= Math.pow(1 - 0.003 * thickH, k); L.vel.y *= Math.pow(1 - 0.004 * thickH, k);
+      } else if (L.engine) {
         var thK = L.drone ? 0.85 : 1;
         L.vel.x += k * thrust * thK * Math.sin(L.angle);
         L.vel.y -= k * thrust * thK * Math.cos(L.angle);
@@ -3764,10 +3890,12 @@
   }
 
   function drawPath() {
-    var L = lander, x = L.pos.x, y = L.pos.y, vy = L.vel.y, a = L.angle, pts = [];
-    while (y <= H && x <= W && x >= 0 && !inGround(ground.path, x, y)) {
+    var L = lander, x = L.pos.x, y = L.pos.y, vy = L.vel.y, vx = L.vel.x, a = L.angle, pts = [], heli = heliNow();
+    while (y <= H && x <= W && x >= 0 && !inGround(ground.path, x, y) && pts.length < 4000) {
       pts.push({ x: x, y: y });
-      y = Math.min(y + vy, H); x += L.vel.x; a += Math.PI / 180 * L.spinVel; vy += grav;
+      y = Math.min(y + vy, H); x += vx; a += Math.PI / 180 * L.spinVel; vy += grav;
+      // the helicopter's air drag
+      if (heli) { vy *= 0.996; vx *= 0.997; }
     }
     if (pts.length <= 20) return;
     ctx.save();
@@ -3943,6 +4071,34 @@
     }
     ctx.restore();
   }
+  // Aurora's rotor on the nose: a mast, a hub and two blades seen edge on, with a soft blur disk. It spins faster
+  // with the engine key held, and folds in (a) toward the top of the sky
+  var rotorPh = 0, rotorLast = 0;
+  function drawRotor(a) {
+    if (a <= 0) return;
+    var now = elapsed, L = lander;
+    rotorPh += Math.min(50, Math.max(0, now - rotorLast)) * (L.engine ? 0.045 : 0.026); rotorLast = now;
+    var R = (LW * 1.55) * (0.3 + 0.7 * a), top = -LH - 6;
+    ctx.save(); ctx.globalAlpha *= Math.min(1, a * 1.5);
+    ctx.fillStyle = SHIP.skirtDk; ctx.fillRect(-1.3, top, 2.6, 7);
+    ctx.fillStyle = "rgba(225, 240, 255, " + (L.engine ? 0.34 : 0.22) + ")";
+    ctx.beginPath(); ctx.ellipse(0, top, R, 2.4, 0, 0, Math.PI * 2); ctx.fill();
+    for (var b = 0; b < 2; b++) {
+      var c = Math.cos(rotorPh + b * Math.PI / 2), len = R * Math.abs(c);
+      ctx.fillStyle = c * (b ? -1 : 1) > 0 ? SHIP.skirt : SHIP.skirtDk;
+      ctx.beginPath(); ctx.roundRect(-len, top - 1.4, len * 2, 2.8, 1.4); ctx.fill();
+    }
+    ctx.fillStyle = SHIP.nose; ctx.beginPath(); ctx.arc(0, top, 2.6, 0, Math.PI * 2); ctx.fill();
+    if (L.engine) {
+      // downwash under the blade tips
+      ctx.strokeStyle = "rgba(200, 255, 236, 0.35)"; ctx.lineWidth = 1.2;
+      for (var w = 0; w < 4; w++) {
+        var wx = (w < 2 ? -1 : 1) * R * (0.55 + 0.35 * (w % 2)), wy = top + 4 + ((now / 6 + w * 9) % 22);
+        ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx * 1.06, wy + 6); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
   function drawShipAt(x, y, angle, scale, jets) {
     var L = lander;
     if (jets && L.drone) { drawDroneAt(x, y, angle); return; }
@@ -3967,12 +4123,14 @@
       }
     }
 
+    var heli = jets && mode === "game" && heliNow();
+    if (heli) drawRotor(clamp01(-H * 2, -H * 1.5, L.pos.y));
     ctx.translate(-LW / 2, -LH / 2);
-    var left = jets && L.left, right = jets && L.right;
+    var left = jets && L.left && !heli, right = jets && L.right && !heli;
     // Choppy exhaust in one warm color family: every frame the flame gets a
     // new length and width and is cut into 1 to 3 segments with small gaps
     // and stepped brightness, so it sputters instead of reading as a wedge
-    if (L.engine) {
+    if (L.engine && !heli) {
       var fl = rnd(10, 50), hw = LW / 2 - rnd(2, 4.5), segs = 1 + Math.floor(Math.random() * 3), at = 0, shade = Math.floor(Math.random() * 3);
       for (var si = 0; si < segs && at < 1; si++) {
         var last = si === segs - 1, end = last ? 1 : at + (1 - at) * rnd(0.35, 0.6);
@@ -4037,7 +4195,7 @@
     if (L.wreck) L.wreck.draw(dt);
     placeShown();
     if (L.doom && !L.result) drawDoomShip(L);
-    else if (!L.result || L.result.landed) drawShipAt(L.shown.x, L.shown.y, L.angle, 1, true);
+    else if (!L.result || L.result.landed) drawShipAt(L.shown.x, L.shown.y, L.angle, wormJump ? wormJump.scale : 1, true);
     if (L.doom && !L.result) { /* no readouts while melting or freezing */ }
     else if (L.pos.y > SPACE_Y) { drawSideHud(); drawCourseNote(); }
     else if (!L.result) {
@@ -4055,6 +4213,9 @@
 
   // ---- The mothership over Ignis: the drone docks with it (inside the dotted ring) to leave ----
   var mother = null, MAG_R = 72;
+  // Aurora flies as a helicopter while the lander is in its air (below twice the screen height)
+  var HELI_TILT = 24;
+  function heliNow() { return scene === "surface" && !!BODIES[sceneIdx].heli && lander.pos.y > -H * 2; }
   function DRONE_TOP() { return -H * 0.42; }
   function motherAt(drop) {
     var wy = mother.rise ? mix(mother.rise.from, mother.rise.to, sine(clamp01(mother.rise.at, mother.rise.at + 1400, elapsed))) : mother.wy;
@@ -4130,6 +4291,141 @@
       ctx.strokeStyle = "rgba(255, 236, 200, 0.9)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(h.x, h.y, 16.5, sp, sp + Math.PI * 1.4); ctx.stroke();
       ctx.restore();
     });
+  }
+  // ---- Wormholes, past Aurora (WORM_FROM to WORM_TO): a swirl whose pull sucks the lander in and throws it to
+  // another distance, ahead or back, anywhere from just past Aurora out to WORM_MAX. Each one shows where it leads ----
+  var worms = [], wormNextAt = 0, wormJump = null, WORM_FIELD = 190, WORM_PULL = 0.02, WORM_CORE = 18;
+  var WORM_IN_MS = 750, WORM_SWAP_MS = 1150, WORM_OUT_MS = 2000;
+  // arrivals stay this far past Aurora, so the lander always comes out in open space
+  function wormMargin() { return Math.round((WORM_MAX - WORM_FROM) / 300); }
+  function wormGap() { var span = WORM_TO - WORM_FROM; return rnd(span * 0.012, span * 0.03); }
+  function wormDest(d) {
+    var lo = WORM_FROM + wormMargin(), t = lo;
+    for (var i = 0; i < 20; i++) { t = Math.round(rnd(lo, WORM_MAX)); if (Math.abs(t - d) > (WORM_MAX - WORM_FROM) * 0.05) break; }
+    return Math.max(lo, Math.min(WORM_MAX, t));
+  }
+  function makeWorm(x, y, d) { return { x: x, y: y, ph: rnd(0, 6), spin: coin() ? 1 : -1, dest: wormDest(d) }; }
+  function spawnWorm(d) {
+    // clear of black holes and other wormholes coming in at about the same height
+    for (var t = 0; t < 12; t++) {
+      var x = rnd(W * 0.15, W * 0.85), y = -WORM_FIELD - rnd(0, 80);
+      if (holes.concat(worms).some(function (o) { return Math.hypot(o.x - x, o.y - y) < WORM_FIELD + 60; })) continue;
+      worms.push(makeWorm(x, y, d)); return;
+    }
+  }
+  function stepWorms(dt) {
+    var L = lander, k = dt / TICK;
+    worms = worms.filter(function (h) { return (wormJump && wormJump.h === h) || (h.y < H + WORM_FIELD && h.y > -WORM_FIELD * 3); });
+    worms.forEach(function (h) {
+      if (!L.result && !L.doom && !wormJump) h.y -= L.vel.y * k;
+      var dx = h.x - L.shown.x, dy = h.y - L.shown.y, r = Math.hypot(dx, dy);
+      if (!wormJump && !L.result && !L.doom && r < WORM_FIELD) {
+        // pulled in and swirled around; close in, the swirl swallows the speed so nothing slips past the core
+        var a = Math.min(WORM_PULL, 0.004 * WORM_FIELD / Math.max(r, 20)), rr = Math.max(r, 1);
+        L.vel.x += k * a * (dx - 0.25 * h.spin * dy) / rr; L.vel.y += k * a * (dy + 0.25 * h.spin * dx) / rr;
+        if (r < 90) { var dmp = Math.pow(0.965, k); L.vel.x *= dmp; L.vel.y *= dmp; }
+        if (r < WORM_CORE) startWormJump(h);
+      }
+      drawWorm(h, h.x, h.y, 1, true);
+    });
+  }
+  function drawWorm(h, x, y, a, field) {
+    var sp = elapsed / 650 * h.spin + h.ph;
+    ctx.save();
+    if (field) {
+      ctx.globalAlpha = a; ctx.strokeStyle = "rgba(126, 240, 192, 0.4)"; ctx.lineWidth = 1.5; ctx.setLineDash([3, 7]);
+      ctx.beginPath(); ctx.arc(x, y, WORM_FIELD, sp * 0.15, sp * 0.15 + Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.globalAlpha = a;
+    var gl = ctx.createRadialGradient(x, y, 0, x, y, 74);
+    gl.addColorStop(0, "rgba(176, 120, 255, 0.6)"); gl.addColorStop(0.45, "rgba(31, 227, 160, 0.22)"); gl.addColorStop(1, "rgba(31, 227, 160, 0)");
+    ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(x, y, 74, 0, Math.PI * 2); ctx.fill();
+    // four spiral arms winding into the core
+    var cols = ["#7ef0c0", "#b48cff", "#84d8ff", "#c8ffe8"];
+    ctx.lineCap = "round";
+    for (var i = 0; i < 4; i++) {
+      ctx.strokeStyle = cols[i]; ctx.lineWidth = i === 3 ? 1.5 : 2.6; ctx.globalAlpha = a * (i === 3 ? 0.7 : 0.9);
+      ctx.beginPath();
+      for (var j = 0; j <= 18; j++) {
+        var rr = 9 + j * 2.6, th = sp + i * Math.PI / 2 + h.spin * j * 0.21;
+        var px = x + Math.cos(th) * rr, py = y + Math.sin(th) * rr * 0.92;
+        if (j) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = a;
+    ctx.fillStyle = "#14082e"; ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(220, 255, 240, 0.9)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 11.5, -sp, -sp + Math.PI * 1.3); ctx.stroke();
+    if (field) {
+      ctx.font = "700 11px " + FONT; ctx.letterSpacing = "1px"; ctx.textAlign = "center"; ctx.fillStyle = "rgba(220, 255, 240, 0.8)";
+      ctx.fillText(ftCompact(h.dest) + " FT", x, y + 92);
+    }
+    ctx.restore();
+  }
+  function startWormJump(h) {
+    var L = lander;
+    wormJump = { at: elapsed, h: h, x0: L.pos.x, y0: h.y, a0: L.angle, sp: Math.max(1.5, Math.min(30, speedOf(L.vel))), dest: h.dest, done: false, scale: 1 };
+    L.frozen = true; L.vel = { x: 0, y: 0 }; L.spinVel = 0; L.boostUntil = 0;
+    if (fixing) { fixing = false; syncBoost(); }
+    holes = []; spaceRocks = []; bigRocks = [];
+    Snd.riser(WORM_SWAP_MS / 1000);
+  }
+  // The jump: drawn over the scene after the lander. In: the swirl draws the ship to its center, spinning and
+  // shrinking. Then rings of aurora light rush out over the screen, the lander is moved to the new distance under
+  // them, and they clear around a small swirl that lets it go
+  function drawWormJump() {
+    var J = wormJump;
+    if (!J) return;
+    var L = lander, t = elapsed - J.at, p;
+    if (!J.done) {
+      p = sine(clamp01(0, WORM_IN_MS, t));
+      L.pos.x = mix(J.x0, J.h.x, p);
+      J.h.y = mix(J.y0, L.shown.y, p);
+      L.angle = J.a0 + J.h.spin * p * p * Math.PI * 4;
+      J.scale = 1 - 0.85 * p;
+      if (t >= WORM_SWAP_MS) wormArrive(J);
+    } else {
+      p = sine(clamp01(WORM_SWAP_MS + 250, WORM_OUT_MS, t));
+      L.angle = J.a0 + J.h.spin * (1 - p) * (1 - p) * Math.PI * 2;
+      J.scale = 0.15 + 0.85 * p;
+      drawWorm(J.h, L.shown.x, L.shown.y, 1 - p, false);
+    }
+    // the tunnel
+    var cover = clamp01(WORM_IN_MS - 250, WORM_SWAP_MS - 50, t) * (1 - clamp01(WORM_SWAP_MS + 100, WORM_OUT_MS - 200, t));
+    if (cover > 0) {
+      var cx = L.shown.x, cy = L.shown.y, far = Math.hypot(Math.max(cx, W - cx), Math.max(cy, H - cy));
+      ctx.save();
+      ctx.globalAlpha = sine(cover); ctx.fillStyle = "#070417"; ctx.fillRect(0, 0, W, H);
+      var cols = ["#1fe3a0", "#9a5cff", "#33bfff", "#7ef0c0"];
+      for (var i = 0; i < 9; i++) {
+        var f = ((t / 700 + i / 9) % 1), r = Math.pow(f, 1.6) * far;
+        ctx.globalAlpha = sine(cover) * (1 - f) * 0.9; ctx.strokeStyle = cols[i % cols.length]; ctx.lineWidth = 3 + f * 26;
+        ctx.beginPath(); ctx.ellipse(cx, cy, r, r * 0.8, t / 900 * J.h.spin, 0, Math.PI * 2); ctx.stroke();
+      }
+      // a burst of light at the center as the lander goes through
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = sine(cover) * (0.35 + 0.65 * clamp01(WORM_SWAP_MS - 300, WORM_SWAP_MS, t) * (1 - clamp01(WORM_SWAP_MS, WORM_SWAP_MS + 350, t)));
+      var burst = ctx.createRadialGradient(cx, cy, 0, cx, cy, far * 0.55);
+      burst.addColorStop(0, "rgba(200, 255, 232, 0.9)"); burst.addColorStop(0.25, "rgba(31, 227, 160, 0.35)"); burst.addColorStop(1, "rgba(154, 92, 255, 0)");
+      ctx.fillStyle = burst; ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
+    if (J.done && t >= WORM_OUT_MS) {
+      L.angle = J.a0; L.lastTurnAngle = J.a0; L.lastTurn = Math.floor((J.a0 + Math.PI) / (Math.PI * 2));
+      L.frozen = false; wormJump = null;
+    }
+  }
+  // Moves the lander to the wormhole's distance, heading on outward, with nothing else around it
+  function wormArrive(J) {
+    var L = lander;
+    J.done = true;
+    L.pos.y = groundLevel - (J.dest - sceneBase) * 3.5;
+    L.vel = { x: 0, y: -J.sp };
+    worms = []; holes = []; spaceRocks = []; bigRocks = [];
+    wormNextAt = J.dest + wormGap(); holeNextAt = J.dest + rnd(6000, 15000);
+    L.heightMark = Math.min(L.heightMark, L.pos.y);
+    placeShown();
+    flashNote("WORMHOLE TO " + fmt(J.dest) + " FT");
   }
   // ---- Past Elysium (lightning) or past the Sun (the sky turns red): the way to Inferno ----
   var hellGate = null, GATE_FT = 30000, GATE_TEXT = "ABANDON ALL HOPE, YE WHO ENTER HERE";
@@ -4832,7 +5128,7 @@
     // Earth, Venus and Mercury are always in the sky's little orrery
     if (!shieldEarned[idx] && idx > 0) { shieldEarned[idx] = true; if (body.id !== "venus" && body.id !== "mercury") discovered[body.id] = elapsed; }
     scene = "surface";
-    sceneIdx = idx; heat = cold = acid = 0; gShift = 0; holes = []; heavenCourse = body.id === "heaven" ? null : heavenCourse;
+    sceneIdx = idx; heat = cold = acid = 0; gShift = 0; holes = []; worms = []; wormNextAt = 0; if (wormJump) { wormJump = null; L.frozen = false; } heavenCourse = body.id === "heaven" ? null : heavenCourse;
     if (EXTRA_IDS.indexOf(body.id) >= 0 && !(progress.reached || {})[body.id]) { progress.reached = progress.reached || {}; progress.reached[body.id] = true; saveProgress(); }
     sceneBase = body.orbit || 0;
     grav = body.grav;
@@ -4991,15 +5287,16 @@
       var nbz = nextBody(), dz = distNow(), stop = null;
       var holeAt = BODIES[idxOf("rogue")].orbit + 25000;
       [[BELT_FROM, "ASTEROID BELT"], [KUIPER_FROM, "KUIPER BELT"], [OORT_FROM, "OORT CLOUD"], [EXIT_FROM, "EDGE OF THE SOLAR SYSTEM"],
-       [holeAt, "BLACK HOLE"], [EDGE_FT - 3000, "NEAR THE EDGE"]].forEach(function (z) {
-        if (!stop && dz < z[0] - 200 && (nbz ? z[0] < nbz.orbit : here0().id !== "heaven")) stop = z;
+       [holeAt, "BLACK HOLE"], [WORM_FROM + wormMargin() * 2, "WORMHOLES"], [EDGE_FT - 3000, "NEAR THE EDGE"]].forEach(function (z) {
+        if (!stop && dz < z[0] - 200 && (nbz ? z[0] < nbz.orbit : here0().id !== "heaven") && (z[1] !== "WORMHOLES" || here0().id === "aurora")) stop = z;
       });
       if (stop) {
         var LZ = lander, edgeStop = stop[0] === EDGE_FT - 3000;
         LZ.pos.y = groundLevel - (stop[0] + 300 - sceneBase) * 3.5;
         LZ.vel = { x: 0, y: edgeStop ? -30 : -1.5 }; LZ.angle = Math.PI * 2; LZ.spinVel = 0; LZ.parked = false; LZ.drone = false; mother = null;
-        spaceRocks = []; bigRocks = []; holes = [];
+        spaceRocks = []; bigRocks = []; holes = []; worms = []; wormJump = null; LZ.frozen = false;
         if (stop[0] === holeAt) holes.push({ x: (LZ.pos.x + 190) % W, y: H / 2 - 80, ph: 0 });
+        if (stop[1] === "WORMHOLES") { worms.push(makeWorm((LZ.pos.x + 90) % W, H / 2 - 110, stop[0])); wormNextAt = stop[0] + wormGap(); }
         flashNote(stop[1]);
         return;
       }
@@ -6934,7 +7231,7 @@
         return { intro: [], loop: [v1, v2, v3, v4, v5, v6, v7] };
       }
     };
-    var BODY_THEME = { earth: "epic", venus: "venus", mercury: "mercury", moon: "mercury", mars: "mars", jupiter: "jupiter", saturn: "saturn", uranus: "uranus", neptune: "neptune", pluto: "venus", nomad: "jupiter", rogue: "neptune", ignis: "mars", heaven: "epic", hell: "mars", sun: "epic" };
+    var BODY_THEME = { earth: "epic", venus: "venus", mercury: "mercury", moon: "mercury", mars: "mars", jupiter: "jupiter", saturn: "saturn", uranus: "uranus", neptune: "neptune", pluto: "venus", nomad: "jupiter", rogue: "neptune", ignis: "mars", aurora: "neptune", heaven: "epic", hell: "mars", sun: "epic" };
     // ---- Track 2: epic trailer theme, D minor (original) ----
     // Loop of 36 bars, 4/4: open (4) grand impact over the organ ostinato;
     // build (8) i-bVI-bIII-bVII, taiko and spiccato strings rising, choir hits;
@@ -7362,7 +7659,7 @@
     // completing bases (single use, kept until a crash spends them)
     upShieldsLeft = upLevel("shields");
     boostsLeft = upLevel("boost"); fixesLeft = upLevel("corrector"); fixing = false; downAt = null; clearTimeout(downTimer);
-    genesis = null; hellGate = null; lander.frozen = false; lander.boostUntil = 0; lander.drone = false; lander.grab = null; mother = null; holes = []; holeNextAt = 0; edge = null; heavenCourse = null; gShift = 0;
+    genesis = null; hellGate = null; lander.frozen = false; lander.boostUntil = 0; lander.drone = false; lander.grab = null; mother = null; holes = []; holeNextAt = 0; worms = []; wormNextAt = 0; wormJump = null; edge = null; heavenCourse = null; gShift = 0;
     shields = upShieldsLeft + (progress.shieldBank || 0); shieldEarned = {}; discovered = {}; kuiperAt = oortAt = exitAt = null;
     progress.flights = (progress.flights || 0) + 1;
     // From Earth the course is the one chosen (inner once unlocked); from a base, outward
@@ -7432,6 +7729,7 @@
     ctx.fillStyle = skyGradient;
     ctx.fillRect(0, 0, W, H);
     if (here.id === "venus") drawVenusAir(L.pos.y);
+    else if (here.id === "aurora" && air > 0 && drawAuroraSky(L.pos.y, air)) { /* the curtains of light */ }
     else if (air > 0) { ctx.save(); ctx.globalAlpha = air; ctx.fillStyle = here.skyFill; ctx.fillRect(0, 0, W, H); ctx.restore(); }
     // Venus's air is opaque: stars and the far bodies show only near its top
     var clear = here.id === "venus" ? Math.pow(1 - air, 3) : 1 - air;
@@ -7450,7 +7748,7 @@
     var d = distNow(), next = nextBody();
     if (here.id === "saturn" && air > 0) drawRingSky(dropFor(L.pos.y), air);
     if (here.id === "venus") drawVenusBanks(L.pos.y);
-    else if (here.sky && here.id !== "earth" && here.id !== "ignis" && here.id !== "sun" && air > 0) { ctx.save(); ctx.globalAlpha = air; drawAirBanks(here, L.pos.y); ctx.restore(); }
+    else if (here.sky && here.id !== "earth" && here.id !== "ignis" && here.id !== "sun" && here.id !== "aurora" && air > 0) { ctx.save(); ctx.globalAlpha = air; drawAirBanks(here, L.pos.y); ctx.restore(); }
     if (here.id === "ignis" && air > 0) { ctx.save(); ctx.globalAlpha = air; drawIgnisBanks(L.pos.y); ctx.restore(); }
     if (here.id === "mercury") drawSun(dropFor(L.pos.y), L.pos.y);
     // The Sun's heat: the hull heats up fast near the surface and cools off
@@ -7582,8 +7880,14 @@
         if (!holeNextAt) holeNextAt = d + rnd(6000, 15000);
         if (d >= holeNextAt) { holes.push({ x: rnd(W * 0.15, W * 0.85), y: -HOLE_FIELD, ph: rnd(0, 6) }); holeNextAt = d + rnd(20000, 45000); }
       }
+      // wormholes past Aurora
+      if (outer && here.id === "aurora" && !wormJump && d >= WORM_FROM + wormMargin() && d <= WORM_TO) {
+        if (!wormNextAt) wormNextAt = d + wormGap() * 0.3;
+        if (d >= wormNextAt) { spawnWorm(d); wormNextAt = d + wormGap(); }
+      }
     }
     if (holes.length) stepHoles(dt);
+    if (worms.length) stepWorms(dt);
     if (sendBig && elapsed > bigAt) { sendBig = false; bigRocks.push(BigRock("ground")); }
     spaceRocks = spaceRocks.filter(function (r) { return !r.finished(); });
     spaceRocks.forEach(function (r) { r.draw(dt); });
@@ -7598,6 +7902,7 @@
     checkEject();
     stepMother(drop);
     drawLander(elapsed, dt);
+    drawWormJump();
     dither();
     drawTravelHud();
     drawShieldHud();
@@ -7630,6 +7935,7 @@
     cold: function () { return cold; },
     orbit: function (id) { if (mode === "game") enterOrbit(idxOf(id)); },
     stockEngine: function () { thrust = THRUST; },
+    worms: function () { return { list: worms.map(function (h) { return { x: h.x, y: h.y, dest: h.dest }; }), jump: wormJump ? { t: elapsed - wormJump.at, dest: wormJump.dest, done: wormJump.done } : null, dist: distNow() }; },
     place: function (ft) { lander.pos.y = groundLevel - ft * 3.5; lander.vel = { x: 0, y: -0.2 }; lander.angle = Math.PI * 2; lander.spinVel = 0; }
   };
 
