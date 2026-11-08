@@ -239,10 +239,13 @@ function withData_(name, out) {
   try { const d = loadUser_(name); d.user = out.user; out.data = d; } catch (e) {}
   return out;
 }
-function rpcSignup(name, pw) {
+// the Terms and Conditions and Privacy Policy version the page shows (the date at their top); a sign up must agree to it
+const TERMS_VER_ = '2026-11-08';
+function rpcSignup(name, pw, terms) {
   ensureStore_();
   name = normName_(name); pw = typeof pw === 'string' ? pw : '';
   if (!name || !pw) return { error: 'empty' };
+  if (terms !== TERMS_VER_) return { error: 'terms' };
   if (!NAME_RE.test(name)) return { error: 'name' };
   if (pw.length < 6) return { error: 'short' };
   if (pw.length > 200) return { error: 'long' };
@@ -255,7 +258,7 @@ function rpcSignup(name, pw) {
     cache.put(hk, String(made + 1), 3700);
     // the first account is the owner (administrator)
     if (!PROPS.getProperty('owner')) PROPS.setProperty('owner', name);
-    const rec = newPwRec_(pw, { c: Date.now(), k: [] });
+    const rec = newPwRec_(pw, { c: Date.now(), k: [], tos: [TERMS_VER_, Date.now()] });
     saveUser_(name, blank_());
     const token = session_(name, rec);
     return { token: token, user: userOut_(name) };
